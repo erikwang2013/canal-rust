@@ -482,7 +482,7 @@ fn extract_column_values(row: &RowData, column_infos: &[ColumnInfo]) -> Vec<Colu
                 name: info.map_or_else(|| format!("col_{}", i), |c| c.name.clone()),
                 value: cell.as_ref().map(mysql_value_to_string),
                 column_type: info.map_or(0, |c| c.column_type),
-                is_key: info.map_or(false, |c| c.is_key),
+                is_key: info.is_some_and(|c| c.is_key),
                 updated: false,
             }
         })
