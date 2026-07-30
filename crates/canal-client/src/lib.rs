@@ -126,7 +126,6 @@ impl CanalClient {
 
         // Spawn background poll loop: Get → Messages → ClientAck → repeat
         tokio::spawn(async move {
-            let mut batch_id = 0i64;
             loop {
                 // Send Get
                 let get = Get {
@@ -163,7 +162,7 @@ impl CanalClient {
                                 break;
                             }
                         };
-                        batch_id = msgs.batch_id;
+                        let batch_id = msgs.batch_id;
 
                         // Forward events to the stream consumer
                         for entry_bytes in &msgs.messages {
