@@ -1,0 +1,10 @@
+[package]
+name = "canal-admin"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+tokio.workspace = true
+axum.workspace = true
+serde.workspace = true
+tracing.workspace = true

@@ -1,0 +1,13 @@
+version: "3.8"
+services:
+  canal-rust:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "11111:11111"   # Canal client protocol
+      - "8080:8080"     # Admin API
+      - "9090:9090"     # Prometheus metrics
+    volumes:
+      - ../canal.yaml:/etc/canal/canal.yaml:ro
+    restart: unless-stopped

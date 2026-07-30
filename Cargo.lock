@@ -229,6 +229,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 
 [[package]]
+name = "canal-admin"
+version = "1.0.2"
+dependencies = [
+ "axum",
+ "serde",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "canal-binlog"
 version = "1.0.2"
 dependencies = [
@@ -328,6 +338,16 @@ dependencies = [
  "serde_yaml",
  "thiserror 2.0.19",
  "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "canal-meta"
+version = "1.0.2"
+dependencies = [
+ "canal-common",
+ "chrono",
+ "serde",
  "tracing",
 ]
 

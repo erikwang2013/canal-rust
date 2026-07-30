@@ -1,0 +1,10 @@
+[package]
+name = "canal-meta"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+serde.workspace = true
+chrono.workspace = true
+tracing.workspace = true
+canal-common = { path = "../canal-common" }
