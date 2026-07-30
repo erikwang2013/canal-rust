@@ -57,11 +57,7 @@ impl Decoder for CanalCodec {
 impl Encoder<PacketBytes> for CanalCodec {
     type Error = CanalError;
 
-    fn encode(
-        &mut self,
-        item: PacketBytes,
-        dst: &mut BytesMut,
-    ) -> Result<(), Self::Error> {
+    fn encode(&mut self, item: PacketBytes, dst: &mut BytesMut) -> Result<(), Self::Error> {
         let len = item.len() as u32;
         dst.reserve(4 + item.len());
         dst.put_u32(len);

@@ -42,13 +42,7 @@ pub struct DefaultBinlogConnector {
 }
 
 impl DefaultBinlogConnector {
-    pub fn new(
-        host: &str,
-        port: u16,
-        username: &str,
-        password: &str,
-        server_id: u64,
-    ) -> Self {
+    pub fn new(host: &str, port: u16, username: &str, password: &str, server_id: u64) -> Self {
         Self {
             host: host.to_string(),
             port,

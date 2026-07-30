@@ -31,11 +31,7 @@ impl PositionTracker {
 
     /// Get a client's last acknowledged position
     pub fn get(&self, client_id: &str) -> Option<LogPosition> {
-        self.positions
-            .read()
-            .unwrap()
-            .get(client_id)
-            .cloned()
+        self.positions.read().unwrap().get(client_id).cloned()
     }
 
     /// Remove a disconnected client's position tracking

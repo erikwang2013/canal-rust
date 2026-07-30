@@ -75,7 +75,11 @@ fn default_log_format() -> String {
 
 /// Canal Rust — MySQL binlog incremental subscription & consumption
 #[derive(Parser)]
-#[command(name = "canal-rust", version = "0.1.0", about = "MySQL binlog subscription tool")]
+#[command(
+    name = "canal-rust",
+    version = "0.1.0",
+    about = "MySQL binlog subscription tool"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -126,16 +130,16 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
         .parse()
         .with_context(|| format!("Invalid bind address: {}", config.canal.server.bind))?;
 
-    tracing::info!(
-        "Starting canal-rust server v{}",
-        env!("CARGO_PKG_VERSION")
-    );
+    tracing::info!("Starting canal-rust server v{}", env!("CARGO_PKG_VERSION"));
     tracing::info!(
         "MySQL source: {}:{}",
         config.canal.mysql.host,
         config.canal.mysql.port
     );
-    tracing::info!("Store: memory, buffer_size={}", config.canal.store.buffer_size);
+    tracing::info!(
+        "Store: memory, buffer_size={}",
+        config.canal.store.buffer_size
+    );
     tracing::info!("Listening on {}", bind_addr);
 
     let store = canal_store::memory::MemoryEventStore::new(config.canal.store.buffer_size);
@@ -160,8 +164,8 @@ async fn run_dump(config_path: PathBuf) -> Result<()> {
 }
 
 fn setup_logging(logging: &LogSection) {
-    let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new(&logging.level));
+    let filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(&logging.level));
 
     match logging.format.as_str() {
         "json" => {

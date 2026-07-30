@@ -22,6 +22,7 @@ pub struct MemoryEventStore {
 
 impl MemoryEventStore {
     pub fn new(capacity: usize) -> Self {
+        assert!(capacity > 0, "MemoryEventStore capacity must be > 0");
         Self {
             buffer: Mutex::new(VecDeque::with_capacity(capacity)),
             capacity,
@@ -64,11 +65,7 @@ impl MemoryEventStore {
 
     /// Get a batch of events starting after the given position.
     /// Blocks (async) until events are available.
-    pub async fn get_batch(
-        &self,
-        start: &LogPosition,
-        batch_size: usize,
-    ) -> CanalResult<Events> {
+    pub async fn get_batch(&self, start: &LogPosition, batch_size: usize) -> CanalResult<Events> {
         loop {
             // Scoped block ensures MutexGuard is dropped before .await below
             let result = {

@@ -1,7 +1,5 @@
-use canal_common::{
-    CanalError, CanalResult, ColumnValue, DmlType, EventType, RowChange, RowData,
-};
 use crate::table_map::TableMapCache;
+use canal_common::{CanalError, CanalResult, ColumnValue, DmlType, EventType, RowChange, RowData};
 
 /// Converts MySQL binlog raw events into Canal's normalized event format.
 /// Manages TableMap state and resolves table_id references.
@@ -38,10 +36,9 @@ impl EventConverter {
         event_type: EventType,
         columns: Vec<ColumnValue>,
     ) -> CanalResult<RowChange> {
-        let (schema, table) = self
-            .table_map
-            .get(table_id)
-            .ok_or_else(|| CanalError::NotFound(format!("table_id {} not found in TableMap", table_id)))?;
+        let (schema, table) = self.table_map.get(table_id).ok_or_else(|| {
+            CanalError::NotFound(format!("table_id {} not found in TableMap", table_id))
+        })?;
 
         let (before, after, dml_type) = match event_type {
             EventType::Insert => (None, Some(RowData { columns }), DmlType::Insert),
@@ -155,16 +152,15 @@ mod tests {
         converter.handle_table_map(10, "mydb", "products");
 
         let change = converter
-            .handle_row_event(
-                10,
-                EventType::Delete,
-                vec![make_column("id", "1")],
-            )
+            .handle_row_event(10, EventType::Delete, vec![make_column("id", "1")])
             .unwrap();
 
         assert_eq!(change.dml_type, DmlType::Delete);
         assert!(change.after.is_none());
-        assert_eq!(change.before.unwrap().columns[0].value.as_deref(), Some("1"));
+        assert_eq!(
+            change.before.unwrap().columns[0].value.as_deref(),
+            Some("1")
+        );
     }
 
     #[test]
