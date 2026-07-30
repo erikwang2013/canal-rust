@@ -10,3 +10,4 @@ thiserror.workspace = true
 serde.workspace = true
 canal-common = { path = "../canal-common" }
 canal-proto = { path = "../canal-proto" }
+mysql_cdc = "0.2.1"

@@ -4,4 +4,4 @@ pub mod table_map;
 
 pub use connector::{BinlogConnector, DefaultBinlogConnector};
 pub use converter::EventConverter;
-pub use table_map::TableMapCache;
+pub use table_map::{ColumnInfo, TableMapCache};

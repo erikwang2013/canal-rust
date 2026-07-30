@@ -1,4 +1,4 @@
-use crate::table_map::TableMapCache;
+use crate::table_map::{ColumnInfo, TableMapCache};
 use canal_common::{CanalError, CanalResult, ColumnValue, DmlType, EventType, RowChange, RowData};
 
 /// Converts MySQL binlog raw events into Canal's normalized event format.
@@ -24,6 +24,28 @@ impl EventConverter {
     pub fn handle_table_map(&mut self, table_id: u64, schema: &str, table: &str) {
         self.table_map
             .put(table_id, schema.to_string(), table.to_string());
+    }
+
+    /// Process a TableMap event with full column metadata from mysql_cdc.
+    /// Use this when column names, types, and key info are available.
+    pub fn handle_table_map_event(
+        &mut self,
+        table_id: u64,
+        schema: &str,
+        table: &str,
+        columns: Vec<ColumnInfo>,
+    ) {
+        self.table_map.put_with_columns(
+            table_id,
+            schema.to_string(),
+            table.to_string(),
+            columns,
+        );
+    }
+
+    /// Look up column metadata for a table_id.
+    pub fn get_columns(&self, table_id: u64) -> Option<&Vec<ColumnInfo>> {
+        self.table_map.get_columns(table_id)
     }
 
     /// Process a Row event (INSERT / UPDATE / DELETE):
