@@ -115,13 +115,15 @@ async fn main() -> Result<()> {
     }
 }
 
+fn load_config(config_path: &std::path::Path) -> Result<CanalConfig> {
+    let content = std::fs::read_to_string(config_path)
+        .with_context(|| format!("Failed to read config: {}", config_path.display()))?;
+    serde_yaml::from_str(&content)
+        .with_context(|| format!("Failed to parse config: {}", config_path.display()))
+}
+
 async fn run_server(config_path: PathBuf) -> Result<()> {
-    let config: CanalConfig = {
-        let content = std::fs::read_to_string(&config_path)
-            .with_context(|| format!("Failed to read config: {}", config_path.display()))?;
-        serde_yaml::from_str(&content)
-            .with_context(|| format!("Failed to parse config: {}", config_path.display()))?
-    };
+    let config = load_config(&config_path)?;
 
     setup_logging(&config.canal.logging);
 
@@ -197,12 +199,7 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
 }
 
 async fn run_dump(config_path: PathBuf) -> Result<()> {
-    let config: CanalConfig = {
-        let content = std::fs::read_to_string(&config_path)
-            .with_context(|| format!("Failed to read config: {}", config_path.display()))?;
-        serde_yaml::from_str(&content)
-            .with_context(|| format!("Failed to parse config: {}", config_path.display()))?
-    };
+    let config = load_config(&config_path)?;
 
     setup_logging(&config.canal.logging);
 

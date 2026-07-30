@@ -1,3 +1,5 @@
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use async_trait::async_trait;
 use canal_common::{CanalError, CanalEvent, CanalResult, ColumnValue, EventType, LogPosition};
 use mysql_cdc::binlog_client::BinlogClient;
@@ -46,7 +48,7 @@ pub struct DefaultBinlogConnector {
     server_id: u64,
     sender: Option<mpsc::Sender<CanalResult<CanalEvent>>>,
     current_pos: Option<LogPosition>,
-    running: bool,
+    running: AtomicBool,
 }
 
 impl DefaultBinlogConnector {
@@ -59,7 +61,7 @@ impl DefaultBinlogConnector {
             server_id,
             sender: None,
             current_pos: None,
-            running: false,
+            running: AtomicBool::new(false),
         }
     }
 
@@ -336,7 +338,7 @@ impl DefaultBinlogConnector {
 #[async_trait]
 impl BinlogConnector for DefaultBinlogConnector {
     async fn connect(&mut self, pos: &LogPosition) -> CanalResult<()> {
-        if self.running {
+        if self.running.load(Ordering::SeqCst) {
             return Err(CanalError::Internal(
                 "already connected — disconnect first".to_string(),
             ));
@@ -355,7 +357,7 @@ impl BinlogConnector for DefaultBinlogConnector {
         );
 
         self.current_pos = Some(pos.clone());
-        self.running = true;
+        self.running.store(true, Ordering::SeqCst);
 
         tokio::task::spawn_blocking(move || {
             Self::run_replication(options, tx);
@@ -364,6 +366,11 @@ impl BinlogConnector for DefaultBinlogConnector {
         Ok(())
     }
 
+    /// Take the receiver end of the event channel.
+    ///
+    /// **Must be called before `connect()`.** After `connect()` spawns a
+    /// blocking replication task that holds the sender, calling this after
+    /// connect will create a new channel whose receiver gets no events.
     fn take_receiver(&mut self) -> mpsc::Receiver<CanalResult<CanalEvent>> {
         self.sender
             .take()
@@ -380,7 +387,7 @@ impl BinlogConnector for DefaultBinlogConnector {
     }
 
     async fn disconnect(&mut self) -> CanalResult<()> {
-        self.running = false;
+        self.running.store(false, Ordering::SeqCst);
         info!("Disconnected from MySQL");
         Ok(())
     }

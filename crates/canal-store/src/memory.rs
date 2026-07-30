@@ -20,6 +20,9 @@ pub struct MemoryEventStore {
     notify: Notify,
 }
 
+/// Timeout for get_batch() waiting: 5 seconds
+const GET_BATCH_TIMEOUT_MS: u64 = 5000;
+
 impl MemoryEventStore {
     pub fn new(capacity: usize) -> Self {
         assert!(capacity > 0, "MemoryEventStore capacity must be > 0");
@@ -107,8 +110,14 @@ impl MemoryEventStore {
                 return Ok(events);
             }
 
-            // Wait for new events to be put
-            self.notify.notified().await;
+            // Wait for new events to be put, with timeout to prevent
+            // permanent blocking when no more events are available
+            tokio::select! {
+                _ = self.notify.notified() => {},
+                _ = tokio::time::sleep(std::time::Duration::from_millis(GET_BATCH_TIMEOUT_MS)) => {
+                    return Ok(Events::new(0));
+                }
+            }
         }
     }
 

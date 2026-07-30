@@ -3,7 +3,7 @@ use canal_common::{CanalEvent, CanalResult, Events};
 use canal_filter::EventFilter;
 use canal_store::memory::MemoryEventStore;
 use std::sync::Arc;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 use crate::connector::SinkConnector;
 
@@ -100,14 +100,30 @@ impl EventSink for DefaultEventSink {
         // Use Arc to share the filtered batch across connectors.
         let shared: Arc<Vec<CanalEvent>> = Arc::new(filtered);
 
+        let mut join_handles = Vec::new();
         for connector in &self.connectors {
             let events = Arc::clone(&shared);
             let conn = Arc::clone(connector);
-            tokio::spawn(async move {
-                if let Err(e) = conn.dispatch((*events).clone()).await {
-                    error!("Connector {} dispatch failed: {}", conn.name(), e);
+            join_handles.push(tokio::spawn(async move {
+                match conn.dispatch((*events).clone()).await {
+                    Ok(()) => (conn.name().to_string(), 0u64),
+                    Err(e) => {
+                        error!("Connector {} dispatch failed: {}", conn.name(), e);
+                        (conn.name().to_string(), 1u64)
+                    }
                 }
-            });
+            }));
+        }
+        for handle in join_handles {
+            match handle.await {
+                Ok((name, failures)) if failures > 0 => {
+                    warn!("Connector {} had {} failures in this batch", name, failures);
+                }
+                Err(e) => {
+                    error!("Connector task panicked: {}", e);
+                }
+                _ => {}
+            }
         }
 
         // Phase 4: Read back for client response (get exact batch_id from store)

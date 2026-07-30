@@ -6,6 +6,7 @@ use rdkafka::config::ClientConfig;
 use rdkafka::producer::{FutureProducer, FutureRecord, Producer};
 use rdkafka::util::Timeout;
 use serde_json;
+use tokio::sync::Mutex;
 use std::time::Duration;
 use tracing::{debug, error, info};
 
@@ -13,7 +14,7 @@ use tracing::{debug, error, info};
 /// Uses rdkafka's FutureProducer for async message delivery.
 pub struct KafkaConnector {
     name: String,
-    producer: FutureProducer,
+    producer: Mutex<Option<FutureProducer>>,
     topic: String,
     servers: String,
 }
@@ -26,21 +27,16 @@ impl KafkaConnector {
     /// * `servers` - Comma-separated bootstrap servers (e.g., "localhost:9092")
     /// * `topic` - Target Kafka topic
     pub fn new(name: &str, servers: &str, topic: &str) -> CanalResult<Self> {
-        let producer: FutureProducer = ClientConfig::new()
-            .set("bootstrap.servers", servers)
-            .set("message.timeout.ms", "5000")
-            .set("acks", "1")
-            .create()
-            .map_err(|e| CanalError::Internal(format!(
-                "Failed to create Kafka producer: {}", e
-            )))?;
-
         Ok(Self {
             name: name.to_string(),
-            producer,
+            producer: Mutex::new(None),
             topic: topic.to_string(),
             servers: servers.to_string(),
         })
+    }
+
+    async fn get_producer_async(&self) -> tokio::sync::MutexGuard<'_, Option<FutureProducer>> {
+        self.producer.lock().await
     }
 
     /// Serialize a CanalEvent batch to flat JSON messages for Kafka.
@@ -98,17 +94,22 @@ impl SinkConnector for KafkaConnector {
     }
 
     async fn connect(&self) -> CanalResult<()> {
-        info!(
-            "Kafka connector '{}' connecting to {}",
-            self.name, self.servers
-        );
+        let producer: FutureProducer = ClientConfig::new()
+            .set("bootstrap.servers", &self.servers)
+            .set("message.timeout.ms", "5000")
+            .set("acks", "1")
+            .create()
+            .map_err(|e| CanalError::Internal(format!("Kafka producer create failed: {}", e)))?;
 
-        // Verify connectivity by getting metadata
-        self.producer
+        info!("Kafka connector '{}' connecting to {}", self.name, self.servers);
+
+        producer
             .client()
             .fetch_metadata(Some(&self.topic), Timeout::After(Duration::from_secs(10)))
             .map_err(|e| CanalError::Internal(format!("Kafka metadata fetch failed: {}", e)))?;
 
+        let mut guard = self.producer.lock().await;
+        *guard = Some(producer);
         info!("Kafka connector '{}' connected to topic '{}'", self.name, self.topic);
         Ok(())
     }
@@ -128,7 +129,10 @@ impl SinkConnector for KafkaConnector {
                 .payload(&msg)
                 .key(&events[0].schema_name); // partition by schema
 
-            match self.producer.send(record, Timeout::After(Duration::from_secs(5))).await {
+            {
+                let guard = self.producer.lock().await;
+                let producer = guard.as_ref().expect("KafkaConnector: not connected");
+                match producer.send(record, Timeout::After(Duration::from_secs(5))).await {
                 Ok((partition, offset)) => {
                     debug!(
                         "Kafka delivered: topic={}, partition={}, offset={}",
@@ -141,6 +145,7 @@ impl SinkConnector for KafkaConnector {
                     failed += 1;
                 }
             }
+            } // drop MutexGuard
         }
 
         if failed > 0 {
@@ -155,6 +160,8 @@ impl SinkConnector for KafkaConnector {
     }
 
     async fn close(&self) -> CanalResult<()> {
+        let mut guard = self.producer.lock().await;
+        *guard = None;
         info!("Kafka connector '{}' closed", self.name);
         Ok(())
     }

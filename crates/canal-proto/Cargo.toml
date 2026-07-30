@@ -8,4 +8,3 @@ prost-build = "0.13"
 prost.workspace = true
 prost-types.workspace = true
 bytes.workspace = true
-canal-common = { path = "../canal-common" }

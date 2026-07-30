@@ -31,6 +31,7 @@ use canal_store::memory::MemoryEventStore;
 use futures::{SinkExt, StreamExt};
 use prost::Message;
 use tokio::net::TcpListener;
+use tokio_util::sync::CancellationToken;
 use tokio_util::codec::Framed;
 use tracing::{debug, error, info, warn};
 
@@ -44,6 +45,7 @@ pub struct CanalServer {
     store: Arc<MemoryEventStore>,
     sessions: Arc<SessionManager>,
     bind_addr: SocketAddr,
+    shutdown_token: CancellationToken,
 }
 
 impl CanalServer {
@@ -52,7 +54,13 @@ impl CanalServer {
             store,
             sessions: Arc::new(SessionManager::new()),
             bind_addr,
+            shutdown_token: CancellationToken::new(),
         }
+    }
+
+    /// Get a clone of the shutdown token. Call `cancel()` on it to stop the server.
+    pub fn shutdown_token(&self) -> CancellationToken {
+        self.shutdown_token.clone()
     }
 
     /// Start the TCP server. Blocks indefinitely, spawning a new
@@ -63,7 +71,13 @@ impl CanalServer {
         info!("Canal server listening on {}", self.bind_addr);
 
         loop {
-            let (socket, peer_addr) = listener.accept().await?;
+            let (socket, peer_addr) = tokio::select! {
+                result = listener.accept() => result?,
+                _ = self.shutdown_token.cancelled() => {
+                    info!("Canal server shutting down gracefully");
+                    return Ok(());
+                }
+            };
             info!("Client connected: {}", peer_addr);
 
             let store = self.store.clone();

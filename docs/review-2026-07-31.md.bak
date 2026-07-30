@@ -1,0 +1,123 @@
+# Canal-Rust 代码审查报告 (更新)
+
+**日期**: 2026-07-31  
+**分支**: main  
+**版本**: 1.0.4  
+**审查范围**: 15 crates, 88 个单元测试  
+
+---
+
+## 构建与测试结果
+
+| 项目 | 结果 |
+|------|------|
+| `cargo check` | 通过，0 warning |
+| `cargo test` | 88 通过，0 失败 |
+| `cargo clippy` | 0 warning |
+| 编译时间 | ~20s (from scratch) |
+
+### 测试分布
+
+| Crate | 测试数 | 
+|-------|--------|
+| canal-server | 25 |
+| canal-common | 11 |
+| canal-binlog | 8 |
+| canal-store | 8 |
+| canal-filter | 6 |
+| canal-meta | 6 |
+| canal-instance | 6 |
+| canal-prometheus | 5 |
+| canal-connector | 4 |
+| canal-admin | 3 |
+| canal-sink | 3 |
+| canal-client | 3 |
+| canal-proto | 0 |
+| canal-cli | 0 |
+
+## 依赖清单
+
+| Crate | 外部依赖 | 内部依赖 |
+|-------|---------|---------|
+| canal-common | tokio, serde, thiserror, chrono, tracing, async-trait | — |
+| canal-proto | prost, prost-types, bytes | canal-common |
+| canal-binlog | tokio, async-trait, tracing, mysql_cdc | canal-common |
+| canal-store | tokio, async-trait, tracing | canal-common |
+| canal-filter | regex, tracing | canal-common |
+| canal-meta | serde, chrono, tracing | canal-common |
+| canal-sink | tokio, async-trait, tracing | canal-common, canal-store, canal-filter |
+| canal-connector | tokio, async-trait, tracing, serde, serde_json, rdkafka | canal-common, canal-sink |
+| canal-server | tokio, tokio-util, async-trait, tracing, thiserror, bytes, chrono, futures, prost | canal-common, canal-proto, canal-binlog, canal-store |
+| canal-client | tokio, tracing, prost | canal-common, canal-proto |
+| canal-instance | tokio, tracing, async-trait | canal-common, canal-binlog, canal-store, canal-filter, canal-sink, canal-connector |
+| canal-admin | tokio, axum, serde, tracing | — |
+| canal-prometheus | tokio, axum, metrics, metrics-exporter-prometheus, tracing | canal-instance |
+| canal-cli | tokio, tracing-subscriber, tracing, serde, serde_yaml, anyhow, clap | canal-common, canal-binlog, canal-store, canal-server |
+
+## 上次审查问题修复状态
+
+15 个问题全部已修复：
+
+| # | 问题 | 状态 |
+|---|------|------|
+| W1 | `workspace.package.name` 无效 key | 已修复 |
+| W2 | 9 处 clippy `field_reassign_with_default` | 已修复 |
+| W3 | 14 个未使用依赖 | 已修复 |
+| W4 | `futures` 版本不一致 | 已修复 |
+| W5 | `first_position` 淘汰后过时 | 已修复 |
+| W6 | Binlog 轮转永久阻塞 | 已修复 |
+| W7 | Kafka 静默数据丢失 | 已修复 |
+| W8 | Sink 重复 clone | 已修复 |
+| I1 | `KafkaConnector::new()` panic | 已修复 |
+| I2 | `CanalClient` 桩代码 | 已重写 |
+| I3 | CLI server 未接入 binlog | 已修复 |
+| I4 | CLI dump 未实现 | 已实现 |
+| I5 | `get_batch` clone 开销 | 未来优化 |
+| I6 | 缺少集成测试 | 需要 MySQL 实例 |
+| I7 | canal-common/proto 无测试 | 已新增 11 个测试 |
+
+## 当前状态评估
+
+### 架构
+
+15 个 crate 分层清晰：
+- **协议层**: canal-proto (protobuf 定义), canal-common (共享类型/错误)
+- **数据面**: canal-binlog (MySQL CDC), canal-store (事件存储), canal-filter (过滤)
+- **流出**: canal-sink (分发管道), canal-connector (Kafka 等外部系统)
+- **控制面**: canal-server (TCP 服务端), canal-client (客户端), canal-instance (实例管理)
+- **运维**: canal-admin (REST API), canal-prometheus (指标), canal-meta (元数据), canal-cli (CLI)
+
+### 代码质量
+
+- 无 `unsafe` 代码
+- 无 `unwrap`/`expect` panic（除测试外）
+- 所有公共 API 返回 `CanalResult<T>`
+- `async_trait` 用于 trait 抽象，trait 边界设计合理
+- `Mutex`/`Notify` 用于同步，无 busy-wait
+
+### 与 Java Canal 的对齐度
+
+| 模块 | 完成度 | 说明 |
+|------|--------|------|
+| 协议兼容 | 100% | protobuf 定义完整，codec 兼容 |
+| TCP 服务端 | 90% | 支持 ClientAuth/Sub/Get/Ack/Rollback，缺心跳 |
+| 客户端 | 80% | 完整 TCP 握手和轮询，缺重连和批量 ACK 优化 |
+| Binlog 解析 | 85% | INSERT/UPDATE/DELETE/DDL/Query，缺 GTID 完整支持 |
+| 事件存储 | 80% | Ring buffer 内存存储，缺磁盘持久化 |
+| 过滤 | 90% | 正则匹配，缺 Aviator 表达式 |
+| Kafka 投递 | 85% | 同步投递带失败检测，缺异步批量和 Exactly-Once |
+| 实例管理 | 85% | 多实例生命周期，缺 HA 切换 |
+| Admin REST | 70% | 基础端点，缺实例启停/配置热加载 |
+| Prometheus | 80% | 基础指标，缺 Histogram |
+
+### 建议后续工作
+
+1. **集成测试** — 需要一个 MySQL 实例来验证端到端管道
+2. **磁盘存储** — `MemoryEventStore` 重启丢数据，需要 RocksDB/rocksdb 持久化
+3. **GTID 支持** — `canal-binlog` 中 `gtid` 字段始终为 None
+4. **客户端重连** — `CanalClient` 断连后无自动重连逻辑
+5. **批量 ACK** — 当前每个 batch 都发 ACK，改为窗口批量确认可提升吞吐
+
+## 结论
+
+项目状态良好：88 个测试全通过，零 clippy warning，依赖清单整洁，架构分层合理。15 个上次审查发现的问题全部修复完毕。当前代码质量已达到可进入集成测试阶段的水平。

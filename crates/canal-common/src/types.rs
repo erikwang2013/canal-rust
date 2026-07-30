@@ -31,6 +31,29 @@ impl std::fmt::Display for LogPosition {
         }
     }
 }
+impl PartialOrd for LogPosition {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for LogPosition {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        let suffix_self = binlog_suffix(&self.journal_name);
+        let suffix_other = binlog_suffix(&other.journal_name);
+        suffix_self
+            .cmp(&suffix_other)
+            .then_with(|| self.position.cmp(&other.position))
+    }
+}
+
+/// Extract the numeric suffix from a binlog filename for ordering.
+fn binlog_suffix(journal_name: &str) -> u64 {
+    journal_name
+        .rsplit('.').next()
+        .and_then(|s| s.parse::<u64>().ok())
+        .unwrap_or(0)
+}
 
 /// Position range for a batch of events
 #[derive(Debug, Clone, Serialize, Deserialize)]

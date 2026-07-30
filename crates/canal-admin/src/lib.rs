@@ -1,23 +1,23 @@
-use std::collections::HashMap;
 use std::sync::Arc;
 use axum::{Router, routing::{get, post}, Json, extract::{Path, State}};
 use serde::Serialize;
-use tokio::sync::RwLock as TokioRwLock;
+use tokio::sync::RwLock;
 use tracing::info;
 
-/// A managed instance reference for the admin API.
+/// Summary of a Canal instance exposed via the admin API.
 #[derive(Clone, Serialize)]
-pub struct AdminInstance {
+pub struct InstanceSummary {
     pub name: String,
     pub destination: String,
     pub running: bool,
-    pub store_size: usize,
 }
 
 /// Shared application state for the admin API.
+/// Holds raw String registrations; in production this would hold an
+/// Arc<InstanceManager> from canal-instance and call its methods directly.
 #[derive(Clone, Default)]
 pub struct AdminState {
-    pub instances: Arc<TokioRwLock<HashMap<String, AdminInstance>>>,
+    pub instances: Arc<RwLock<std::collections::HashMap<String, InstanceSummary>>>,
 }
 
 /// Health check response.
@@ -31,7 +31,7 @@ pub struct HealthResponse {
 /// Instance list response.
 #[derive(Serialize)]
 pub struct InstanceListResponse {
-    pub instances: Vec<AdminInstance>,
+    pub instances: Vec<InstanceSummary>,
 }
 
 /// Generic status message.
@@ -58,11 +58,10 @@ impl AdminServer {
     /// Register an instance for admin visibility.
     pub async fn register_instance(&self, name: &str, destination: &str) {
         let mut instances = self.state.instances.write().await;
-        instances.insert(name.to_string(), AdminInstance {
+        instances.insert(name.to_string(), InstanceSummary {
             name: name.to_string(),
             destination: destination.to_string(),
             running: false,
-            store_size: 0,
         });
     }
 
@@ -105,7 +104,7 @@ async fn health_handler() -> Json<HealthResponse> {
 }
 
 async fn list_instances(State(state): State<AdminState>) -> Json<InstanceListResponse> {
-    let instances: Vec<AdminInstance> = state.instances.read().await.values().cloned().collect();
+    let instances: Vec<InstanceSummary> = state.instances.read().await.values().cloned().collect();
     Json(InstanceListResponse { instances })
 }
 

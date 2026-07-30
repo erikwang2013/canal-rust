@@ -252,45 +252,150 @@ async fn read_packet(stream: &mut TcpStream) -> CanalResult<Packet> {
 }
 
 /// Convert a protobuf Entry (from Messages) into a CanalEvent.
+/// Decodes header, row_change, and ddl_sql from the protobuf message.
 fn entry_bytes_to_event(data: &[u8]) -> CanalEvent {
-    if let Ok(entry) = canal_proto::Entry::decode(data) {
-        if let Some(hdr) = entry.header {
-            let ev_type = hdr.event_type_present
-                .map(|et| match et {
-                    canal_proto::header::EventTypePresent::EventType(v) => v,
-                })
-                .unwrap_or(0);
-
+    let entry = match canal_proto::Entry::decode(data) {
+        Ok(e) => e,
+        Err(_) => {
             return CanalEvent {
-                journal_name: hdr.logfile_name,
-                position: hdr.logfile_offset as u64,
-                server_id: hdr.server_id as u64,
-                execute_time: hdr.execute_time,
-                entry_type: canal_common::EventType::from(ev_type),
-                schema_name: hdr.schema_name,
-                table_name: hdr.table_name,
+                journal_name: String::new(),
+                position: 0,
+                server_id: 0,
+                execute_time: 0,
+                entry_type: canal_common::EventType::Unknown(0),
+                schema_name: String::new(),
+                table_name: String::new(),
                 row_change: None,
                 ddl_sql: None,
-                gtid: if hdr.gtid.is_empty() { None } else { Some(hdr.gtid) },
+                gtid: None,
                 raw_bytes: vec![],
             };
         }
-    }
+    };
+
+    let hdr = match entry.header {
+        Some(h) => h,
+        None => {
+            return CanalEvent {
+                journal_name: String::new(),
+                position: 0,
+                server_id: 0,
+                execute_time: 0,
+                entry_type: canal_common::EventType::Unknown(0),
+                schema_name: String::new(),
+                table_name: String::new(),
+                row_change: None,
+                ddl_sql: None,
+                gtid: None,
+                raw_bytes: vec![],
+            };
+        }
+    };
+
+    let ev_type = hdr.event_type_present
+        .map(|et| match et {
+            canal_proto::header::EventTypePresent::EventType(v) => v,
+        })
+        .unwrap_or(0);
+
+    // Parse RowChange from store_value
+    let (row_change, ddl_sql) = if !entry.store_value.is_empty() {
+        if let Ok(rc) = canal_proto::RowChange::decode(&entry.store_value[..]) {
+            // Check if this is a DDL event
+            let ddl = match rc.is_ddl_present {
+                Some(canal_proto::row_change::IsDdlPresent::IsDdl(true)) => Some(rc.sql.clone()),
+                _ => None,
+            };
+
+            let change = if ddl.is_none() && !rc.row_datas.is_empty() {
+                let rd = &rc.row_datas[0];
+                let dml_type = rc.event_type_present
+                    .map(|et| match et {
+                        canal_proto::row_change::EventTypePresent::EventType(v) => {
+                            match v {
+                                1 => canal_common::DmlType::Insert,
+                                2 => canal_common::DmlType::Update,
+                                3 => canal_common::DmlType::Delete,
+                                _ => canal_common::DmlType::Insert,
+                            }
+                        }
+                    })
+                    .unwrap_or(canal_common::DmlType::Insert);
+
+                let before = if rd.before_columns.is_empty() {
+                    None
+                } else {
+                    Some(canal_common::RowData {
+                        columns: rd.before_columns.iter().map(|c| {
+                            canal_common::ColumnValue {
+                                name: c.name.clone(),
+                                value: if c.value.is_empty() && c.is_null_present.is_some() {
+                                    None
+                                } else {
+                                    Some(c.value.clone())
+                                },
+                                column_type: c.sql_type,
+                                is_key: c.is_key,
+                                updated: c.updated,
+                            }
+                        }).collect(),
+                    })
+                };
+
+                let after = if rd.after_columns.is_empty() {
+                    None
+                } else {
+                    Some(canal_common::RowData {
+                        columns: rd.after_columns.iter().map(|c| {
+                            canal_common::ColumnValue {
+                                name: c.name.clone(),
+                                value: if c.value.is_empty() && c.is_null_present.is_some() {
+                                    None
+                                } else {
+                                    Some(c.value.clone())
+                                },
+                                column_type: c.sql_type,
+                                is_key: c.is_key,
+                                updated: c.updated,
+                            }
+                        }).collect(),
+                    })
+                };
+
+                Some(canal_common::RowChange {
+                    table_name: hdr.table_name.clone(),
+                    schema_name: hdr.schema_name.clone(),
+                    before,
+                    after,
+                    dml_type,
+                })
+            } else {
+                None
+            };
+
+            (change, ddl)
+        } else {
+            (None, None)
+        }
+    } else {
+        (None, None)
+    };
 
     CanalEvent {
-        journal_name: String::new(),
-        position: 0,
-        server_id: 0,
-        execute_time: 0,
-        entry_type: canal_common::EventType::Unknown(0),
-        schema_name: String::new(),
-        table_name: String::new(),
-        row_change: None,
-        ddl_sql: None,
-        gtid: None,
-        raw_bytes: vec![],
+        journal_name: hdr.logfile_name,
+        position: hdr.logfile_offset as u64,
+        server_id: hdr.server_id as u64,
+        execute_time: hdr.execute_time,
+        entry_type: canal_common::EventType::from(ev_type),
+        schema_name: hdr.schema_name,
+        table_name: hdr.table_name,
+        row_change,
+        ddl_sql,
+        gtid: if hdr.gtid.is_empty() { None } else { Some(hdr.gtid) },
+        raw_bytes: entry.store_value,
     }
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -319,7 +424,6 @@ mod tests {
         let (_tx, rx) = mpsc::channel::<CanalResult<CanalEvent>>(4);
         let mut stream = CanalEventStream { rx };
         drop(_tx);
-        // Channel closed — next_event returns None
         assert!(stream.next_event().await.is_none());
     }
 }
