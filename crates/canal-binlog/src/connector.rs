@@ -13,7 +13,7 @@ pub trait BinlogConnector: Send {
 
     /// Get the receiver end of the event channel.
     /// Events from MySQL binlog are streamed through this channel.
-    fn receiver(&mut self) -> mpsc::Receiver<CanalResult<CanalEvent>>;
+    fn take_receiver(&mut self) -> mpsc::Receiver<CanalResult<CanalEvent>>;
 
     /// Gracefully disconnect from MySQL
     async fn disconnect(&mut self) -> CanalResult<()>;
@@ -96,10 +96,19 @@ impl BinlogConnector for DefaultBinlogConnector {
         Ok(())
     }
 
-    fn receiver(&mut self) -> mpsc::Receiver<CanalResult<CanalEvent>> {
-        let (tx, rx) = mpsc::channel(4096);
-        self.sender = Some(tx);
-        rx
+    fn take_receiver(&mut self) -> mpsc::Receiver<CanalResult<CanalEvent>> {
+        self.sender
+            .take()
+            .map(|_| {
+                let (tx, rx) = mpsc::channel(4096);
+                self.sender = Some(tx);
+                rx
+            })
+            .unwrap_or_else(|| {
+                let (tx, rx) = mpsc::channel(4096);
+                self.sender = Some(tx);
+                rx
+            })
     }
 
     async fn disconnect(&mut self) -> CanalResult<()> {

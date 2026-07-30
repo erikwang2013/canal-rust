@@ -25,18 +25,25 @@ impl PositionTracker {
     pub fn update(&self, client_id: &str, position: LogPosition) {
         self.positions
             .write()
-            .unwrap()
+            .unwrap_or_else(|e| e.into_inner())
             .insert(client_id.to_string(), position);
     }
 
     /// Get a client's last acknowledged position
     pub fn get(&self, client_id: &str) -> Option<LogPosition> {
-        self.positions.read().unwrap().get(client_id).cloned()
+        self.positions
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(client_id)
+            .cloned()
     }
 
     /// Remove a disconnected client's position tracking
     pub fn remove(&self, client_id: &str) {
-        self.positions.write().unwrap().remove(client_id);
+        self.positions
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .remove(client_id);
     }
 }
 

@@ -5,12 +5,12 @@ use crate::error::CanalResult;
 #[async_trait::async_trait]
 pub trait CanalLifecycle: Send + Sync {
     /// Start the component
-    async fn start(&mut self) -> CanalResult<()> {
+    async fn start(&self) -> CanalResult<()> {
         Ok(())
     }
 
     /// Stop the component gracefully
-    async fn stop(&mut self) -> CanalResult<()> {
+    async fn stop(&self) -> CanalResult<()> {
         Ok(())
     }
 

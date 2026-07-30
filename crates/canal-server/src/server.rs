@@ -1,6 +1,7 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+use canal_common::lifecycle::CanalLifecycle;
 use canal_common::{CanalError, CanalResult, Events, FilterPattern, LogPosition};
 use canal_store::memory::MemoryEventStore;
 use futures::{SinkExt, StreamExt};
@@ -33,6 +34,7 @@ impl CanalServer {
     /// Tokio task for each accepted client connection.
     pub async fn serve(&self) -> CanalResult<()> {
         let listener = TcpListener::bind(&self.bind_addr).await?;
+        self.store.start().await?;
         info!("Canal server listening on {}", self.bind_addr);
 
         loop {

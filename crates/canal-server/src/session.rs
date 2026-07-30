@@ -55,37 +55,59 @@ impl SessionManager {
         let session = ClientSession::new(client_id, destination, filter);
         self.sessions
             .write()
-            .unwrap()
+            .unwrap_or_else(|e| e.into_inner())
             .insert(client_id.to_string(), session);
     }
 
     /// Remove a client session (on disconnect)
     pub fn unregister(&self, client_id: &str) {
-        self.sessions.write().unwrap().remove(client_id);
+        self.sessions
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .remove(client_id);
     }
 
     /// Get a session by client_id
     pub fn get(&self, client_id: &str) -> Option<ClientSession> {
-        self.sessions.read().unwrap().get(client_id).cloned()
+        self.sessions
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(client_id)
+            .cloned()
     }
 
     /// Update a client's current read position
     pub fn update_position(&self, client_id: &str, pos: LogPosition) {
-        if let Some(s) = self.sessions.write().unwrap().get_mut(client_id) {
+        if let Some(s) = self
+            .sessions
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .get_mut(client_id)
+        {
             s.last_position = Some(pos);
         }
     }
 
     /// Update a client's acknowledged position
     pub fn update_ack(&self, client_id: &str, pos: LogPosition) {
-        if let Some(s) = self.sessions.write().unwrap().get_mut(client_id) {
+        if let Some(s) = self
+            .sessions
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .get_mut(client_id)
+        {
             s.last_ack_position = Some(pos);
         }
     }
 
     /// Record a heartbeat from a client
     pub fn heartbeat(&self, client_id: &str) {
-        if let Some(s) = self.sessions.write().unwrap().get_mut(client_id) {
+        if let Some(s) = self
+            .sessions
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .get_mut(client_id)
+        {
             s.heartbeat();
         }
     }

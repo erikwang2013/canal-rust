@@ -43,7 +43,7 @@ impl MemoryEventStore {
         let first = LogPosition::new(&events[0].journal_name, events[0].position);
         let last_pos = events.last().unwrap();
 
-        let mut buffer = self.buffer.lock().unwrap();
+        let mut buffer = self.buffer.lock().unwrap_or_else(|e| e.into_inner());
 
         // Evict old events if buffer is full (ring buffer behavior)
         while buffer.len() + events.len() > self.capacity {
@@ -52,9 +52,15 @@ impl MemoryEventStore {
 
         // Track position boundaries
         if buffer.is_empty() {
-            *self.first_position.lock().unwrap() = Some(first);
+            *self
+                .first_position
+                .lock()
+                .unwrap_or_else(|e| e.into_inner()) = Some(first);
         }
-        *self.latest_position.lock().unwrap() =
+        *self
+            .latest_position
+            .lock()
+            .unwrap_or_else(|e| e.into_inner()) =
             Some(LogPosition::new(&last_pos.journal_name, last_pos.position));
 
         buffer.extend(events);
@@ -69,7 +75,7 @@ impl MemoryEventStore {
         loop {
             // Scoped block ensures MutexGuard is dropped before .await below
             let result = {
-                let buffer = self.buffer.lock().unwrap();
+                let buffer = self.buffer.lock().unwrap_or_else(|e| e.into_inner());
 
                 // Find first event after the requested start position
                 let start_idx = buffer.iter().position(|e| {
@@ -102,24 +108,30 @@ impl MemoryEventStore {
 
     /// Get the latest position in the store
     pub fn latest_position(&self) -> Option<LogPosition> {
-        self.latest_position.lock().unwrap().clone()
+        self.latest_position
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
     }
 
     /// Get the first position in the store
     pub fn first_position(&self) -> Option<LogPosition> {
-        self.first_position.lock().unwrap().clone()
+        self.first_position
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
     }
 }
 
 #[async_trait]
 impl CanalLifecycle for MemoryEventStore {
-    async fn start(&mut self) -> CanalResult<()> {
+    async fn start(&self) -> CanalResult<()> {
         self.running.store(true, Ordering::SeqCst);
         info!("MemoryEventStore started, capacity={}", self.capacity);
         Ok(())
     }
 
-    async fn stop(&mut self) -> CanalResult<()> {
+    async fn stop(&self) -> CanalResult<()> {
         self.running.store(false, Ordering::SeqCst);
         info!("MemoryEventStore stopped");
         Ok(())
@@ -217,7 +229,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_lifecycle_start_stop() {
-        let mut store = MemoryEventStore::new(1024);
+        let store = MemoryEventStore::new(1024);
         assert!(!store.is_running());
 
         store.start().await.unwrap();
