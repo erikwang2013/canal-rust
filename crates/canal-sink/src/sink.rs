@@ -87,25 +87,30 @@ impl EventSink for DefaultEventSink {
             return Ok(Events::new(0));
         }
 
+        // Build start position for get_batch before filtered is moved
+        let first_pos = canal_common::LogPosition::new(
+            &filtered[0].journal_name,
+            filtered[0].position.saturating_sub(1),
+        );
+
         // Phase 2: Store in memory for client subscription
         self.store.put_batch(filtered.clone()).await?;
 
-        // Phase 3: Fan out to external connectors (fire and forget pattern)
+        // Phase 3: Fan out to external connectors (fire and forget pattern).
+        // Use Arc to share the filtered batch across connectors.
+        let shared: Arc<Vec<CanalEvent>> = Arc::new(filtered);
+
         for connector in &self.connectors {
-            let events = filtered.clone();
+            let events = Arc::clone(&shared);
             let conn = Arc::clone(connector);
             tokio::spawn(async move {
-                if let Err(e) = conn.dispatch(events).await {
+                if let Err(e) = conn.dispatch((*events).clone()).await {
                     error!("Connector {} dispatch failed: {}", conn.name(), e);
                 }
             });
         }
 
         // Phase 4: Read back for client response (get exact batch_id from store)
-        let first_pos = canal_common::LogPosition::new(
-            &filtered[0].journal_name,
-            filtered[0].position.saturating_sub(1), // start just before first event
-        );
 
         let batch = self.store.get_batch(&first_pos, filtered_count).await?;
         info!(

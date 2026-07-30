@@ -6,9 +6,6 @@ edition.workspace = true
 tokio.workspace = true
 async-trait.workspace = true
 tracing.workspace = true
-thiserror.workspace = true
-serde.workspace = true
-serde_yaml.workspace = true
 canal-common = { path = "../canal-common" }
 [dev-dependencies]
 tokio.workspace = true

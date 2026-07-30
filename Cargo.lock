@@ -230,7 +230,7 @@ checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 
 [[package]]
 name = "canal-admin"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "axum",
  "serde",
@@ -240,21 +240,18 @@ dependencies = [
 
 [[package]]
 name = "canal-binlog"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "async-trait",
  "canal-common",
- "canal-proto",
  "mysql_cdc",
- "serde",
- "thiserror 2.0.19",
  "tokio",
  "tracing",
 ]
 
 [[package]]
 name = "canal-cli"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "anyhow",
  "canal-binlog",
@@ -271,7 +268,7 @@ dependencies = [
 
 [[package]]
 name = "canal-client"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "async-trait",
  "bytes",
@@ -286,7 +283,7 @@ dependencies = [
 
 [[package]]
 name = "canal-common"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "async-trait",
  "chrono",
@@ -298,7 +295,7 @@ dependencies = [
 
 [[package]]
 name = "canal-connector"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "async-trait",
  "canal-common",
@@ -306,44 +303,37 @@ dependencies = [
  "rdkafka",
  "serde",
  "serde_json",
- "thiserror 2.0.19",
  "tokio",
  "tracing",
 ]
 
 [[package]]
 name = "canal-filter"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "canal-common",
  "regex",
- "serde",
- "thiserror 2.0.19",
  "tracing",
 ]
 
 [[package]]
 name = "canal-instance"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "async-trait",
  "canal-binlog",
  "canal-common",
  "canal-connector",
  "canal-filter",
- "canal-server",
  "canal-sink",
  "canal-store",
- "serde",
- "serde_yaml",
- "thiserror 2.0.19",
  "tokio",
  "tracing",
 ]
 
 [[package]]
 name = "canal-meta"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "canal-common",
  "chrono",
@@ -353,7 +343,7 @@ dependencies = [
 
 [[package]]
 name = "canal-prometheus"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "axum",
  "canal-instance",
@@ -365,7 +355,7 @@ dependencies = [
 
 [[package]]
 name = "canal-proto"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "bytes",
  "canal-common",
@@ -376,7 +366,7 @@ dependencies = [
 
 [[package]]
 name = "canal-server"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "async-trait",
  "bytes",
@@ -395,27 +385,22 @@ dependencies = [
 
 [[package]]
 name = "canal-sink"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "async-trait",
  "canal-common",
  "canal-filter",
  "canal-store",
- "serde",
- "thiserror 2.0.19",
  "tokio",
  "tracing",
 ]
 
 [[package]]
 name = "canal-store"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "async-trait",
  "canal-common",
- "serde",
- "serde_yaml",
- "thiserror 2.0.19",
  "tokio",
  "tracing",
 ]

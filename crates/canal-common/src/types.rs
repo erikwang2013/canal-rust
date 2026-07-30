@@ -184,3 +184,100 @@ impl Default for FilterPattern {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_log_position_new() {
+        let pos = LogPosition::new("mysql-bin.000001", 12345);
+        assert_eq!(pos.journal_name, "mysql-bin.000001");
+        assert_eq!(pos.position, 12345);
+    }
+
+    #[test]
+    fn test_log_position_display() {
+        let pos = LogPosition::new("mysql-bin.000001", 999);
+        assert_eq!(format!("{}", pos), "mysql-bin.000001:999");
+    }
+
+    #[test]
+    fn test_log_position_display_with_gtid() {
+        let pos = LogPosition {
+            journal_name: "bin.001".into(),
+            position: 42,
+            timestamp: Some(1000),
+            server_id: Some(1),
+            gtid: Some("uuid:1-100".into()),
+        };
+        assert_eq!(format!("{}", pos), "bin.001:42:uuid:1-100");
+    }
+
+    #[test]
+    fn test_event_type_from_i32() {
+        assert_eq!(EventType::from(1), EventType::Insert);
+        assert_eq!(EventType::from(2), EventType::Update);
+        assert_eq!(EventType::from(3), EventType::Delete);
+        assert_eq!(EventType::from(99), EventType::Unknown(99));
+    }
+
+    #[test]
+    fn test_events_new_is_empty() {
+        let batch = Events::new(42);
+        assert!(batch.is_empty());
+        assert_eq!(batch.len(), 0);
+    }
+
+    #[test]
+    fn test_events_with_events_populates_range() {
+        let e1 = CanalEvent {
+            journal_name: "bin.001".into(), position: 100, server_id: 1,
+            execute_time: 0, entry_type: EventType::Insert,
+            schema_name: "db".into(), table_name: "t".into(),
+            row_change: None, ddl_sql: None, gtid: None, raw_bytes: vec![],
+        };
+        let e2 = CanalEvent {
+            journal_name: "bin.001".into(), position: 200, server_id: 1,
+            execute_time: 0, entry_type: EventType::Update,
+            schema_name: "db".into(), table_name: "t".into(),
+            row_change: None, ddl_sql: None, gtid: None, raw_bytes: vec![],
+        };
+        let batch = Events::with_events(vec![e1, e2], 1);
+        assert_eq!(batch.len(), 2);
+        assert_eq!(batch.position_range.start.position, 100);
+        assert_eq!(batch.position_range.end.position, 200);
+    }
+
+    #[test]
+    fn test_filter_pattern_default() {
+        let fp = FilterPattern::default();
+        assert_eq!(fp.pattern, ".*\\..*");
+        assert!(fp.black_list.is_empty());
+    }
+
+    #[test]
+    fn test_column_value_key_detection() {
+        let pk = ColumnValue {
+            name: "id".into(), value: Some("1".into()),
+            column_type: 3, is_key: true, updated: false,
+        };
+        assert!(pk.is_key);
+        let non_pk = ColumnValue {
+            name: "name".into(), value: None,
+            column_type: 253, is_key: false, updated: false,
+        };
+        assert!(!non_pk.is_key);
+    }
+
+    #[test]
+    fn test_row_change_roundtrip() {
+        let change = RowChange {
+            table_name: "users".into(), schema_name: "db".into(),
+            before: None,
+            after: Some(RowData { columns: vec![] }),
+            dml_type: DmlType::Insert,
+        };
+        assert_eq!(change.dml_type, DmlType::Insert);
+    }
+}

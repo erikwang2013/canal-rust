@@ -25,20 +25,22 @@ impl KafkaConnector {
     /// * `name` - Connector name for logging/metrics
     /// * `servers` - Comma-separated bootstrap servers (e.g., "localhost:9092")
     /// * `topic` - Target Kafka topic
-    pub fn new(name: &str, servers: &str, topic: &str) -> Self {
+    pub fn new(name: &str, servers: &str, topic: &str) -> CanalResult<Self> {
         let producer: FutureProducer = ClientConfig::new()
             .set("bootstrap.servers", servers)
             .set("message.timeout.ms", "5000")
             .set("acks", "1")
             .create()
-            .expect("Failed to create Kafka producer");
+            .map_err(|e| CanalError::Internal(format!(
+                "Failed to create Kafka producer: {}", e
+            )))?;
 
-        Self {
+        Ok(Self {
             name: name.to_string(),
             producer,
             topic: topic.to_string(),
             servers: servers.to_string(),
-        }
+        })
     }
 
     /// Serialize a CanalEvent batch to flat JSON messages for Kafka.
@@ -119,6 +121,7 @@ impl SinkConnector for KafkaConnector {
 
         let messages = self.serialize_events(&events);
         let mut delivered = 0u64;
+        let mut failed = 0u64;
 
         for msg in messages {
             let record = FutureRecord::to(&self.topic)
@@ -135,8 +138,16 @@ impl SinkConnector for KafkaConnector {
                 }
                 Err((e, _msg)) => {
                     error!("Kafka delivery failed: {}", e);
+                    failed += 1;
                 }
             }
+        }
+
+        if failed > 0 {
+            return Err(CanalError::Internal(format!(
+                "Kafka '{}': {}/{} messages failed to deliver",
+                self.name, failed, total
+            )));
         }
 
         info!("Kafka '{}': dispatched {}/{} messages", self.name, delivered, total);
@@ -185,7 +196,7 @@ mod tests {
     fn test_serialize_insert_event() {
         // Test with a mock connector that doesn't actually connect to Kafka.
         // We just verify JSON serialization works.
-        let connector = KafkaConnector::new("test", "localhost:9092", "test-topic");
+        let connector = KafkaConnector::new("test", "localhost:9092", "test-topic").unwrap();
         let events = vec![make_event("test_db", "users", 100)];
         let messages = connector.serialize_events(&events);
         assert_eq!(messages.len(), 1);
@@ -199,7 +210,7 @@ mod tests {
 
     #[test]
     fn test_serialize_multiple_events() {
-        let connector = KafkaConnector::new("test", "localhost:9092", "test-topic");
+        let connector = KafkaConnector::new("test", "localhost:9092", "test-topic").unwrap();
         let events = vec![
             make_event("db", "t1", 100),
             make_event("db", "t2", 200),
@@ -210,13 +221,13 @@ mod tests {
 
     #[test]
     fn test_connector_name() {
-        let connector = KafkaConnector::new("canal-kafka-1", "localhost:9092", "topic");
+        let connector = KafkaConnector::new("canal-kafka-1", "localhost:9092", "topic").unwrap();
         assert_eq!(connector.name(), "canal-kafka-1");
     }
 
     #[test]
     fn test_empty_events_produces_empty_messages() {
-        let connector = KafkaConnector::new("test", "localhost:9092", "test-topic");
+        let connector = KafkaConnector::new("test", "localhost:9092", "test-topic").unwrap();
         let messages = connector.serialize_events(&[]);
         assert_eq!(messages.len(), 0);
     }

@@ -50,12 +50,15 @@ impl MemoryEventStore {
             buffer.pop_front();
         }
 
-        // Track position boundaries
-        if buffer.is_empty() {
-            *self
-                .first_position
-                .lock()
-                .unwrap_or_else(|e| e.into_inner()) = Some(first);
+        // Track position boundaries — update first_position after eviction too
+        let mut first_pos = self
+            .first_position
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        if let Some(front) = buffer.front() {
+            *first_pos = Some(LogPosition::new(&front.journal_name, front.position));
+        } else {
+            *first_pos = Some(first);
         }
         *self
             .latest_position
@@ -77,9 +80,12 @@ impl MemoryEventStore {
             let result = {
                 let buffer = self.buffer.lock().unwrap_or_else(|e| e.into_inner());
 
-                // Find first event after the requested start position
+                // Find first event after the requested start position.
+                // Use lexicographic (journal, position) comparison so binlog
+                // rotation (e.g. mysql-bin.000001 → mysql-bin.000002) works.
                 let start_idx = buffer.iter().position(|e| {
-                    e.journal_name == start.journal_name && e.position > start.position
+                    (e.journal_name.as_str(), e.position)
+                        > (start.journal_name.as_str(), start.position)
                 });
 
                 if let Some(idx) = start_idx {

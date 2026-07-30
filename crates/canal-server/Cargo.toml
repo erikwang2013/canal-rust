@@ -10,7 +10,7 @@ tracing.workspace = true
 thiserror.workspace = true
 bytes.workspace = true
 chrono.workspace = true
-futures = "0.3"
+futures.workspace = true
 prost.workspace = true
 canal-common = { path = "../canal-common" }
 canal-proto = { path = "../canal-proto" }
@@ -18,4 +18,4 @@ canal-binlog = { path = "../canal-binlog" }
 canal-store = { path = "../canal-store" }
 [dev-dependencies]
 tokio.workspace = true
-futures = "0.3"
+futures.workspace = true

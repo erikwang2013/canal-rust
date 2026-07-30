@@ -3,8 +3,7 @@ members = ["crates/*"]
 resolver = "2"
 
 [workspace.package]
-name = "canal-rust"
-version = "1.0.3"
+version = "1.0.4"
 edition = "2021"
 license = "Apache-2.0"
 

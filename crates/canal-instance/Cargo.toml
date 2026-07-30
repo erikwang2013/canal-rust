@@ -5,13 +5,9 @@ edition.workspace = true
 [dependencies]
 tokio.workspace = true
 tracing.workspace = true
-thiserror.workspace = true
-serde.workspace = true
-serde_yaml.workspace = true
 canal-common = { path = "../canal-common" }
 canal-binlog = { path = "../canal-binlog" }
 canal-store = { path = "../canal-store" }
-canal-server = { path = "../canal-server" }
 canal-filter = { path = "../canal-filter" }
 canal-sink = { path = "../canal-sink" }
 canal-connector = { path = "../canal-connector" }

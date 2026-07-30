@@ -6,8 +6,5 @@ edition.workspace = true
 tokio.workspace = true
 async-trait.workspace = true
 tracing.workspace = true
-thiserror.workspace = true
-serde.workspace = true
 canal-common = { path = "../canal-common" }
-canal-proto = { path = "../canal-proto" }
 mysql_cdc = "0.2.1"

@@ -47,9 +47,9 @@ pub struct CanalServer {
 }
 
 impl CanalServer {
-    pub fn new(bind_addr: SocketAddr, store: MemoryEventStore) -> Self {
+    pub fn new(bind_addr: SocketAddr, store: Arc<MemoryEventStore>) -> Self {
         Self {
-            store: Arc::new(store),
+            store,
             sessions: Arc::new(SessionManager::new()),
             bind_addr,
         }
@@ -481,7 +481,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_server_binds_to_port() {
-        let store = MemoryEventStore::new(1024);
+        let store = Arc::new(MemoryEventStore::new(1024));
         let addr: SocketAddr = "127.0.0.1:0".parse().unwrap();
         let server = CanalServer::new(addr, store);
 
@@ -742,9 +742,11 @@ mod tests {
     fn test_send_ack_packet_structure() {
         // Test that an ACK packet encodes and decodes correctly
         let ack = Ack::default();
-        let mut packet = Packet::default();
-        packet.r#type = PacketType::Ack as i32;
-        packet.body = ack.encode_to_vec();
+        let packet = Packet {
+            r#type: PacketType::Ack as i32,
+            body: ack.encode_to_vec(),
+            ..Default::default()
+        };
 
         let wire = packet.encode_to_vec();
         let decoded = Packet::decode(&wire[..]).unwrap();
@@ -762,9 +764,11 @@ mod tests {
             error_code_present: Some(canal_proto::ack::ErrorCodePresent::ErrorCode(5)),
         };
 
-        let mut packet = Packet::default();
-        packet.r#type = PacketType::Ack as i32;
-        packet.body = ack.encode_to_vec();
+        let packet = Packet {
+            r#type: PacketType::Ack as i32,
+            body: ack.encode_to_vec(),
+            ..Default::default()
+        };
 
         let wire = packet.encode_to_vec();
         let decoded = Packet::decode(&wire[..]).unwrap();
@@ -798,13 +802,17 @@ mod tests {
         let entry = canal_event_to_entry(&event);
         let entry_bytes = entry.encode_to_vec();
 
-        let mut msgs = Messages::default();
-        msgs.batch_id = 1;
+        let mut msgs = Messages {
+            batch_id: 1,
+            ..Default::default()
+        };
         msgs.messages.push(entry_bytes);
 
-        let mut packet = Packet::default();
-        packet.r#type = PacketType::Messages as i32;
-        packet.body = msgs.encode_to_vec();
+        let packet = Packet {
+            r#type: PacketType::Messages as i32,
+            body: msgs.encode_to_vec(),
+            ..Default::default()
+        };
 
         let wire = packet.encode_to_vec();
         let decoded_packet = Packet::decode(&wire[..]).unwrap();
@@ -833,9 +841,11 @@ mod tests {
             ..Default::default()
         };
 
-        let mut packet = Packet::default();
-        packet.r#type = PacketType::Clientauthentication as i32;
-        packet.body = auth.encode_to_vec();
+        let packet = Packet {
+            r#type: PacketType::Clientauthentication as i32,
+            body: auth.encode_to_vec(),
+            ..Default::default()
+        };
 
         let wire = packet.encode_to_vec();
         let decoded = Packet::decode(&wire[..]).unwrap();
@@ -855,9 +865,11 @@ mod tests {
             filter: "mydb\\.users".into(),
         };
 
-        let mut packet = Packet::default();
-        packet.r#type = PacketType::Subscription as i32;
-        packet.body = sub.encode_to_vec();
+        let packet = Packet {
+            r#type: PacketType::Subscription as i32,
+            body: sub.encode_to_vec(),
+            ..Default::default()
+        };
 
         let wire = packet.encode_to_vec();
         let decoded = Packet::decode(&wire[..]).unwrap();
@@ -877,9 +889,11 @@ mod tests {
             ..Default::default()
         };
 
-        let mut packet = Packet::default();
-        packet.r#type = PacketType::Get as i32;
-        packet.body = get.encode_to_vec();
+        let packet = Packet {
+            r#type: PacketType::Get as i32,
+            body: get.encode_to_vec(),
+            ..Default::default()
+        };
 
         let wire = packet.encode_to_vec();
         let decoded = Packet::decode(&wire[..]).unwrap();
@@ -898,9 +912,11 @@ mod tests {
             batch_id: 42,
         };
 
-        let mut packet = Packet::default();
-        packet.r#type = PacketType::Clientack as i32;
-        packet.body = ack.encode_to_vec();
+        let packet = Packet {
+            r#type: PacketType::Clientack as i32,
+            body: ack.encode_to_vec(),
+            ..Default::default()
+        };
 
         let wire = packet.encode_to_vec();
         let decoded = Packet::decode(&wire[..]).unwrap();
@@ -918,9 +934,11 @@ mod tests {
             batch_id: 10,
         };
 
-        let mut packet = Packet::default();
-        packet.r#type = PacketType::Clientrollback as i32;
-        packet.body = rollback.encode_to_vec();
+        let packet = Packet {
+            r#type: PacketType::Clientrollback as i32,
+            body: rollback.encode_to_vec(),
+            ..Default::default()
+        };
 
         let wire = packet.encode_to_vec();
         let decoded = Packet::decode(&wire[..]).unwrap();
