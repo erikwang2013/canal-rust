@@ -316,6 +316,7 @@ dependencies = [
 name = "canal-instance"
 version = "1.0.1"
 dependencies = [
+ "async-trait",
  "canal-binlog",
  "canal-common",
  "canal-connector",
