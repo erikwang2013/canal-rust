@@ -1,0 +1,15 @@
+[package]
+name = "canal-prometheus"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+tokio = { workspace = true }
+axum = { workspace = true }
+metrics = { workspace = true }
+metrics-exporter-prometheus = { workspace = true }
+tracing = { workspace = true }
+canal-instance = { path = "../canal-instance" }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros"] }

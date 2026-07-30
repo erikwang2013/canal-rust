@@ -131,7 +131,15 @@ impl InstanceManager {
             instances: RwLock::new(HashMap::new()),
         }
     }
+}
 
+impl Default for InstanceManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl InstanceManager {
     /// Register a new instance. Overwrites if destination already exists.
     pub async fn register(&self, instance: CanalInstance) {
         let dest = instance.destination().to_string();
