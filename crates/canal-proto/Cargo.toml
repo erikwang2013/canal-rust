@@ -1,0 +1,11 @@
+[package]
+name = "canal-proto"
+version.workspace = true
+edition.workspace = true
+[build-dependencies]
+prost-build = "0.13"
+[dependencies]
+prost.workspace = true
+prost-types.workspace = true
+bytes.workspace = true
+canal-common = { path = "../canal-common" }

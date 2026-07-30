@@ -1,0 +1,14 @@
+[package]
+name = "canal-client"
+version.workspace = true
+edition.workspace = true
+[dependencies]
+tokio.workspace = true
+tokio-util.workspace = true
+async-trait.workspace = true
+tracing.workspace = true
+thiserror.workspace = true
+bytes.workspace = true
+prost.workspace = true
+canal-common = { path = "../canal-common" }
+canal-proto = { path = "../canal-proto" }

@@ -1,0 +1,24 @@
+canal:
+  server_id: 1234
+  mysql:
+    host: "127.0.0.1"
+    port: 3306
+    username: "canal"
+    password: "canal"
+    charset: "utf8mb4"
+  position:
+    journal_name: "mysql-bin.000001"
+    position: 4
+  store:
+    type: "memory"
+    buffer_size: 16384
+    batch_timeout_ms: 100
+  server:
+    bind: "0.0.0.0:11111"
+    idle_timeout_secs: 3600
+  filter:
+    pattern: ".*\\..*"
+    black_list: ""
+  logging:
+    level: "info"
+    format: "json"

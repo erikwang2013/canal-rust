@@ -1,0 +1,12 @@
+[package]
+name = "canal-binlog"
+version.workspace = true
+edition.workspace = true
+[dependencies]
+tokio.workspace = true
+async-trait.workspace = true
+tracing.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+canal-common = { path = "../canal-common" }
+canal-proto = { path = "../canal-proto" }
