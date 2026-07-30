@@ -128,7 +128,7 @@ checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 
 [[package]]
 name = "canal-binlog"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "async-trait",
  "canal-common",
@@ -142,7 +142,7 @@ dependencies = [
 
 [[package]]
 name = "canal-cli"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "anyhow",
  "canal-binlog",
@@ -159,7 +159,7 @@ dependencies = [
 
 [[package]]
 name = "canal-client"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "async-trait",
  "bytes",
@@ -174,7 +174,7 @@ dependencies = [
 
 [[package]]
 name = "canal-common"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "async-trait",
  "chrono",
@@ -186,7 +186,7 @@ dependencies = [
 
 [[package]]
 name = "canal-proto"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "bytes",
  "canal-common",
@@ -197,7 +197,7 @@ dependencies = [
 
 [[package]]
 name = "canal-server"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "async-trait",
  "bytes",
@@ -216,7 +216,7 @@ dependencies = [
 
 [[package]]
 name = "canal-store"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "async-trait",
  "canal-common",
