@@ -48,15 +48,13 @@ pub struct StatusMessage {
 }
 
 pub struct AdminServer {
-    bind_addr: String,
+    pub bind_addr: String,
     state: AdminState,
 }
 
 impl std::fmt::Debug for AdminServer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AdminServer")
-            .field("bind_addr", &self.bind_addr)
-            .finish()
+        f.debug_struct("AdminServer").field("bind_addr", &self.bind_addr).finish()
     }
 }
 
@@ -131,17 +129,10 @@ async fn list_instances(
     let dests = state.instance_manager.list().await;
     let mut instances = Vec::new();
     for d in dests {
-        let running = state
-            .instance_manager
-            .get(&d)
-            .await
+        let running = state.instance_manager.get(&d).await
             .map(|i| i.is_running())
             .unwrap_or(false);
-        instances.push(InstanceSummary {
-            name: d.clone(),
-            destination: d,
-            running,
-        });
+        instances.push(InstanceSummary { name: d.clone(), destination: d, running });
     }
     Ok(Json(InstanceListResponse { instances }))
 }
@@ -153,13 +144,16 @@ async fn start_instance(
 ) -> Result<Json<StatusMessage>, StatusCode> {
     check_auth(&headers, &state.admin_token)?;
     match state.instance_manager.get(&name).await {
-        Some(instance) => {
-            let _ = instance.start().await;
-            Ok(Json(StatusMessage {
+        Some(instance) => match instance.start().await {
+            Ok(()) => Ok(Json(StatusMessage {
                 status: "ok".into(),
                 message: format!("Instance '{}' started", name),
-            }))
-        }
+            })),
+            Err(e) => Ok(Json(StatusMessage {
+                status: "error".into(),
+                message: format!("Failed to start '{}': {}", name, e),
+            })),
+        },
         None => Ok(Json(StatusMessage {
             status: "not_found".into(),
             message: format!("Instance '{}' not found", name),
@@ -174,13 +168,16 @@ async fn stop_instance(
 ) -> Result<Json<StatusMessage>, StatusCode> {
     check_auth(&headers, &state.admin_token)?;
     match state.instance_manager.get(&name).await {
-        Some(instance) => {
-            let _ = instance.stop().await;
-            Ok(Json(StatusMessage {
+        Some(instance) => match instance.stop().await {
+            Ok(()) => Ok(Json(StatusMessage {
                 status: "ok".into(),
                 message: format!("Instance '{}' stopped", name),
-            }))
-        }
+            })),
+            Err(e) => Ok(Json(StatusMessage {
+                status: "error".into(),
+                message: format!("Failed to stop '{}': {}", name, e),
+            })),
+        },
         None => Ok(Json(StatusMessage {
             status: "not_found".into(),
             message: format!("Instance '{}' not found", name),

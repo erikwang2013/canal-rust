@@ -9,7 +9,6 @@ use tokio::sync::Notify;
 use tracing::{debug, info};
 
 /// Memory-backed event store using a ring buffer
-/// Corresponds to Java MemoryEventStoreWithBuffer
 pub struct MemoryEventStore {
     buffer: Mutex<VecDeque<CanalEvent>>,
     capacity: usize,
@@ -20,7 +19,6 @@ pub struct MemoryEventStore {
     notify: Notify,
 }
 
-/// Timeout for get_batch() waiting: 5 seconds
 const GET_BATCH_TIMEOUT_MS: u64 = 5000;
 
 impl MemoryEventStore {
@@ -37,8 +35,6 @@ impl MemoryEventStore {
         }
     }
 
-    /// Append a batch of events to the store.
-    /// Returns the batch_id assigned to this batch.
     pub async fn put_batch(&self, events: Vec<CanalEvent>) -> CanalResult<i64> {
         if events.is_empty() {
             return Ok(0);
@@ -50,12 +46,10 @@ impl MemoryEventStore {
 
         let mut buffer = self.buffer.lock().unwrap_or_else(|e| e.into_inner());
 
-        // Evict old events if buffer is full (ring buffer behavior)
         while buffer.len() + events.len() > self.capacity {
             buffer.pop_front();
         }
 
-        // Track position boundaries — update first_position after eviction too
         let mut first_pos = self
             .first_position
             .lock()
@@ -65,6 +59,7 @@ impl MemoryEventStore {
         } else {
             *first_pos = Some(first);
         }
+
         *self
             .latest_position
             .lock()
@@ -78,16 +73,15 @@ impl MemoryEventStore {
     }
 
     /// Get a batch of events starting after the given position.
-    /// Blocks (async) until events are available.
     pub async fn get_batch(&self, start: &LogPosition, batch_size: usize) -> CanalResult<Events> {
         loop {
-            // Scoped block ensures MutexGuard is dropped before .await below
+            // Register the Notify future BEFORE acquiring the lock to avoid
+            // missed wakeups between checking the buffer and entering the select.
+            let notified = self.notify.notified();
+
             let result = {
                 let buffer = self.buffer.lock().unwrap_or_else(|e| e.into_inner());
 
-                // Find first event after the requested start position.
-                // Use lexicographic (journal, position) comparison so binlog
-                // rotation (e.g. mysql-bin.000001 → mysql-bin.000002) works.
                 let start_idx = buffer.iter().position(|e| {
                     LogPosition::new(&e.journal_name, e.position)
                         > LogPosition::new(&start.journal_name, start.position)
@@ -112,10 +106,8 @@ impl MemoryEventStore {
                 return Ok(events);
             }
 
-            // Wait for new events to be put, with timeout to prevent
-            // permanent blocking when no more events are available
             tokio::select! {
-                _ = self.notify.notified() => {},
+                _ = notified => {},
                 _ = tokio::time::sleep(std::time::Duration::from_millis(GET_BATCH_TIMEOUT_MS)) => {
                     return Ok(Events::new(0));
                 }
@@ -123,7 +115,6 @@ impl MemoryEventStore {
         }
     }
 
-    /// Get the latest position in the store
     pub fn latest_position(&self) -> Option<LogPosition> {
         self.latest_position
             .lock()
@@ -131,7 +122,6 @@ impl MemoryEventStore {
             .clone()
     }
 
-    /// Get the first position in the store
     pub fn first_position(&self) -> Option<LogPosition> {
         self.first_position
             .lock()
@@ -183,15 +173,12 @@ mod tests {
     #[tokio::test]
     async fn test_put_and_get_batch() {
         let store = MemoryEventStore::new(1024);
-
         store
             .put_batch(vec![make_event("mysql-bin.000001", 100)])
             .await
             .unwrap();
-
         let start = LogPosition::new("mysql-bin.000001", 4);
         let batch = store.get_batch(&start, 10).await.unwrap();
-
         assert_eq!(batch.len(), 1);
         assert_eq!(batch.events[0].position, 100);
     }
@@ -200,7 +187,6 @@ mod tests {
     async fn test_latest_position_tracks_head() {
         let store = MemoryEventStore::new(1024);
         assert!(store.latest_position().is_none());
-
         store
             .put_batch(vec![
                 make_event("mysql-bin.000001", 100),
@@ -208,7 +194,6 @@ mod tests {
             ])
             .await
             .unwrap();
-
         let latest = store.latest_position().unwrap();
         assert_eq!(latest.position, 200);
     }
@@ -216,7 +201,6 @@ mod tests {
     #[tokio::test]
     async fn test_buffer_overflow_evicts_oldest() {
         let store = MemoryEventStore::new(2);
-
         store
             .put_batch(vec![
                 make_event("mysql-bin.000001", 100),
@@ -224,14 +208,10 @@ mod tests {
             ])
             .await
             .unwrap();
-
-        // This should evict event at position 100
         store
             .put_batch(vec![make_event("mysql-bin.000001", 300)])
             .await
             .unwrap();
-
-        // Position 100 should have been evicted
         let early = LogPosition::new("mysql-bin.000001", 50);
         let batch = store.get_batch(&early, 10).await.unwrap();
         assert_eq!(batch.events[0].position, 200);
@@ -248,10 +228,8 @@ mod tests {
     async fn test_lifecycle_start_stop() {
         let store = MemoryEventStore::new(1024);
         assert!(!store.is_running());
-
         store.start().await.unwrap();
         assert!(store.is_running());
-
         store.stop().await.unwrap();
         assert!(!store.is_running());
     }

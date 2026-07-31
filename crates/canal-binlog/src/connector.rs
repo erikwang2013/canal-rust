@@ -52,6 +52,7 @@ pub struct DefaultBinlogConnector {
 
 impl DefaultBinlogConnector {
     pub fn new(host: &str, port: u16, username: &str, password: &str, server_id: u64) -> Self {
+        assert!(server_id <= u32::MAX as u64, "server_id must fit in u32");
         Self {
             host: host.to_string(),
             port,

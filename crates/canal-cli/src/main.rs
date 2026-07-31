@@ -81,7 +81,6 @@ fn default_log_format() -> String {
 
 // -- CLI --
 
-/// Canal Rust — MySQL binlog incremental subscription & consumption
 #[derive(Parser)]
 #[command(
     name = "canal-rust",
@@ -95,12 +94,10 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Start the Canal server (MySQL binlog → clients)
     Server {
         #[arg(short, long, default_value = "canal.yaml")]
         config: PathBuf,
     },
-    /// Dump binlog events to stdout (debugging)
     Dump {
         #[arg(short, long, default_value = "canal.yaml")]
         config: PathBuf,
@@ -112,7 +109,6 @@ enum Commands {
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
-
     match cli.command {
         Commands::Server { config } => run_server(config).await,
         Commands::Dump { config } => run_dump(config).await,
@@ -133,7 +129,6 @@ fn load_config(config_path: &std::path::Path) -> Result<CanalConfig> {
 
 async fn run_server(config_path: PathBuf) -> Result<()> {
     let config = load_config(&config_path)?;
-
     setup_logging(&config.canal.logging);
 
     let bind_addr: SocketAddr = config
@@ -144,28 +139,27 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
         .with_context(|| format!("Invalid bind address: {}", config.canal.server.bind))?;
 
     if bind_addr.ip().is_unspecified() {
-        tracing::warn!("Server binding to 0.0.0.0 — ensure firewall protection");
+        tracing::warn!("Server binding to 0.0.0.0 -- ensure firewall protection");
     }
 
     tracing::info!("Starting canal-rust server v{}", env!("CARGO_PKG_VERSION"));
-    tracing::info!(
-        "MySQL source: {}:{}",
-        config.canal.mysql.host,
-        config.canal.mysql.port
-    );
-    tracing::info!(
-        "Store: memory, buffer_size={}",
-        config.canal.store.buffer_size
-    );
+    tracing::info!("MySQL source: {}:{}", config.canal.mysql.host, config.canal.mysql.port);
+    tracing::info!("Store: memory, buffer_size={}", config.canal.store.buffer_size);
     tracing::info!("Listening on {}", bind_addr);
 
     let store = Arc::new(canal_store::memory::MemoryEventStore::new(
         config.canal.store.buffer_size,
     ));
 
-    let store_for_binlog = Arc::clone(&store);
+    let server = canal_server::server::CanalServer::new(bind_addr, store.clone());
+    let shutdown_token = server.shutdown_token();
+
+    // Spawn binlog connector
+    let store_for_binlog = store.clone();
     let mysql_cfg = config.canal.mysql;
     let server_id = config.canal.server_id;
+    let shutdown_for_binlog = shutdown_token.clone();
+
     let binlog_handle = tokio::spawn(async move {
         let pos = canal_common::LogPosition::new("mysql-bin.000001", 4);
         let (mut connector, mut rx) =
@@ -180,6 +174,7 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
 
         if let Err(e) = connector.connect(&pos).await {
             tracing::error!("Binlog connector failed to connect: {}", e);
+            shutdown_for_binlog.cancel();
             return;
         }
         tracing::info!("Binlog connector started");
@@ -199,7 +194,10 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
                             }
                         }
                         Some(Err(e)) => tracing::error!("Binlog event error: {}", e),
-                        None => break,
+                        None => {
+                            tracing::warn!("Binlog stream ended, triggering shutdown");
+                            break;
+                        }
                     }
                 }
                 _ = flush_interval.tick() => {
@@ -212,12 +210,18 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
             }
         }
 
+        // Flush remaining events before shutdown
         if !batch.is_empty() {
-            let _ = store_for_binlog.put_batch(batch).await;
+            if let Err(e) = store_for_binlog.put_batch(batch).await {
+                tracing::error!("Failed to flush remaining batch on shutdown: {}", e);
+            }
         }
+
+        // Trigger graceful server shutdown
+        shutdown_for_binlog.cancel();
     });
 
-    let server = canal_server::server::CanalServer::new(bind_addr, store);
+    // Run server (blocks until shutdown_token is cancelled)
     server.serve().await?;
 
     binlog_handle.abort();
@@ -231,7 +235,6 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
 
 async fn run_dump(config_path: PathBuf) -> Result<()> {
     let config = load_config(&config_path)?;
-
     setup_logging(&config.canal.logging);
 
     tracing::info!(

@@ -10,18 +10,13 @@ use std::sync::Mutex;
 use std::time::Duration;
 use tracing::{debug, error, info, warn};
 
-/// Kafka connector configuration.
 #[derive(Debug, Clone)]
 pub struct KafkaConfig {
     pub servers: String,
     pub topic: String,
-    /// Optional TLS: path to CA certificate PEM file
     pub ssl_ca_location: Option<String>,
-    /// Optional SASL: username for PLAIN/SCRAM auth
     pub sasl_username: Option<String>,
-    /// Optional SASL: password for PLAIN/SCRAM auth
     pub sasl_password: Option<String>,
-    /// Optional SASL: mechanism (e.g. "PLAIN", "SCRAM-SHA-256", "SCRAM-SHA-512")
     pub sasl_mechanism: Option<String>,
 }
 
@@ -38,7 +33,6 @@ impl KafkaConfig {
     }
 }
 
-/// Kafka connector implementing the SinkConnector trait.
 pub struct KafkaConnector {
     name: String,
     producer: Mutex<Option<FutureProducer>>,
@@ -54,7 +48,6 @@ impl KafkaConnector {
         })
     }
 
-    /// Serialize a CanalEvent batch to flat JSON messages for Kafka.
     fn serialize_events(&self, events: &[CanalEvent]) -> Vec<(String, String)> {
         events
             .iter()
@@ -116,17 +109,28 @@ impl SinkConnector for KafkaConnector {
            .set("message.timeout.ms", "5000")
            .set("acks", "1");
 
-        // TLS config
+        let has_tls = self.config.ssl_ca_location.is_some();
+        let has_sasl = self.config.sasl_username.is_some();
+
+        // Set security.protocol based on combination
+        match (has_tls, has_sasl) {
+            (true, true) => {
+                cfg.set("security.protocol", "SASL_SSL");
+            }
+            (true, false) => {
+                cfg.set("security.protocol", "SSL");
+            }
+            (false, true) => {
+                cfg.set("security.protocol", "SASL_PLAINTEXT");
+            }
+            (false, false) => {}
+        }
+
         if let Some(ref ca_path) = self.config.ssl_ca_location {
-            cfg.set("security.protocol", "SASL_SSL");
             cfg.set("ssl.ca.location", ca_path);
         }
 
-        // SASL config
         if let Some(ref user) = self.config.sasl_username {
-            if !self.config.ssl_ca_location.is_some() {
-                cfg.set("security.protocol", "SASL_PLAINTEXT");
-            }
             cfg.set("sasl.username", user);
             if let Some(ref pass) = self.config.sasl_password {
                 cfg.set("sasl.password", pass);
@@ -160,16 +164,22 @@ impl SinkConnector for KafkaConnector {
         let mut delivered = 0u64;
         let mut failed = 0u64;
 
-        // Partition by each event's own schema_name
+        // Clone producer once before the loop
+        let producer = {
+            let guard = self.producer.lock().unwrap_or_else(|e| e.into_inner());
+            match guard.as_ref() {
+                Some(p) => p.clone(),
+                None => return Err(CanalError::Internal(
+                    "KafkaConnector: not connected".into()
+                )),
+            }
+        };
+
         for (key, msg) in messages {
             let record = FutureRecord::to(&self.config.topic)
                 .payload(&msg)
                 .key(&key);
 
-            let producer = self.producer.lock().unwrap_or_else(|e| e.into_inner())
-                .as_ref()
-                .expect("KafkaConnector: not connected")
-                .clone();
             match producer.send(record, Timeout::After(Duration::from_secs(5))).await {
                 Ok((partition, offset)) => {
                     debug!(
@@ -242,7 +252,7 @@ mod tests {
         let events = vec![make_event("test_db", "users", 100)];
         let messages = connector.serialize_events(&events);
         assert_eq!(messages.len(), 1);
-        assert_eq!(messages[0].0, "test_db"); // key is schema_name
+        assert_eq!(messages[0].0, "test_db");
 
         let parsed: serde_json::Value = serde_json::from_str(&messages[0].1).unwrap();
         assert_eq!(parsed["schema"], "test_db");

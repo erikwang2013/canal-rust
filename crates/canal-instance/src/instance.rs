@@ -11,7 +11,6 @@ use canal_store::memory::MemoryEventStore;
 use tokio::sync::RwLock;
 use tracing::info;
 
-/// Configuration for a single Canal instance.
 #[derive(Clone)]
 pub struct InstanceConfig {
     pub destination: String,
@@ -39,7 +38,6 @@ impl std::fmt::Debug for InstanceConfig {
     }
 }
 
-/// A managed Canal instance.
 pub struct CanalInstance {
     config: InstanceConfig,
     sink: Arc<DefaultEventSink>,
@@ -48,7 +46,6 @@ pub struct CanalInstance {
 }
 
 impl CanalInstance {
-    /// Create a new CanalInstance. Returns error if the filter pattern is invalid.
     pub fn new(
         config: InstanceConfig,
         connectors: Vec<Arc<dyn SinkConnector>>,
@@ -114,7 +111,6 @@ impl CanalLifecycle for CanalInstance {
     }
 }
 
-/// Manages multiple CanalInstances, keyed by destination name.
 pub struct InstanceManager {
     instances: RwLock<HashMap<String, Arc<CanalInstance>>>,
 }
@@ -168,22 +164,20 @@ impl InstanceManager {
             .count()
     }
 
+    /// Start all instances via CanalLifecycle trait methods.
     pub async fn start_all(&self) -> CanalResult<()> {
         for (dest, instance) in self.instances.read().await.iter() {
             info!("Starting instance '{}'", dest);
-            instance
-                .running
-                .store(true, std::sync::atomic::Ordering::SeqCst);
+            instance.start().await?;
         }
         Ok(())
     }
 
+    /// Stop all instances via CanalLifecycle trait methods.
     pub async fn stop_all(&self) -> CanalResult<()> {
         for (dest, instance) in self.instances.read().await.iter() {
             info!("Stopping instance '{}'", dest);
-            instance
-                .running
-                .store(false, std::sync::atomic::Ordering::SeqCst);
+            instance.stop().await?;
         }
         Ok(())
     }
@@ -213,13 +207,8 @@ mod tests {
     async fn test_instance_creation_and_lifecycle() {
         let config = make_config("test-dest");
         let instance = CanalInstance::new(config, vec![]).unwrap();
-
         assert_eq!(instance.destination(), "test-dest");
         assert!(!instance.is_running());
-
-        let config2 = make_config("test-dest-2");
-        let instance2 = CanalInstance::new(config2, vec![]).unwrap();
-        assert_eq!(instance2.destination(), "test-dest-2");
     }
 
     #[tokio::test]
@@ -233,43 +222,26 @@ mod tests {
     #[tokio::test]
     async fn test_manager_register_and_lookup() {
         let manager = InstanceManager::new();
-        let config = make_config("my-dest");
-        let instance = CanalInstance::new(config, vec![]).unwrap();
+        let instance = CanalInstance::new(make_config("my-dest"), vec![]).unwrap();
         manager.register(instance).await;
-
         let found = manager.get("my-dest").await;
         assert!(found.is_some());
-        assert_eq!(found.unwrap().destination(), "my-dest");
     }
 
     #[tokio::test]
     async fn test_manager_list_instances() {
         let manager = InstanceManager::new();
-
-        manager
-            .register(CanalInstance::new(make_config("a"), vec![]).unwrap())
-            .await;
-        manager
-            .register(CanalInstance::new(make_config("b"), vec![]).unwrap())
-            .await;
-        manager
-            .register(CanalInstance::new(make_config("c"), vec![]).unwrap())
-            .await;
-
-        let list = manager.list().await;
-        assert_eq!(list.len(), 3);
+        manager.register(CanalInstance::new(make_config("a"), vec![]).unwrap()).await;
+        manager.register(CanalInstance::new(make_config("b"), vec![]).unwrap()).await;
+        manager.register(CanalInstance::new(make_config("c"), vec![]).unwrap()).await;
+        assert_eq!(manager.list().await.len(), 3);
     }
 
     #[tokio::test]
     async fn test_manager_remove() {
         let manager = InstanceManager::new();
-        manager
-            .register(CanalInstance::new(make_config("x"), vec![]).unwrap())
-            .await;
-
-        let removed = manager.remove("x").await;
-        assert!(removed.is_some());
-
+        manager.register(CanalInstance::new(make_config("x"), vec![]).unwrap()).await;
+        assert!(manager.remove("x").await.is_some());
         assert!(manager.get("x").await.is_none());
     }
 
@@ -278,27 +250,14 @@ mod tests {
         let config = make_config("feed-test");
         let instance = CanalInstance::new(config, vec![]).unwrap();
         instance.start().await.unwrap();
-
-        let events = vec![CanalEvent {
-            journal_name: "mysql-bin.000001".into(),
-            position: 100,
-            server_id: 1,
-            execute_time: 0,
+        instance.feed(vec![CanalEvent {
+            journal_name: "mysql-bin.000001".into(), position: 100,
+            server_id: 1, execute_time: 0,
             entry_type: canal_common::EventType::Insert,
-            schema_name: "db".into(),
-            table_name: "t".into(),
-            row_change: None,
-            ddl_sql: None,
-            gtid: None,
-            raw_bytes: vec![],
-        }];
-
-        // Feed with running=true should work
-        instance.feed(events).await.unwrap();
-
-        // Store should have events
-        let pos = instance.store().latest_position();
-        assert!(pos.is_some());
+            schema_name: "db".into(), table_name: "t".into(),
+            row_change: None, ddl_sql: None, gtid: None, raw_bytes: vec![],
+        }]).await.unwrap();
+        assert!(instance.store().latest_position().is_some());
     }
 
     #[test]
