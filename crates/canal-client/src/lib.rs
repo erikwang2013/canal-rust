@@ -264,7 +264,8 @@ async fn read_packet(stream: &mut TcpStream) -> CanalResult<Packet> {
 fn entry_bytes_to_event(data: &[u8]) -> CanalEvent {
     let entry = match canal_proto::Entry::decode(data) {
         Ok(e) => e,
-        Err(_) => {
+        Err(e) => {
+            warn!("Failed to decode Entry from {} bytes: {}", data.len(), e);
             return CanalEvent {
                 journal_name: String::new(),
                 position: 0,

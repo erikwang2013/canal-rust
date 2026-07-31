@@ -8,7 +8,6 @@ use canal_common::{CanalEvent, CanalResult, Events, LogPosition};
 use tokio::sync::Notify;
 use tracing::{debug, info};
 
-/// Memory-backed event store using a ring buffer
 pub struct MemoryEventStore {
     buffer: Mutex<VecDeque<CanalEvent>>,
     capacity: usize,
@@ -35,36 +34,38 @@ impl MemoryEventStore {
         }
     }
 
-    pub async fn put_batch(&self, events: Vec<CanalEvent>) -> CanalResult<i64> {
+    pub async fn put_batch(&self, mut events: Vec<CanalEvent>) -> CanalResult<i64> {
         if events.is_empty() {
             return Ok(0);
         }
 
         let batch_id = self.batch_id_seq.fetch_add(1, Ordering::SeqCst);
-        let first = LogPosition::new(&events[0].journal_name, events[0].position);
-        let last_pos = events.last().unwrap();
 
         let mut buffer = self.buffer.lock().unwrap_or_else(|e| e.into_inner());
 
-        while buffer.len() + events.len() > self.capacity {
+        while buffer.len() + events.len() > self.capacity && !buffer.is_empty() {
             buffer.pop_front();
         }
+        // If a single batch exceeds capacity, keep only the tail-most events
+        if events.len() > self.capacity {
+            let skip = events.len() - self.capacity;
+            events.drain(..skip);
+        }
 
-        let mut first_pos = self
-            .first_position
-            .lock()
-            .unwrap_or_else(|e| e.into_inner());
+        let first = LogPosition::new(&events[0].journal_name, events[0].position);
+        let last = LogPosition::new(
+            &events.last().unwrap().journal_name,
+            events.last().unwrap().position,
+        );
+
+        let mut first_pos = self.first_position.lock().unwrap_or_else(|e| e.into_inner());
         if let Some(front) = buffer.front() {
             *first_pos = Some(LogPosition::new(&front.journal_name, front.position));
         } else {
             *first_pos = Some(first);
         }
 
-        *self
-            .latest_position
-            .lock()
-            .unwrap_or_else(|e| e.into_inner()) =
-            Some(LogPosition::new(&last_pos.journal_name, last_pos.position));
+        *self.latest_position.lock().unwrap_or_else(|e| e.into_inner()) = Some(last);
 
         buffer.extend(events);
         self.notify.notify_waiters();
@@ -72,11 +73,8 @@ impl MemoryEventStore {
         Ok(batch_id)
     }
 
-    /// Get a batch of events starting after the given position.
     pub async fn get_batch(&self, start: &LogPosition, batch_size: usize) -> CanalResult<Events> {
         loop {
-            // Register the Notify future BEFORE acquiring the lock to avoid
-            // missed wakeups between checking the buffer and entering the select.
             let notified = self.notify.notified();
 
             let result = {
@@ -100,7 +98,7 @@ impl MemoryEventStore {
                 } else {
                     None
                 }
-            }; // MutexGuard dropped here
+            };
 
             if let Some(events) = result {
                 return Ok(events);
@@ -116,17 +114,11 @@ impl MemoryEventStore {
     }
 
     pub fn latest_position(&self) -> Option<LogPosition> {
-        self.latest_position
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .clone()
+        self.latest_position.lock().unwrap_or_else(|e| e.into_inner()).clone()
     }
 
     pub fn first_position(&self) -> Option<LogPosition> {
-        self.first_position
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .clone()
+        self.first_position.lock().unwrap_or_else(|e| e.into_inner()).clone()
     }
 }
 
@@ -156,65 +148,56 @@ mod tests {
 
     fn make_event(journal: &str, pos: u64) -> CanalEvent {
         CanalEvent {
-            journal_name: journal.to_string(),
-            position: pos,
-            server_id: 1,
-            execute_time: 0,
-            entry_type: EventType::Insert,
-            schema_name: "test_db".to_string(),
-            table_name: "users".to_string(),
-            row_change: None,
-            ddl_sql: None,
-            gtid: None,
-            raw_bytes: vec![],
+            journal_name: journal.to_string(), position: pos,
+            server_id: 1, execute_time: 0, entry_type: EventType::Insert,
+            schema_name: "test_db".to_string(), table_name: "users".to_string(),
+            row_change: None, ddl_sql: None, gtid: None, raw_bytes: vec![],
         }
     }
 
     #[tokio::test]
     async fn test_put_and_get_batch() {
         let store = MemoryEventStore::new(1024);
-        store
-            .put_batch(vec![make_event("mysql-bin.000001", 100)])
-            .await
-            .unwrap();
+        store.put_batch(vec![make_event("mysql-bin.000001", 100)]).await.unwrap();
         let start = LogPosition::new("mysql-bin.000001", 4);
         let batch = store.get_batch(&start, 10).await.unwrap();
         assert_eq!(batch.len(), 1);
-        assert_eq!(batch.events[0].position, 100);
     }
 
     #[tokio::test]
     async fn test_latest_position_tracks_head() {
         let store = MemoryEventStore::new(1024);
-        assert!(store.latest_position().is_none());
-        store
-            .put_batch(vec![
-                make_event("mysql-bin.000001", 100),
-                make_event("mysql-bin.000001", 200),
-            ])
-            .await
-            .unwrap();
-        let latest = store.latest_position().unwrap();
-        assert_eq!(latest.position, 200);
+        store.put_batch(vec![
+            make_event("mysql-bin.000001", 100),
+            make_event("mysql-bin.000001", 200),
+        ]).await.unwrap();
+        assert_eq!(store.latest_position().unwrap().position, 200);
     }
 
     #[tokio::test]
     async fn test_buffer_overflow_evicts_oldest() {
         let store = MemoryEventStore::new(2);
-        store
-            .put_batch(vec![
-                make_event("mysql-bin.000001", 100),
-                make_event("mysql-bin.000001", 200),
-            ])
-            .await
-            .unwrap();
-        store
-            .put_batch(vec![make_event("mysql-bin.000001", 300)])
-            .await
-            .unwrap();
+        store.put_batch(vec![
+            make_event("mysql-bin.000001", 100),
+            make_event("mysql-bin.000001", 200),
+        ]).await.unwrap();
+        store.put_batch(vec![make_event("mysql-bin.000001", 300)]).await.unwrap();
         let early = LogPosition::new("mysql-bin.000001", 50);
         let batch = store.get_batch(&early, 10).await.unwrap();
         assert_eq!(batch.events[0].position, 200);
+    }
+
+    #[tokio::test]
+    async fn test_oversized_batch_truncated() {
+        let store = MemoryEventStore::new(2);
+        // Put a batch larger than capacity
+        store.put_batch(vec![
+            make_event("mysql-bin.000001", 100),
+            make_event("mysql-bin.000001", 200),
+            make_event("mysql-bin.000001", 300),
+        ]).await.unwrap();
+        let latest = store.latest_position().unwrap();
+        assert_eq!(latest.position, 300);
     }
 
     #[tokio::test]

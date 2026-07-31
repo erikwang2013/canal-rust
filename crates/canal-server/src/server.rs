@@ -345,7 +345,10 @@ fn canal_event_to_entry(event: &CanalEvent) -> Entry {
         EventType::Rotate => ProtoEventType::Query as i32,
         EventType::Xid => ProtoEventType::Xacommit as i32,
         EventType::Heartbeat => ProtoEventType::Mheartbeat as i32,
-        EventType::Unknown(_v) => ProtoEventType::Insert as i32,
+        EventType::Unknown(v) => {
+            warn!("Unknown event type {} mapped to Insert", v);
+            ProtoEventType::Insert as i32
+        }
     };
 
     let header = Header {
