@@ -1,10 +1,10 @@
-use axum::{Router, response::IntoResponse, routing::get};
+use axum::{response::IntoResponse, routing::get, Router};
 use metrics::{counter, describe_counter, describe_gauge, gauge};
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle};
 use std::net::SocketAddr;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::sync::OnceLock;
-use std::sync::atomic::{AtomicU64, Ordering};
 use tracing::info;
 
 static PROMETHEUS_HANDLE: OnceLock<PrometheusHandle> = OnceLock::new();
@@ -27,10 +27,7 @@ fn init_metrics() -> &'static PrometheusHandle {
             "canal_dispatch_errors_total",
             "Total number of connector dispatch failures"
         );
-        describe_gauge!(
-            "canal_instances_active",
-            "Number of active Canal instances"
-        );
+        describe_gauge!("canal_instances_active", "Number of active Canal instances");
 
         PrometheusBuilder::new()
             .install_recorder()

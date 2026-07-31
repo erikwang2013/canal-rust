@@ -136,8 +136,8 @@ impl EventSink for DefaultEventSink {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use canal_common::{CanalEvent, EventType};
     use crate::connector::SinkConnector;
+    use canal_common::{CanalEvent, EventType};
     use std::sync::Mutex;
 
     /// A mock connector that collects dispatched events for verification

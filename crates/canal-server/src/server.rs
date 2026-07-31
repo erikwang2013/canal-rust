@@ -7,24 +7,8 @@ use canal_common::{
     LogPosition,
 };
 use canal_proto::{
-    self,
-    column,
-    header,
-    row_change,
-    Ack,
-    ClientAck,
-    ClientAuth,
-    ClientRollback,
-    Column,
-    Entry,
-    EventType as ProtoEventType,
-    Get,
-    Header,
-    Messages,
-    Packet,
-    PacketType,
-    RowChange,
-    RowData,
+    self, column, header, row_change, Ack, ClientAck, ClientAuth, ClientRollback, Column, Entry,
+    EventType as ProtoEventType, Get, Header, Messages, Packet, PacketType, RowChange, RowData,
     Sub,
 };
 use canal_store::memory::MemoryEventStore;
@@ -33,8 +17,8 @@ use prost::Message;
 use tokio::net::TcpListener;
 use tokio::sync::{Mutex, Semaphore};
 use tokio::task::JoinSet;
-use tokio_util::sync::CancellationToken;
 use tokio_util::codec::Framed;
+use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 
 use crate::codec::CanalCodec;
@@ -134,179 +118,222 @@ async fn handle_client(
     sessions: Arc<SessionManager>,
     auth_token: Option<String>,
 ) -> CanalResult<()> {
-    let mut client_id: Option<String> = None;
-    let mut current_pos: Option<LogPosition> = None;
-    let mut last_ack_pos: Option<LogPosition> = None;
-    let mut authenticated = auth_token.is_none();
-    let mut auth_error_count: u32 = 0;
+    let mut state = ClientState::default();
 
     while let Some(frame_bytes) = transport.next().await {
         let frame_bytes = frame_bytes?;
 
-        let packet = Packet::decode(&frame_bytes[..]).map_err(|e| {
-            CanalError::Protocol(format!("failed to decode Packet: {}", e))
-        })?;
+        let packet = Packet::decode(&frame_bytes[..])
+            .map_err(|e| CanalError::Protocol(format!("failed to decode Packet: {}", e)))?;
 
         let ptype = packet.r#type;
 
         if ptype == PacketType::Clientauthentication as i32 {
-            let auth = ClientAuth::decode(&packet.body[..]).map_err(|e| {
-                CanalError::Protocol(format!("failed to decode ClientAuth: {}", e))
-            })?;
-
-            if let Some(ref token) = auth_token {
-                let pass = String::from_utf8_lossy(&auth.password);
-                if pass.as_ref() != token.as_str() {
-                    auth_error_count += 1;
-                    warn!("Auth failed for client '{}': bad password", auth.client_id);
-                    send_ack(&mut transport, Some("authentication failed")).await?;
-                    if auth_error_count >= 3 {
-                        info!("Too many auth failures, disconnecting");
-                        return Ok(());
-                    }
-                    continue;
-                }
-            }
-            authenticated = true;
-
-            let cid = if auth.client_id.is_empty() {
-                "anonymous".to_string()
-            } else {
-                auth.client_id.clone()
-            };
-
-            let filter = if auth.filter.is_empty() {
-                FilterPattern::default()
-            } else {
-                FilterPattern {
-                    pattern: auth.filter.clone(),
-                    black_list: String::new(),
-                }
-            };
-
-            sessions.register(&cid, &auth.destination, filter);
-            client_id = Some(cid.clone());
-
-            if auth.start_timestamp > 0 {
-                current_pos = Some(LogPosition {
-                    journal_name: String::new(),
-                    position: 0,
-                    timestamp: Some(auth.start_timestamp),
-                    server_id: None,
-                    gtid: None,
-                });
-            }
-
-            info!("Client authenticated: {} (dest={})", cid, auth.destination);
-            send_ack(&mut transport, None).await?;
+            handle_auth(&mut transport, &packet, &mut state, &auth_token, &sessions)
+                .await?;
+        } else if !state.authenticated {
+            send_ack(&mut transport, Some("not authenticated")).await?;
+            continue;
+        } else if ptype == PacketType::Subscription as i32 {
+            handle_sub(&mut transport, &packet, &mut state, &sessions).await?;
+        } else if ptype == PacketType::Get as i32 {
+            handle_get(&mut transport, &packet, &mut state, &store, &sessions).await?;
+        } else if ptype == PacketType::Clientack as i32 {
+            handle_client_ack(&packet, &mut state, &sessions);
+        } else if ptype == PacketType::Clientrollback as i32 {
+            handle_client_rollback(&packet, &mut state);
+        } else if ptype == PacketType::Heartbeat as i32 {
+            handle_heartbeat(&mut transport, &state, &sessions).await?;
         } else {
-            if !authenticated {
-                send_ack(&mut transport, Some("not authenticated")).await?;
-                continue;
-            }
-
-            if ptype == PacketType::Subscription as i32 {
-                let sub = Sub::decode(&packet.body[..]).map_err(|e| {
-                    CanalError::Protocol(format!("failed to decode Sub: {}", e))
-                })?;
-
-                let cid = sub.client_id.clone();
-                if let Some(session) = sessions.get(&cid) {
-                    sessions.register(&cid, &sub.destination, FilterPattern {
-                        pattern: sub.filter.clone(),
-                        black_list: session.filter.black_list.clone(),
-                    });
-                } else {
-                    sessions.register(&cid, &sub.destination, FilterPattern {
-                        pattern: sub.filter.clone(),
-                        black_list: String::new(),
-                    });
-                }
-                client_id = Some(cid);
-                send_ack(&mut transport, None).await?;
-            } else if ptype == PacketType::Get as i32 {
-                let get = Get::decode(&packet.body[..]).map_err(|e| {
-                    CanalError::Protocol(format!("failed to decode Get: {}", e))
-                })?;
-
-                let batch_size = if get.fetch_size > 0 {
-                    get.fetch_size as usize
-                } else {
-                    100
-                };
-
-                let cid = client_id.clone().unwrap_or_else(|| "anonymous".to_string());
-                let start = current_pos
-                    .clone()
-                    .unwrap_or_else(|| LogPosition::new("mysql-bin.000001", 4));
-
-                let events: Events = store.get_batch(&start, batch_size).await?;
-
-                if !events.is_empty() {
-                    current_pos = Some(events.position_range.end.clone());
-                    if sessions.get(&cid).is_some() {
-                        if let Some(ref pos) = current_pos {
-                            sessions.update_position(&cid, pos.clone());
-                        }
-                    }
-
-                    let mut msgs = Messages {
-                        batch_id: events.batch_id,
-                        ..Default::default()
-                    };
-                    for event in &events.events {
-                        let entry = canal_event_to_entry(event);
-                        msgs.messages.push(entry.encode_to_vec());
-                    }
-
-                    let resp_packet = Packet {
-                        r#type: PacketType::Messages as i32,
-                        body: msgs.encode_to_vec(),
-                        ..Default::default()
-                    };
-                    transport.send(resp_packet.encode_to_vec()).await?;
-                } else {
-                    let msgs = Messages::default();
-                    let resp_packet = Packet {
-                        r#type: PacketType::Messages as i32,
-                        body: msgs.encode_to_vec(),
-                        ..Default::default()
-                    };
-                    transport.send(resp_packet.encode_to_vec()).await?;
-                }
-            } else if ptype == PacketType::Clientack as i32 {
-                let client_ack = ClientAck::decode(&packet.body[..]).map_err(|e| {
-                    CanalError::Protocol(format!("failed to decode ClientAck: {}", e))
-                })?;
-                let cid = client_ack.client_id.clone();
-                if let Some(ref pos) = current_pos {
-                    last_ack_pos = Some(pos.clone());
-                    sessions.update_ack(&cid, pos.clone());
-                }
-            } else if ptype == PacketType::Clientrollback as i32 {
-                let _rollback = ClientRollback::decode(&packet.body[..]).map_err(|e| {
-                    CanalError::Protocol(format!("failed to decode ClientRollback: {}", e))
-                })?;
-                if let Some(ref ack_pos) = last_ack_pos {
-                    current_pos = Some(ack_pos.clone());
-                } else {
-                    current_pos = None;
-                }
-            } else if ptype == PacketType::Heartbeat as i32 {
-                if let Some(ref cid) = client_id {
-                    sessions.heartbeat(cid);
-                }
-                send_ack(&mut transport, None).await?;
-            } else {
-                warn!("Unknown packet type: {}", ptype);
-            }
+            warn!("Unknown packet type: {}", ptype);
         }
     }
 
-    if let Some(ref cid) = client_id {
+    if let Some(ref cid) = state.client_id {
         sessions.unregister(cid);
     }
 
+    Ok(())
+}
+
+#[derive(Default)]
+struct ClientState {
+    client_id: Option<String>,
+    current_pos: Option<LogPosition>,
+    last_ack_pos: Option<LogPosition>,
+    authenticated: bool,
+    auth_error_count: u32,
+}
+
+async fn handle_auth(
+    transport: &mut (impl SinkExt<Vec<u8>, Error = CanalError> + Unpin),
+    packet: &Packet,
+    state: &mut ClientState,
+    auth_token: &Option<String>,
+    sessions: &SessionManager,
+) -> CanalResult<()> {
+    let auth = ClientAuth::decode(&packet.body[..])
+        .map_err(|e| CanalError::Protocol(format!("failed to decode ClientAuth: {}", e)))?;
+
+    if let Some(ref token) = auth_token {
+        let pass = String::from_utf8_lossy(&auth.password);
+        if pass.as_ref() != token.as_str() {
+            state.auth_error_count += 1;
+            warn!("Auth failed for client '{}': bad password", auth.client_id);
+            send_ack(transport, Some("authentication failed")).await?;
+            if state.auth_error_count >= 3 {
+                info!("Too many auth failures, disconnecting");
+                return Err(CanalError::AuthFailed("too many failures".into()));
+            }
+            return Ok(());
+        }
+    }
+    state.authenticated = true;
+
+    let cid = if auth.client_id.is_empty() {
+        "anonymous".to_string()
+    } else {
+        auth.client_id.clone()
+    };
+
+    let filter = if auth.filter.is_empty() {
+        FilterPattern::default()
+    } else {
+        FilterPattern {
+            pattern: auth.filter.clone(),
+            black_list: String::new(),
+        }
+    };
+
+    sessions.register(&cid, &auth.destination, filter);
+    state.client_id = Some(cid.clone());
+
+    if auth.start_timestamp > 0 {
+        state.current_pos = Some(LogPosition {
+            journal_name: String::new(),
+            position: 0,
+            timestamp: Some(auth.start_timestamp),
+            server_id: None,
+            gtid: None,
+        });
+    }
+
+    info!("Client authenticated: {} (dest={})", cid, auth.destination);
+    send_ack(transport, None).await?;
+    Ok(())
+}
+
+async fn handle_sub(
+    transport: &mut (impl SinkExt<Vec<u8>, Error = CanalError> + Unpin),
+    packet: &Packet,
+    state: &mut ClientState,
+    sessions: &SessionManager,
+) -> CanalResult<()> {
+    let sub = Sub::decode(&packet.body[..])
+        .map_err(|e| CanalError::Protocol(format!("failed to decode Sub: {}", e)))?;
+
+    let cid = sub.client_id.clone();
+    let black_list = sessions
+        .get(&cid)
+        .map(|s| s.filter.black_list.clone())
+        .unwrap_or_default();
+
+    sessions.register(
+        &cid,
+        &sub.destination,
+        FilterPattern {
+            pattern: sub.filter.clone(),
+            black_list,
+        },
+    );
+    state.client_id = Some(cid);
+    send_ack(transport, None).await?;
+    Ok(())
+}
+
+async fn handle_get(
+    transport: &mut (impl SinkExt<Vec<u8>, Error = CanalError> + Unpin),
+    packet: &Packet,
+    state: &mut ClientState,
+    store: &MemoryEventStore,
+    sessions: &SessionManager,
+) -> CanalResult<()> {
+    let get = Get::decode(&packet.body[..])
+        .map_err(|e| CanalError::Protocol(format!("failed to decode Get: {}", e)))?;
+
+    let batch_size = if get.fetch_size > 0 {
+        get.fetch_size as usize
+    } else {
+        100
+    };
+
+    let cid = state
+        .client_id
+        .clone()
+        .unwrap_or_else(|| "anonymous".to_string());
+    let start = state
+        .current_pos
+        .clone()
+        .unwrap_or_else(|| LogPosition::new("mysql-bin.000001", 4));
+
+    let events: Events = store.get_batch(&start, batch_size).await?;
+
+    let mut msgs = Messages::default();
+    if !events.is_empty() {
+        state.current_pos = Some(events.position_range.end.clone());
+        if sessions.get(&cid).is_some() {
+            if let Some(ref pos) = state.current_pos {
+                sessions.update_position(&cid, pos.clone());
+            }
+        }
+
+        msgs = Messages {
+            batch_id: events.batch_id,
+            ..Default::default()
+        };
+        for event in &events.events {
+            let entry = canal_event_to_entry(event);
+            msgs.messages.push(entry.encode_to_vec());
+        }
+    }
+
+    let resp_packet = Packet {
+        r#type: PacketType::Messages as i32,
+        body: msgs.encode_to_vec(),
+        ..Default::default()
+    };
+    transport.send(resp_packet.encode_to_vec()).await?;
+    Ok(())
+}
+
+fn handle_client_ack(packet: &Packet, state: &mut ClientState, sessions: &SessionManager) {
+    if let Ok(client_ack) = ClientAck::decode(&packet.body[..]) {
+        if let Some(ref pos) = state.current_pos {
+            state.last_ack_pos = Some(pos.clone());
+            sessions.update_ack(&client_ack.client_id, pos.clone());
+        }
+    }
+}
+
+fn handle_client_rollback(packet: &Packet, state: &mut ClientState) {
+    if ClientRollback::decode(&packet.body[..]).is_ok() {
+        if let Some(ref ack_pos) = state.last_ack_pos {
+            state.current_pos = Some(ack_pos.clone());
+        } else {
+            state.current_pos = None;
+        }
+    }
+}
+
+async fn handle_heartbeat(
+    transport: &mut (impl SinkExt<Vec<u8>, Error = CanalError> + Unpin),
+    state: &ClientState,
+    sessions: &SessionManager,
+) -> CanalResult<()> {
+    if let Some(ref cid) = state.client_id {
+        sessions.heartbeat(cid);
+    }
+    send_ack(transport, None).await?;
     Ok(())
 }
 
@@ -390,7 +417,8 @@ fn canal_event_to_entry(event: &CanalEvent) -> Entry {
 
         if let Some(ref after) = change.after {
             for col in &after.columns {
-                rd.after_columns.push(column_value_to_proto(col, col.updated));
+                rd.after_columns
+                    .push(column_value_to_proto(col, col.updated));
             }
         }
 

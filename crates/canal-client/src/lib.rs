@@ -1,7 +1,5 @@
 use canal_common::{CanalEvent, CanalResult, FilterPattern, LogPosition};
-use canal_proto::{
-    Ack, ClientAck, ClientAuth, Get, Messages, Packet, PacketType, Sub,
-};
+use canal_proto::{Ack, ClientAck, ClientAuth, Get, Messages, Packet, PacketType, Sub};
 use prost::Message;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
@@ -49,10 +47,7 @@ impl CanalClient {
     pub async fn connect(&mut self) -> CanalResult<()> {
         let addr = format!("{}:{}", self.host, self.port);
         let mut stream = TcpStream::connect(&addr).await.map_err(|e| {
-            canal_common::CanalError::BinlogConnection(format!(
-                "TCP connect to {}: {}",
-                addr, e
-            ))
+            canal_common::CanalError::BinlogConnection(format!("TCP connect to {}: {}", addr, e))
         })?;
 
         // Build and send ClientAuth
@@ -78,9 +73,8 @@ impl CanalClient {
                 "expected Ack after ClientAuth".into(),
             ));
         }
-        let ack = Ack::decode(&ack_packet.body[..]).map_err(|e| {
-            canal_common::CanalError::Protocol(format!("decode Ack: {}", e))
-        })?;
+        let ack = Ack::decode(&ack_packet.body[..])
+            .map_err(|e| canal_common::CanalError::Protocol(format!("decode Ack: {}", e)))?;
         if !ack.error_message.is_empty() {
             return Err(canal_common::CanalError::AuthFailed(ack.error_message));
         }
@@ -96,9 +90,10 @@ impl CanalClient {
         &mut self,
         _position: Option<LogPosition>,
     ) -> CanalResult<CanalEventStream> {
-        let mut stream = self.stream.take().ok_or_else(|| {
-            canal_common::CanalError::Internal("not connected".into())
-        })?;
+        let mut stream = self
+            .stream
+            .take()
+            .ok_or_else(|| canal_common::CanalError::Internal("not connected".into()))?;
 
         // Send Sub
         let sub = Sub {
@@ -167,9 +162,18 @@ impl CanalClient {
 
                         // Forward events to the stream consumer
                         for entry_bytes in &msgs.messages {
-                            let event = entry_bytes_to_event(entry_bytes);
-                            if tx.send(Ok(event)).await.is_err() {
-                                return; // consumer dropped
+                            match entry_bytes_to_event(entry_bytes) {
+                                Ok(event) => {
+                                    if tx.send(Ok(event)).await.is_err() {
+                                        return; // consumer dropped
+                                    }
+                                }
+                                Err(e) => {
+                                    warn!("Client {} decode failed: {}", client_id, e);
+                                    if tx.send(Err(e)).await.is_err() {
+                                        return;
+                                    }
+                                }
                             }
                         }
 
@@ -194,13 +198,19 @@ impl CanalClient {
                         break;
                     }
                     _ => {
-                        debug!("Client {} unexpected packet type: {}", client_id, resp.r#type);
+                        debug!(
+                            "Client {} unexpected packet type: {}",
+                            client_id, resp.r#type
+                        );
                     }
                 }
             }
         });
 
-        Ok(CanalEventStream { rx, _bg_task: bg_task })
+        Ok(CanalEventStream {
+            rx,
+            _bg_task: bg_task,
+        })
     }
 
     pub fn client_id(&self) -> u64 {
@@ -235,73 +245,56 @@ async fn send_packet(stream: &mut TcpStream, packet: &Packet) -> CanalResult<()>
     let mut buf = Vec::with_capacity(4 + body.len());
     buf.extend_from_slice(&len.to_be_bytes());
     buf.extend_from_slice(&body);
-    stream.write_all(&buf).await.map_err(canal_common::CanalError::Io)?;
+    stream
+        .write_all(&buf)
+        .await
+        .map_err(canal_common::CanalError::Io)?;
     Ok(())
 }
 
 /// Read a length-prefixed protobuf Packet.
 async fn read_packet(stream: &mut TcpStream) -> CanalResult<Packet> {
     let mut header = [0u8; 4];
-    stream.read_exact(&mut header).await.map_err(canal_common::CanalError::Io)?;
+    stream
+        .read_exact(&mut header)
+        .await
+        .map_err(canal_common::CanalError::Io)?;
     let len = u32::from_be_bytes(header) as usize;
 
     if len > 64 * 1024 * 1024 {
         return Err(canal_common::CanalError::Protocol(format!(
-            "packet too large: {} bytes", len
+            "packet too large: {} bytes",
+            len
         )));
     }
 
     let mut body = vec![0u8; len];
-    stream.read_exact(&mut body).await.map_err(canal_common::CanalError::Io)?;
+    stream
+        .read_exact(&mut body)
+        .await
+        .map_err(canal_common::CanalError::Io)?;
 
-    Packet::decode(&body[..]).map_err(|e| {
-        canal_common::CanalError::Protocol(format!("decode Packet: {}", e))
-    })
+    Packet::decode(&body[..])
+        .map_err(|e| canal_common::CanalError::Protocol(format!("decode Packet: {}", e)))
 }
 
 /// Convert a protobuf Entry (from Messages) into a CanalEvent.
 /// Decodes header, row_change, and ddl_sql from the protobuf message.
-fn entry_bytes_to_event(data: &[u8]) -> CanalEvent {
-    let entry = match canal_proto::Entry::decode(data) {
-        Ok(e) => e,
-        Err(e) => {
-            warn!("Failed to decode Entry from {} bytes: {}", data.len(), e);
-            return CanalEvent {
-                journal_name: String::new(),
-                position: 0,
-                server_id: 0,
-                execute_time: 0,
-                entry_type: canal_common::EventType::Unknown(0),
-                schema_name: String::new(),
-                table_name: String::new(),
-                row_change: None,
-                ddl_sql: None,
-                gtid: None,
-                raw_bytes: vec![],
-            };
-        }
-    };
+fn entry_bytes_to_event(data: &[u8]) -> CanalResult<CanalEvent> {
+    let entry = canal_proto::Entry::decode(data).map_err(|e| {
+        canal_common::CanalError::Protocol(format!(
+            "Failed to decode Entry from {} bytes: {}",
+            data.len(),
+            e
+        ))
+    })?;
 
-    let hdr = match entry.header {
-        Some(h) => h,
-        None => {
-            return CanalEvent {
-                journal_name: String::new(),
-                position: 0,
-                server_id: 0,
-                execute_time: 0,
-                entry_type: canal_common::EventType::Unknown(0),
-                schema_name: String::new(),
-                table_name: String::new(),
-                row_change: None,
-                ddl_sql: None,
-                gtid: None,
-                raw_bytes: vec![],
-            };
-        }
-    };
+    let hdr = entry.header.ok_or_else(|| {
+        canal_common::CanalError::Protocol("Entry missing header".to_string())
+    })?;
 
-    let ev_type = hdr.event_type_present
+    let ev_type = hdr
+        .event_type_present
         .map(|et| match et {
             canal_proto::header::EventTypePresent::EventType(v) => v,
         })
@@ -318,16 +311,15 @@ fn entry_bytes_to_event(data: &[u8]) -> CanalEvent {
 
             let change = if ddl.is_none() && !rc.row_datas.is_empty() {
                 let rd = &rc.row_datas[0];
-                let dml_type = rc.event_type_present
+                let dml_type = rc
+                    .event_type_present
                     .map(|et| match et {
-                        canal_proto::row_change::EventTypePresent::EventType(v) => {
-                            match v {
-                                1 => canal_common::DmlType::Insert,
-                                2 => canal_common::DmlType::Update,
-                                3 => canal_common::DmlType::Delete,
-                                _ => canal_common::DmlType::Insert,
-                            }
-                        }
+                        canal_proto::row_change::EventTypePresent::EventType(v) => match v {
+                            1 => canal_common::DmlType::Insert,
+                            2 => canal_common::DmlType::Update,
+                            3 => canal_common::DmlType::Delete,
+                            _ => canal_common::DmlType::Insert,
+                        },
                     })
                     .unwrap_or(canal_common::DmlType::Insert);
 
@@ -335,8 +327,10 @@ fn entry_bytes_to_event(data: &[u8]) -> CanalEvent {
                     None
                 } else {
                     Some(canal_common::RowData {
-                        columns: rd.before_columns.iter().map(|c| {
-                            canal_common::ColumnValue {
+                        columns: rd
+                            .before_columns
+                            .iter()
+                            .map(|c| canal_common::ColumnValue {
                                 name: c.name.clone(),
                                 value: if c.value.is_empty() && c.is_null_present.is_some() {
                                     None
@@ -346,8 +340,8 @@ fn entry_bytes_to_event(data: &[u8]) -> CanalEvent {
                                 column_type: c.sql_type,
                                 is_key: c.is_key,
                                 updated: c.updated,
-                            }
-                        }).collect(),
+                            })
+                            .collect(),
                     })
                 };
 
@@ -355,8 +349,10 @@ fn entry_bytes_to_event(data: &[u8]) -> CanalEvent {
                     None
                 } else {
                     Some(canal_common::RowData {
-                        columns: rd.after_columns.iter().map(|c| {
-                            canal_common::ColumnValue {
+                        columns: rd
+                            .after_columns
+                            .iter()
+                            .map(|c| canal_common::ColumnValue {
                                 name: c.name.clone(),
                                 value: if c.value.is_empty() && c.is_null_present.is_some() {
                                     None
@@ -366,8 +362,8 @@ fn entry_bytes_to_event(data: &[u8]) -> CanalEvent {
                                 column_type: c.sql_type,
                                 is_key: c.is_key,
                                 updated: c.updated,
-                            }
-                        }).collect(),
+                            })
+                            .collect(),
                     })
                 };
 
@@ -390,7 +386,7 @@ fn entry_bytes_to_event(data: &[u8]) -> CanalEvent {
         (None, None)
     };
 
-    CanalEvent {
+    Ok(CanalEvent {
         journal_name: hdr.logfile_name,
         position: hdr.logfile_offset as u64,
         server_id: hdr.server_id as u64,
@@ -400,11 +396,14 @@ fn entry_bytes_to_event(data: &[u8]) -> CanalEvent {
         table_name: hdr.table_name,
         row_change,
         ddl_sql,
-        gtid: if hdr.gtid.is_empty() { None } else { Some(hdr.gtid) },
+        gtid: if hdr.gtid.is_empty() {
+            None
+        } else {
+            Some(hdr.gtid)
+        },
         raw_bytes: entry.store_value,
-    }
+    })
 }
-
 
 #[cfg(test)]
 mod tests {

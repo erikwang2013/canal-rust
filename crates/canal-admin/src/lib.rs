@@ -1,9 +1,14 @@
-use std::sync::Arc;
-use std::time::Instant;
-use axum::{Router, routing::{get, post}, Json, extract::{Path, State}, http::{HeaderMap, StatusCode}};
+use axum::{
+    extract::{Path, State},
+    http::{HeaderMap, StatusCode},
+    routing::{get, post},
+    Json, Router,
+};
 use canal_common::lifecycle::CanalLifecycle;
 use canal_instance::instance::InstanceManager;
 use serde::Serialize;
+use std::sync::Arc;
+use std::time::Instant;
 use tracing::info;
 
 #[derive(Debug, Clone, Serialize)]
@@ -54,7 +59,9 @@ pub struct AdminServer {
 
 impl std::fmt::Debug for AdminServer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AdminServer").field("bind_addr", &self.bind_addr).finish()
+        f.debug_struct("AdminServer")
+            .field("bind_addr", &self.bind_addr)
+            .finish()
     }
 }
 
@@ -129,10 +136,17 @@ async fn list_instances(
     let dests = state.instance_manager.list().await;
     let mut instances = Vec::new();
     for d in dests {
-        let running = state.instance_manager.get(&d).await
+        let running = state
+            .instance_manager
+            .get(&d)
+            .await
             .map(|i| i.is_running())
             .unwrap_or(false);
-        instances.push(InstanceSummary { name: d.clone(), destination: d, running });
+        instances.push(InstanceSummary {
+            name: d.clone(),
+            destination: d,
+            running,
+        });
     }
     Ok(Json(InstanceListResponse { instances }))
 }
@@ -198,7 +212,10 @@ mod tests {
     #[test]
     fn test_check_auth_missing_header() {
         let headers = HeaderMap::new();
-        assert_eq!(check_auth(&headers, &Some("secret".into())), Err(StatusCode::UNAUTHORIZED));
+        assert_eq!(
+            check_auth(&headers, &Some("secret".into())),
+            Err(StatusCode::UNAUTHORIZED)
+        );
     }
 
     #[test]
@@ -219,14 +236,20 @@ mod tests {
     fn test_check_auth_wrong_token() {
         let mut headers = HeaderMap::new();
         headers.insert("Authorization", "Bearer wrong".parse().unwrap());
-        assert_eq!(check_auth(&headers, &Some("secret".into())), Err(StatusCode::UNAUTHORIZED));
+        assert_eq!(
+            check_auth(&headers, &Some("secret".into())),
+            Err(StatusCode::UNAUTHORIZED)
+        );
     }
 
     #[test]
     fn test_check_auth_empty_header_value() {
         let mut headers = HeaderMap::new();
         headers.insert("Authorization", "".parse().unwrap());
-        assert_eq!(check_auth(&headers, &Some("secret".into())), Err(StatusCode::UNAUTHORIZED));
+        assert_eq!(
+            check_auth(&headers, &Some("secret".into())),
+            Err(StatusCode::UNAUTHORIZED)
+        );
     }
 
     #[tokio::test]

@@ -231,16 +231,24 @@ mod tests {
     #[tokio::test]
     async fn test_manager_list_instances() {
         let manager = InstanceManager::new();
-        manager.register(CanalInstance::new(make_config("a"), vec![]).unwrap()).await;
-        manager.register(CanalInstance::new(make_config("b"), vec![]).unwrap()).await;
-        manager.register(CanalInstance::new(make_config("c"), vec![]).unwrap()).await;
+        manager
+            .register(CanalInstance::new(make_config("a"), vec![]).unwrap())
+            .await;
+        manager
+            .register(CanalInstance::new(make_config("b"), vec![]).unwrap())
+            .await;
+        manager
+            .register(CanalInstance::new(make_config("c"), vec![]).unwrap())
+            .await;
         assert_eq!(manager.list().await.len(), 3);
     }
 
     #[tokio::test]
     async fn test_manager_remove() {
         let manager = InstanceManager::new();
-        manager.register(CanalInstance::new(make_config("x"), vec![]).unwrap()).await;
+        manager
+            .register(CanalInstance::new(make_config("x"), vec![]).unwrap())
+            .await;
         assert!(manager.remove("x").await.is_some());
         assert!(manager.get("x").await.is_none());
     }
@@ -250,13 +258,22 @@ mod tests {
         let config = make_config("feed-test");
         let instance = CanalInstance::new(config, vec![]).unwrap();
         instance.start().await.unwrap();
-        instance.feed(vec![CanalEvent {
-            journal_name: "mysql-bin.000001".into(), position: 100,
-            server_id: 1, execute_time: 0,
-            entry_type: canal_common::EventType::Insert,
-            schema_name: "db".into(), table_name: "t".into(),
-            row_change: None, ddl_sql: None, gtid: None, raw_bytes: vec![],
-        }]).await.unwrap();
+        instance
+            .feed(vec![CanalEvent {
+                journal_name: "mysql-bin.000001".into(),
+                position: 100,
+                server_id: 1,
+                execute_time: 0,
+                entry_type: canal_common::EventType::Insert,
+                schema_name: "db".into(),
+                table_name: "t".into(),
+                row_change: None,
+                ddl_sql: None,
+                gtid: None,
+                raw_bytes: vec![],
+            }])
+            .await
+            .unwrap();
         assert!(instance.store().latest_position().is_some());
     }
 

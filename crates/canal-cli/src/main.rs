@@ -20,6 +20,10 @@ struct CanalConfig {
 struct CanalSection {
     #[serde(default = "default_server_id")]
     server_id: u64,
+    #[serde(default = "default_start_journal")]
+    start_journal_name: String,
+    #[serde(default = "default_start_position")]
+    start_position: u64,
     mysql: MysqlConfig,
     store: StoreSection,
     server: ServerSection,
@@ -28,6 +32,14 @@ struct CanalSection {
 
 fn default_server_id() -> u64 {
     1001
+}
+
+fn default_start_journal() -> String {
+    "mysql-bin.000001".to_string()
+}
+
+fn default_start_position() -> u64 {
+    4
 }
 
 #[derive(Debug, Deserialize)]
@@ -143,8 +155,15 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
     }
 
     tracing::info!("Starting canal-rust server v{}", env!("CARGO_PKG_VERSION"));
-    tracing::info!("MySQL source: {}:{}", config.canal.mysql.host, config.canal.mysql.port);
-    tracing::info!("Store: memory, buffer_size={}", config.canal.store.buffer_size);
+    tracing::info!(
+        "MySQL source: {}:{}",
+        config.canal.mysql.host,
+        config.canal.mysql.port
+    );
+    tracing::info!(
+        "Store: memory, buffer_size={}",
+        config.canal.store.buffer_size
+    );
     tracing::info!("Listening on {}", bind_addr);
 
     let store = Arc::new(canal_store::memory::MemoryEventStore::new(
@@ -161,16 +180,18 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
     let shutdown_for_binlog = shutdown_token.clone();
 
     let binlog_handle = tokio::spawn(async move {
-        let pos = canal_common::LogPosition::new("mysql-bin.000001", 4);
-        let (mut connector, mut rx) =
-            canal_binlog::connector::DefaultBinlogConnector::new(
-                &mysql_cfg.host,
-                mysql_cfg.port,
-                &mysql_cfg.username,
-                &mysql_cfg.password,
-                server_id,
-            )
-            .with_channel();
+        let pos = canal_common::LogPosition::new(
+            &config.canal.start_journal_name,
+            config.canal.start_position,
+        );
+        let (mut connector, mut rx) = canal_binlog::connector::DefaultBinlogConnector::new(
+            &mysql_cfg.host,
+            mysql_cfg.port,
+            &mysql_cfg.username,
+            &mysql_cfg.password,
+            server_id,
+        )
+        .with_channel();
 
         if let Err(e) = connector.connect(&pos).await {
             tracing::error!("Binlog connector failed to connect: {}", e);
@@ -243,19 +264,24 @@ async fn run_dump(config_path: PathBuf) -> Result<()> {
         config.canal.mysql.port
     );
 
-    let pos = canal_common::LogPosition::new("mysql-bin.000001", 4);
+    let pos = canal_common::LogPosition::new(
+        &config.canal.start_journal_name,
+        config.canal.start_position,
+    );
     let server_id = config.canal.server_id;
-    let (mut connector, mut rx) =
-        canal_binlog::connector::DefaultBinlogConnector::new(
-            &config.canal.mysql.host,
-            config.canal.mysql.port,
-            &config.canal.mysql.username,
-            &config.canal.mysql.password,
-            server_id,
-        )
-        .with_channel();
+    let (mut connector, mut rx) = canal_binlog::connector::DefaultBinlogConnector::new(
+        &config.canal.mysql.host,
+        config.canal.mysql.port,
+        &config.canal.mysql.username,
+        &config.canal.mysql.password,
+        server_id,
+    )
+    .with_channel();
 
-    connector.connect(&pos).await.context("Failed to connect to MySQL")?;
+    connector
+        .connect(&pos)
+        .await
+        .context("Failed to connect to MySQL")?;
     eprintln!("Connected. Streaming binlog events...\n");
 
     let mut count: u64 = 0;

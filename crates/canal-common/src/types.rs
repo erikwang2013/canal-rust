@@ -51,7 +51,8 @@ impl Ord for LogPosition {
 /// Returns u64::MAX for non-numeric suffixes so they sort last.
 fn binlog_suffix(journal_name: &str) -> u64 {
     journal_name
-        .rsplit('.').next()
+        .rsplit('.')
+        .next()
         .and_then(|s| s.parse::<u64>().ok())
         .unwrap_or(u64::MAX)
 }
@@ -277,16 +278,30 @@ mod tests {
     #[test]
     fn test_events_with_events_populates_range() {
         let e1 = CanalEvent {
-            journal_name: "bin.001".into(), position: 100, server_id: 1,
-            execute_time: 0, entry_type: EventType::Insert,
-            schema_name: "db".into(), table_name: "t".into(),
-            row_change: None, ddl_sql: None, gtid: None, raw_bytes: vec![],
+            journal_name: "bin.001".into(),
+            position: 100,
+            server_id: 1,
+            execute_time: 0,
+            entry_type: EventType::Insert,
+            schema_name: "db".into(),
+            table_name: "t".into(),
+            row_change: None,
+            ddl_sql: None,
+            gtid: None,
+            raw_bytes: vec![],
         };
         let e2 = CanalEvent {
-            journal_name: "bin.001".into(), position: 200, server_id: 1,
-            execute_time: 0, entry_type: EventType::Update,
-            schema_name: "db".into(), table_name: "t".into(),
-            row_change: None, ddl_sql: None, gtid: None, raw_bytes: vec![],
+            journal_name: "bin.001".into(),
+            position: 200,
+            server_id: 1,
+            execute_time: 0,
+            entry_type: EventType::Update,
+            schema_name: "db".into(),
+            table_name: "t".into(),
+            row_change: None,
+            ddl_sql: None,
+            gtid: None,
+            raw_bytes: vec![],
         };
         let batch = Events::with_events(vec![e1, e2], 1);
         assert_eq!(batch.len(), 2);
@@ -304,13 +319,19 @@ mod tests {
     #[test]
     fn test_column_value_key_detection() {
         let pk = ColumnValue {
-            name: "id".into(), value: Some("1".into()),
-            column_type: 3, is_key: true, updated: false,
+            name: "id".into(),
+            value: Some("1".into()),
+            column_type: 3,
+            is_key: true,
+            updated: false,
         };
         assert!(pk.is_key);
         let non_pk = ColumnValue {
-            name: "name".into(), value: None,
-            column_type: 253, is_key: false, updated: false,
+            name: "name".into(),
+            value: None,
+            column_type: 253,
+            is_key: false,
+            updated: false,
         };
         assert!(!non_pk.is_key);
     }
@@ -318,7 +339,8 @@ mod tests {
     #[test]
     fn test_row_change_roundtrip() {
         let change = RowChange {
-            table_name: "users".into(), schema_name: "db".into(),
+            table_name: "users".into(),
+            schema_name: "db".into(),
             before: None,
             after: Some(RowData { columns: vec![] }),
             dml_type: DmlType::Insert,

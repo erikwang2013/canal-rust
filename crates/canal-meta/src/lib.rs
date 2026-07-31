@@ -1,16 +1,16 @@
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::RwLock;
-use serde::{Deserialize, Serialize};
 use tracing::debug;
 
 /// Column metadata from a table schema.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ColumnMeta {
     pub name: String,
-    pub column_type: i32,   // MySQL column type code
-    pub is_key: bool,       // primary key
+    pub column_type: i32, // MySQL column type code
+    pub is_key: bool,     // primary key
     pub is_nullable: bool,
-    pub position: usize,    // ordinal position in table
+    pub position: usize, // ordinal position in table
 }
 
 /// Table schema: a list of columns with their metadata.
@@ -50,29 +50,44 @@ pub struct TableMetaCache {
 
 impl TableMetaCache {
     pub fn new() -> Self {
-        Self { tables: RwLock::new(HashMap::new()) }
+        Self {
+            tables: RwLock::new(HashMap::new()),
+        }
     }
 
     /// Store or update table metadata.
     pub fn put(&self, key: &str, meta: TableMeta) {
-        self.tables.write().unwrap_or_else(|e| e.into_inner()).insert(key.to_string(), meta);
+        self.tables
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(key.to_string(), meta);
         debug!("Table metadata updated: {}", key);
     }
 
     /// Get table metadata by "schema.table" key.
     pub fn get(&self, key: &str) -> Option<TableMeta> {
-        self.tables.read().unwrap_or_else(|e| e.into_inner()).get(key).cloned()
+        self.tables
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(key)
+            .cloned()
     }
 
     /// Remove table metadata (e.g., after DROP TABLE).
     pub fn remove(&self, key: &str) {
-        self.tables.write().unwrap_or_else(|e| e.into_inner()).remove(key);
+        self.tables
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .remove(key);
         debug!("Table metadata removed: {}", key);
     }
 
     /// Check if metadata exists for a table.
     pub fn contains(&self, key: &str) -> bool {
-        self.tables.read().unwrap_or_else(|e| e.into_inner()).contains_key(key)
+        self.tables
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .contains_key(key)
     }
 
     /// Number of cached tables.
@@ -87,7 +102,10 @@ impl TableMetaCache {
 
     /// Clear all cached table metadata.
     pub fn clear(&self) {
-        self.tables.write().unwrap_or_else(|e| e.into_inner()).clear();
+        self.tables
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .clear();
     }
 }
 
@@ -96,7 +114,13 @@ mod tests {
     use super::*;
 
     fn make_column(name: &str, is_key: bool, pos: usize) -> ColumnMeta {
-        ColumnMeta { name: name.into(), column_type: 253, is_key, is_nullable: false, position: pos }
+        ColumnMeta {
+            name: name.into(),
+            column_type: 253,
+            is_key,
+            is_nullable: false,
+            position: pos,
+        }
     }
 
     fn make_table_meta() -> TableMeta {

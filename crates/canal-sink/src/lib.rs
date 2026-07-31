@@ -1,5 +1,5 @@
-pub mod sink;
 pub mod connector;
+pub mod sink;
 
-pub use sink::EventSink;
 pub use connector::SinkConnector;
+pub use sink::EventSink;

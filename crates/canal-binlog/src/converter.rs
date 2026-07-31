@@ -88,8 +88,12 @@ impl EventConverter {
         Ok(RowChange {
             table_name: table,
             schema_name: schema,
-            before: Some(RowData { columns: before_columns }),
-            after: Some(RowData { columns: after_columns }),
+            before: Some(RowData {
+                columns: before_columns,
+            }),
+            after: Some(RowData {
+                columns: after_columns,
+            }),
             dml_type: DmlType::Update,
         })
     }

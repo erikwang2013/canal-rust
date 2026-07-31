@@ -43,6 +43,7 @@ pub struct DefaultBinlogConnector {
     password: String,
     server_id: u64,
     ssl_mode: SslMode,
+    connect_timeout_secs: u64,
     sender: Option<mpsc::Sender<CanalResult<CanalEvent>>>,
     current_pos: Option<LogPosition>,
     running: AtomicBool,
@@ -60,6 +61,7 @@ impl DefaultBinlogConnector {
             password: password.to_string(),
             server_id,
             ssl_mode: SslMode::IfAvailable,
+            connect_timeout_secs: 30,
             sender: None,
             current_pos: None,
             running: AtomicBool::new(false),
@@ -71,6 +73,12 @@ impl DefaultBinlogConnector {
     /// Set the SSL mode for the MySQL connection.
     pub fn with_ssl_mode(mut self, mode: SslMode) -> Self {
         self.ssl_mode = mode;
+        self
+    }
+
+    /// Set the connection timeout in seconds (default: 30).
+    pub fn with_connect_timeout(mut self, secs: u64) -> Self {
+        self.connect_timeout_secs = secs;
         self
     }
 
@@ -102,6 +110,7 @@ impl DefaultBinlogConnector {
         options: ReplicaOptions,
         tx: mpsc::Sender<CanalResult<CanalEvent>>,
         cancel: CancellationToken,
+        started: tokio::sync::oneshot::Sender<()>,
     ) {
         let mut client = BinlogClient::new(options);
         let mut converter = EventConverter::new();
@@ -114,9 +123,13 @@ impl DefaultBinlogConnector {
                     "failed to start binlog replication: {:?}",
                     e
                 ))));
+                let _ = started.send(());
                 return;
             }
         };
+
+        // Signal that we've successfully connected and started replicating
+        let _ = started.send(());
 
         for result in events {
             if cancel.is_cancelled() {
@@ -139,13 +152,9 @@ impl DefaultBinlogConnector {
                 current_binlog_file = re.binlog_filename.clone();
             }
 
-            if let Err(e) = Self::process_and_send(
-                &header,
-                &event,
-                &mut converter,
-                &current_binlog_file,
-                &tx,
-            ) {
+            if let Err(e) =
+                Self::process_and_send(&header, &event, &mut converter, &current_binlog_file, &tx)
+            {
                 let _ = tx.blocking_send(Err(e));
             }
 
@@ -200,28 +209,36 @@ impl DefaultBinlogConnector {
                 Ok(())
             }
 
-            BinlogEvent::WriteRowsEvent(e) => {
-                Self::send_row_events(
-                    header, current_binlog_file, EventType::Insert,
-                    e.table_id, &e.rows, converter, tx,
-                    extract_column_values,
-                )
-            }
+            BinlogEvent::WriteRowsEvent(e) => Self::send_row_events(
+                header,
+                current_binlog_file,
+                EventType::Insert,
+                e.table_id,
+                &e.rows,
+                converter,
+                tx,
+                extract_column_values,
+            ),
 
-            BinlogEvent::UpdateRowsEvent(e) => {
-                Self::send_update_events(
-                    header, current_binlog_file,
-                    e.table_id, &e.rows, converter, tx,
-                )
-            }
+            BinlogEvent::UpdateRowsEvent(e) => Self::send_update_events(
+                header,
+                current_binlog_file,
+                e.table_id,
+                &e.rows,
+                converter,
+                tx,
+            ),
 
-            BinlogEvent::DeleteRowsEvent(e) => {
-                Self::send_row_events(
-                    header, current_binlog_file, EventType::Delete,
-                    e.table_id, &e.rows, converter, tx,
-                    extract_column_values,
-                )
-            }
+            BinlogEvent::DeleteRowsEvent(e) => Self::send_row_events(
+                header,
+                current_binlog_file,
+                EventType::Delete,
+                e.table_id,
+                &e.rows,
+                converter,
+                tx,
+                extract_column_values,
+            ),
 
             other => {
                 debug!("Skipping unhandled binlog event: {:?}", other);
@@ -249,9 +266,13 @@ impl DefaultBinlogConnector {
                     let schema = change.schema_name.clone();
                     let table = change.table_name.clone();
                     let event = Self::build_canal_event(
-                        header, current_binlog_file, entry_type,
-                        &schema, &table,
-                        Some(change), None,
+                        header,
+                        current_binlog_file,
+                        entry_type,
+                        &schema,
+                        &table,
+                        Some(change),
+                        None,
                     );
                     let _ = tx.blocking_send(Ok(event));
                 }
@@ -281,9 +302,13 @@ impl DefaultBinlogConnector {
                     let schema = change.schema_name.clone();
                     let table = change.table_name.clone();
                     let event = Self::build_canal_event(
-                        header, current_binlog_file, EventType::Update,
-                        &schema, &table,
-                        Some(change), None,
+                        header,
+                        current_binlog_file,
+                        EventType::Update,
+                        &schema,
+                        &table,
+                        Some(change),
+                        None,
                     );
                     let _ = tx.blocking_send(Ok(event));
                 }
@@ -341,19 +366,43 @@ impl BinlogConnector for DefaultBinlogConnector {
         let cancel = CancellationToken::new();
         let cancel_clone = cancel.clone();
         self.cancel_token = Some(cancel);
+        let timeout_secs = self.connect_timeout_secs;
 
         info!(
-            "Connecting to MySQL {}:{} at {}:{}",
-            self.host, self.port, pos.journal_name, pos.position
+            "Connecting to MySQL {}:{} at {}:{} (timeout {}s)",
+            self.host, self.port, pos.journal_name, pos.position, timeout_secs
         );
 
         self.current_pos = Some(pos.clone());
         self.running.store(true, Ordering::SeqCst);
         self.connected.store(true, Ordering::SeqCst);
 
+        let (started_tx, started_rx) = tokio::sync::oneshot::channel();
+
         tokio::task::spawn_blocking(move || {
-            Self::run_replication(options, tx, cancel_clone);
+            Self::run_replication(options, tx, cancel_clone, started_tx);
         });
+
+        let started_result = tokio::time::timeout(
+            std::time::Duration::from_secs(timeout_secs),
+            started_rx,
+        )
+        .await
+        .map_err(|_| {
+            CanalError::BinlogConnection(format!(
+                "connection timed out after {}s",
+                timeout_secs
+            ))
+        })?;
+
+        match started_result {
+            Ok(()) => {}
+            Err(_) => {
+                // The oneshot sender was dropped without sending, meaning
+                // run_replication returned early with an error — the error
+                // was already sent via the event channel.
+            }
+        }
 
         Ok(())
     }
@@ -452,7 +501,10 @@ fn mysql_value_to_string(v: &MySqlValue) -> String {
             if let Ok(s) = std::str::from_utf8(b) {
                 s.to_string()
             } else {
-                b.iter().map(|byte| format!("{:02x}", byte)).collect::<Vec<_>>().join("")
+                b.iter()
+                    .map(|byte| format!("{:02x}", byte))
+                    .collect::<Vec<_>>()
+                    .join("")
             }
         }
         MySqlValue::Bit(bits) => {

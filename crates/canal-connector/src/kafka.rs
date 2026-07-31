@@ -1,14 +1,14 @@
 use async_trait::async_trait;
+use canal_common::CanalEvent;
 use canal_common::{CanalError, CanalResult};
 use canal_sink::connector::SinkConnector;
-use canal_common::CanalEvent;
 use rdkafka::config::ClientConfig;
 use rdkafka::producer::{FutureProducer, FutureRecord, Producer};
 use rdkafka::util::Timeout;
 use serde_json;
 use std::sync::Mutex;
 use std::time::Duration;
-use tracing::{debug, error, info, warn};
+use tracing::{error, info, warn};
 
 #[derive(Debug, Clone)]
 pub struct KafkaConfig {
@@ -106,8 +106,8 @@ impl SinkConnector for KafkaConnector {
     async fn connect(&self) -> CanalResult<()> {
         let mut cfg = ClientConfig::new();
         cfg.set("bootstrap.servers", &self.config.servers)
-           .set("message.timeout.ms", "5000")
-           .set("acks", "1");
+            .set("message.timeout.ms", "5000")
+            .set("acks", "1");
 
         let has_tls = self.config.ssl_ca_location.is_some();
         let has_sasl = self.config.sasl_username.is_some();
@@ -135,22 +135,34 @@ impl SinkConnector for KafkaConnector {
             if let Some(ref pass) = self.config.sasl_password {
                 cfg.set("sasl.password", pass);
             }
-            cfg.set("sasl.mechanism", self.config.sasl_mechanism.as_deref().unwrap_or("PLAIN"));
+            cfg.set(
+                "sasl.mechanism",
+                self.config.sasl_mechanism.as_deref().unwrap_or("PLAIN"),
+            );
         }
 
         let producer: FutureProducer = cfg
             .create()
             .map_err(|e| CanalError::Internal(format!("Kafka producer: {}", e)))?;
 
-        info!("Kafka connector '{}' connecting to {}", self.name, self.config.servers);
+        info!(
+            "Kafka connector '{}' connecting to {}",
+            self.name, self.config.servers
+        );
 
         producer
             .client()
-            .fetch_metadata(Some(&self.config.topic), Timeout::After(Duration::from_secs(10)))
+            .fetch_metadata(
+                Some(&self.config.topic),
+                Timeout::After(Duration::from_secs(10)),
+            )
             .map_err(|e| CanalError::Internal(format!("Kafka metadata: {}", e)))?;
 
         *self.producer.lock().unwrap_or_else(|e| e.into_inner()) = Some(producer);
-        info!("Kafka connector '{}' connected to '{}'", self.name, self.config.topic);
+        info!(
+            "Kafka connector '{}' connected to '{}'",
+            self.name, self.config.topic
+        );
         Ok(())
     }
 
@@ -161,37 +173,40 @@ impl SinkConnector for KafkaConnector {
         }
 
         let messages = self.serialize_events(&events);
-        let mut delivered = 0u64;
-        let mut failed = 0u64;
 
-        // Clone producer once before the loop
         let producer = {
             let guard = self.producer.lock().unwrap_or_else(|e| e.into_inner());
             match guard.as_ref() {
                 Some(p) => p.clone(),
-                None => return Err(CanalError::Internal(
-                    "KafkaConnector: not connected".into()
-                )),
+                None => {
+                    return Err(CanalError::Internal(
+                        "KafkaConnector: not connected".into(),
+                    ))
+                }
             }
         };
 
-        for (key, msg) in messages {
-            let record = FutureRecord::to(&self.config.topic)
-                .payload(&msg)
-                .key(&key);
+        let topic = &self.config.topic;
+        let send_futures: Vec<_> = messages
+            .into_iter()
+            .map(|(key, msg)| {
+                let p = producer.clone();
+                let t = topic.clone();
+                async move {
+                    let record = FutureRecord::to(&t).payload(&msg).key(&key);
+                    p.send(record, Timeout::After(Duration::from_secs(5))).await
+                }
+            })
+            .collect();
 
-            match producer.send(record, Timeout::After(Duration::from_secs(5))).await {
-                Ok((partition, offset)) => {
-                    debug!(
-                        "Kafka delivered: topic={}, partition={}, offset={}",
-                        self.config.topic, partition, offset
-                    );
-                    delivered += 1;
-                }
-                Err((e, _msg)) => {
-                    error!("Kafka delivery failed: {}", e);
-                    failed += 1;
-                }
+        let results = futures::future::join_all(send_futures).await;
+
+        let delivered = results.iter().filter(|r| r.is_ok()).count() as u64;
+        let failed = results.iter().filter(|r| r.is_err()).count() as u64;
+
+        for result in results.iter().filter(|r| r.is_err()) {
+            if let Err((e, _)) = result {
+                error!("Kafka delivery failed: {}", e);
             }
         }
 
@@ -202,7 +217,10 @@ impl SinkConnector for KafkaConnector {
             )));
         }
 
-        info!("Kafka '{}': dispatched {}/{} messages", self.name, delivered, total);
+        info!(
+            "Kafka '{}': dispatched {}/{} messages",
+            self.name, delivered, total
+        );
         Ok(())
     }
 
@@ -233,8 +251,20 @@ mod tests {
                 before: None,
                 after: Some(RowData {
                     columns: vec![
-                        ColumnValue { name: "id".into(), value: Some("1".into()), column_type: 3, is_key: true, updated: false },
-                        ColumnValue { name: "name".into(), value: Some("Alice".into()), column_type: 253, is_key: false, updated: false },
+                        ColumnValue {
+                            name: "id".into(),
+                            value: Some("1".into()),
+                            column_type: 3,
+                            is_key: true,
+                            updated: false,
+                        },
+                        ColumnValue {
+                            name: "name".into(),
+                            value: Some("Alice".into()),
+                            column_type: 253,
+                            is_key: false,
+                            updated: false,
+                        },
                     ],
                 }),
                 dml_type: DmlType::Insert,
@@ -263,10 +293,7 @@ mod tests {
     fn test_serialize_multiple_events() {
         let config = KafkaConfig::new("localhost:9092", "test-topic");
         let connector = KafkaConnector::new("test", config).unwrap();
-        let events = vec![
-            make_event("db", "t1", 100),
-            make_event("db", "t2", 200),
-        ];
+        let events = vec![make_event("db", "t1", 100), make_event("db", "t2", 200)];
         let messages = connector.serialize_events(&events);
         assert_eq!(messages.len(), 2);
     }

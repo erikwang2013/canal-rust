@@ -89,7 +89,12 @@ mod tests {
     #[test]
     fn test_put_with_columns() {
         let mut cache = TableMapCache::new();
-        let cols = vec![ColumnInfo { name: "id".into(), column_type: 3, is_key: true, is_nullable: false }];
+        let cols = vec![ColumnInfo {
+            name: "id".into(),
+            column_type: 3,
+            is_key: true,
+            is_nullable: false,
+        }];
         cache.put_with_columns(1, "db".into(), "tbl".into(), cols);
         assert_eq!(cache.get(1), Some(("db".into(), "tbl".into())));
         assert_eq!(cache.get_columns(1).unwrap().len(), 1);

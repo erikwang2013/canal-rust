@@ -30,7 +30,10 @@ impl EventFilter {
         } else {
             Some(Regex::new(black_list)?)
         };
-        Ok(Self { include: Regex::new(pattern)?, exclude })
+        Ok(Self {
+            include: Regex::new(pattern)?,
+            exclude,
+        })
     }
 
     /// Check whether a CanalEvent passes this filter.
