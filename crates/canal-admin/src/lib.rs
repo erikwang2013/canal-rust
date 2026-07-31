@@ -189,6 +189,46 @@ async fn stop_instance(
 mod tests {
     use super::*;
 
+    #[test]
+    fn test_check_auth_no_token_required() {
+        let headers = HeaderMap::new();
+        assert_eq!(check_auth(&headers, &None), Ok(()));
+    }
+
+    #[test]
+    fn test_check_auth_missing_header() {
+        let headers = HeaderMap::new();
+        assert_eq!(check_auth(&headers, &Some("secret".into())), Err(StatusCode::UNAUTHORIZED));
+    }
+
+    #[test]
+    fn test_check_auth_bearer_token_valid() {
+        let mut headers = HeaderMap::new();
+        headers.insert("Authorization", "Bearer secret".parse().unwrap());
+        assert_eq!(check_auth(&headers, &Some("secret".into())), Ok(()));
+    }
+
+    #[test]
+    fn test_check_auth_raw_token_valid() {
+        let mut headers = HeaderMap::new();
+        headers.insert("Authorization", "secret".parse().unwrap());
+        assert_eq!(check_auth(&headers, &Some("secret".into())), Ok(()));
+    }
+
+    #[test]
+    fn test_check_auth_wrong_token() {
+        let mut headers = HeaderMap::new();
+        headers.insert("Authorization", "Bearer wrong".parse().unwrap());
+        assert_eq!(check_auth(&headers, &Some("secret".into())), Err(StatusCode::UNAUTHORIZED));
+    }
+
+    #[test]
+    fn test_check_auth_empty_header_value() {
+        let mut headers = HeaderMap::new();
+        headers.insert("Authorization", "".parse().unwrap());
+        assert_eq!(check_auth(&headers, &Some("secret".into())), Err(StatusCode::UNAUTHORIZED));
+    }
+
     #[tokio::test]
     async fn test_register_and_list_instances() {
         let mgr = Arc::new(InstanceManager::new());
@@ -202,5 +242,25 @@ mod tests {
         let server = AdminServer::new("127.0.0.1:0", mgr);
         let task = server.start().await.unwrap();
         task.abort();
+    }
+
+    #[tokio::test]
+    async fn test_admin_server_with_auth() {
+        let mgr = Arc::new(InstanceManager::new());
+        let server = AdminServer::new("127.0.0.1:0", mgr).with_auth("test-token".into());
+        assert!(server.state.admin_token.is_some());
+    }
+
+    #[test]
+    fn test_admin_state_debug_masks_token() {
+        let mgr = Arc::new(InstanceManager::new());
+        let state = AdminState {
+            instance_manager: mgr,
+            started_at: std::time::Instant::now(),
+            admin_token: Some("secret".into()),
+        };
+        let debug_str = format!("{:?}", state);
+        assert!(debug_str.contains("has_auth"));
+        assert!(!debug_str.contains("secret"));
     }
 }

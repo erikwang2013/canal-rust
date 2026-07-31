@@ -84,7 +84,7 @@ fn default_log_format() -> String {
 #[derive(Parser)]
 #[command(
     name = "canal-rust",
-    version = "0.1.0",
+    version = env!("CARGO_PKG_VERSION"),
     about = "MySQL binlog subscription tool"
 )]
 struct Cli {

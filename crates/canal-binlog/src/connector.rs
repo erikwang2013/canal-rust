@@ -448,7 +448,13 @@ fn mysql_value_to_string(v: &MySqlValue) -> String {
         MySqlValue::Float(n) => n.to_string(),
         MySqlValue::Double(n) => n.to_string(),
         MySqlValue::Decimal(s) | MySqlValue::String(s) => s.clone(),
-        MySqlValue::Blob(b) => String::from_utf8_lossy(b).to_string(),
+        MySqlValue::Blob(b) => {
+            if let Ok(s) = std::str::from_utf8(b) {
+                s.to_string()
+            } else {
+                b.iter().map(|byte| format!("{:02x}", byte)).collect::<Vec<_>>().join("")
+            }
+        }
         MySqlValue::Bit(bits) => {
             let mut s = String::with_capacity(bits.len());
             for &b in bits {

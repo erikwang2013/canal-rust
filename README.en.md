@@ -215,8 +215,9 @@ canal-rust/
 |--------|-------|
 | Crates | 14 |
 | Lines of Rust | ~5,800 |
-| Tests | 88 |
+| Tests | 100 |
 | Proto definitions | 2 |
+| Version | v1.0.6 |
 | Clippy warnings | 0 |
 | License | Apache-2.0 |
 

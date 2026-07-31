@@ -89,4 +89,16 @@ protobuf 解码失败不记录日志也不传播错误，损坏消息静默通�
 | canal-client | 3 |
 | canal-sink | 3 |
 | canal-admin | 2 |
-| **合计** | **91** |
+| **合计** | **100** |
+
+## v5 问题修复记录
+
+| 问题 | 严重度 | 状态 | 修复方式 |
+|------|--------|------|---------|
+| put_batch 超大批次死锁 | 严重 | 已确认 | 代码已有 `&& !buffer.is_empty()` 保护 (memory.rs:46) |
+| EventType::Unknown 静默映射 | 重要 | 已确认 | 代码已有 `warn!` 日志 (server.rs:349) |
+| entry_bytes_to_event 解码失败 | 重要 | 已确认 | 代码已有 `warn!` 日志 (client/lib.rs:268) |
+| BLOB from_utf8_lossy 替换字符 | 建议 | **已修复** | 非 UTF-8 BLOB 改用 hex 编码 (connector.rs:451) |
+| admin auth 路径无测试 | 建议 | **已修复** | 新增 9 个测试覆盖 auth 逻辑 (admin/lib.rs) |
+| canal-meta 未使用 | 建议 | 保留 | 表结构缓存功能未来会集成 |
+| 版本号全局配置 | 建议 | **已修复** | 工作区统一 v1.0.6，CLI 使用 `CARGO_PKG_VERSION` |
