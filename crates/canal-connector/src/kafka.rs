@@ -6,9 +6,9 @@ use rdkafka::config::ClientConfig;
 use rdkafka::producer::{FutureProducer, FutureRecord, Producer};
 use rdkafka::util::Timeout;
 use serde_json;
-use tokio::sync::Mutex;
+use std::sync::Mutex;
 use std::time::Duration;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 /// Kafka connector implementing the SinkConnector trait.
 /// Uses rdkafka's FutureProducer for async message delivery.
@@ -33,10 +33,6 @@ impl KafkaConnector {
             topic: topic.to_string(),
             servers: servers.to_string(),
         })
-    }
-
-    async fn get_producer_async(&self) -> tokio::sync::MutexGuard<'_, Option<FutureProducer>> {
-        self.producer.lock().await
     }
 
     /// Serialize a CanalEvent batch to flat JSON messages for Kafka.
@@ -81,7 +77,9 @@ impl KafkaConnector {
                     "ddl_sql": event.ddl_sql,
                 });
 
-                serde_json::to_string(&payload).ok()
+                serde_json::to_string(&payload)
+                    .inspect_err(|e| warn!("Kafka '{}': failed to serialize event: {}", self.name, e))
+                    .ok()
             })
             .collect()
     }
@@ -108,8 +106,7 @@ impl SinkConnector for KafkaConnector {
             .fetch_metadata(Some(&self.topic), Timeout::After(Duration::from_secs(10)))
             .map_err(|e| CanalError::Internal(format!("Kafka metadata fetch failed: {}", e)))?;
 
-        let mut guard = self.producer.lock().await;
-        *guard = Some(producer);
+        *self.producer.lock().unwrap() = Some(producer);
         info!("Kafka connector '{}' connected to topic '{}'", self.name, self.topic);
         Ok(())
     }
@@ -129,10 +126,11 @@ impl SinkConnector for KafkaConnector {
                 .payload(&msg)
                 .key(&events[0].schema_name); // partition by schema
 
-            {
-                let guard = self.producer.lock().await;
-                let producer = guard.as_ref().expect("KafkaConnector: not connected");
-                match producer.send(record, Timeout::After(Duration::from_secs(5))).await {
+            let producer = self.producer.lock().unwrap()
+                .as_ref()
+                .expect("KafkaConnector: not connected")
+                .clone();
+            match producer.send(record, Timeout::After(Duration::from_secs(5))).await {
                 Ok((partition, offset)) => {
                     debug!(
                         "Kafka delivered: topic={}, partition={}, offset={}",
@@ -145,7 +143,6 @@ impl SinkConnector for KafkaConnector {
                     failed += 1;
                 }
             }
-            } // drop MutexGuard
         }
 
         if failed > 0 {
@@ -160,8 +157,7 @@ impl SinkConnector for KafkaConnector {
     }
 
     async fn close(&self) -> CanalResult<()> {
-        let mut guard = self.producer.lock().await;
-        *guard = None;
+        *self.producer.lock().unwrap() = None;
         info!("Kafka connector '{}' closed", self.name);
         Ok(())
     }

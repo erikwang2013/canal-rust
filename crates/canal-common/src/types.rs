@@ -139,6 +139,10 @@ pub struct CanalEvent {
     pub row_change: Option<RowChange>,
     pub ddl_sql: Option<String>,
     pub gtid: Option<String>,
+    /// Raw protobuf entry bytes carried through the wire protocol.
+    /// Set by canal-client when decoding server responses; used for
+    /// round-trip length tracking in canal-server's event-to-entry conversion.
+    #[serde(default)]
     pub raw_bytes: Vec<u8>,
 }
 

@@ -1,6 +1,7 @@
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::{Context, Result};
 use canal_binlog::BinlogConnector;
@@ -24,7 +25,6 @@ struct CanalSection {
 }
 
 #[derive(Debug, Deserialize)]
-#[allow(dead_code)]
 struct MysqlConfig {
     host: String,
     #[serde(default = "default_mysql_port")]
@@ -153,7 +153,7 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
     // Spawn binlog connector to feed events into the store
     let store_for_binlog = Arc::clone(&store);
     let mysql_cfg = config.canal.mysql;
-    tokio::spawn(async move {
+    let binlog_handle = tokio::spawn(async move {
         let pos = canal_common::LogPosition::new("mysql-bin.000001", 4);
         let (mut connector, mut rx) =
             canal_binlog::connector::DefaultBinlogConnector::new(
@@ -172,17 +172,30 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
         tracing::info!("Binlog connector started");
 
         let mut batch = Vec::new();
-        while let Some(result) = rx.recv().await {
-            match result {
-                Ok(event) => {
-                    batch.push(event);
-                    if batch.len() >= 256 {
+        let mut flush_interval = tokio::time::interval(Duration::from_millis(200));
+        loop {
+            tokio::select! {
+                result = rx.recv() => {
+                    match result {
+                        Some(Ok(event)) => {
+                            batch.push(event);
+                            if batch.len() >= 256 {
+                                if let Err(e) = store_for_binlog.put_batch(batch.split_off(0)).await {
+                                    tracing::error!("Failed to store events: {}", e);
+                                }
+                            }
+                        }
+                        Some(Err(e)) => tracing::error!("Binlog event error: {}", e),
+                        None => break,
+                    }
+                }
+                _ = flush_interval.tick() => {
+                    if !batch.is_empty() {
                         if let Err(e) = store_for_binlog.put_batch(batch.split_off(0)).await {
-                            tracing::error!("Failed to store events: {}", e);
+                            tracing::error!("Failed to flush batch: {}", e);
                         }
                     }
                 }
-                Err(e) => tracing::error!("Binlog event error: {}", e),
             }
         }
 
@@ -194,6 +207,13 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
 
     let server = canal_server::server::CanalServer::new(bind_addr, store);
     server.serve().await?;
+
+    // Reap binlog connector task — log if it panicked
+    binlog_handle.abort();
+    match binlog_handle.await {
+        Ok(()) => tracing::info!("Binlog connector task completed"),
+        Err(e) => tracing::error!("Binlog connector task panicked: {}", e),
+    }
 
     Ok(())
 }

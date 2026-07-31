@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Instant;
 use axum::{Router, routing::{get, post}, Json, extract::{Path, State}};
 use serde::Serialize;
 use tokio::sync::RwLock;
@@ -15,9 +16,19 @@ pub struct InstanceSummary {
 /// Shared application state for the admin API.
 /// Holds raw String registrations; in production this would hold an
 /// Arc<InstanceManager> from canal-instance and call its methods directly.
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct AdminState {
     pub instances: Arc<RwLock<std::collections::HashMap<String, InstanceSummary>>>,
+    pub started_at: Instant,
+}
+
+impl Default for AdminState {
+    fn default() -> Self {
+        Self {
+            instances: Arc::default(),
+            started_at: Instant::now(),
+        }
+    }
 }
 
 /// Health check response.
@@ -51,7 +62,10 @@ impl AdminServer {
     pub fn new(bind_addr: &str) -> Self {
         Self {
             bind_addr: bind_addr.to_string(),
-            state: AdminState::default(),
+            state: AdminState {
+                started_at: Instant::now(),
+                ..AdminState::default()
+            },
         }
     }
 
@@ -95,11 +109,11 @@ impl AdminServer {
     }
 }
 
-async fn health_handler() -> Json<HealthResponse> {
+async fn health_handler(State(state): State<AdminState>) -> Json<HealthResponse> {
     Json(HealthResponse {
         status: "UP".into(),
         version: env!("CARGO_PKG_VERSION").to_string(),
-        uptime_seconds: 0, // TODO: track actual uptime
+        uptime_seconds: state.started_at.elapsed().as_secs(),
     })
 }
 

@@ -6,6 +6,7 @@ use prost::Message;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
+use tokio::task::JoinHandle;
 use tracing::{debug, info, warn};
 
 /// Canal client for subscribing to MySQL binlog events from a Canal server.
@@ -125,7 +126,7 @@ impl CanalClient {
         let destination = self.destination.clone();
 
         // Spawn background poll loop: Get → Messages → ClientAck → repeat
-        tokio::spawn(async move {
+        let bg_task: JoinHandle<()> = tokio::spawn(async move {
             loop {
                 // Send Get
                 let get = Get {
@@ -199,7 +200,7 @@ impl CanalClient {
             }
         });
 
-        Ok(CanalEventStream { rx })
+        Ok(CanalEventStream { rx, _bg_task: bg_task })
     }
 
     pub fn client_id(&self) -> u64 {
@@ -210,11 +211,18 @@ impl CanalClient {
 /// An async stream of Canal binlog events.
 pub struct CanalEventStream {
     rx: mpsc::Receiver<CanalResult<CanalEvent>>,
+    _bg_task: JoinHandle<()>,
 }
 
 impl CanalEventStream {
     pub async fn next_event(&mut self) -> Option<CanalResult<CanalEvent>> {
         self.rx.recv().await
+    }
+}
+
+impl Drop for CanalEventStream {
+    fn drop(&mut self) {
+        self._bg_task.abort();
     }
 }
 
@@ -422,7 +430,8 @@ mod tests {
     #[tokio::test]
     async fn test_canal_event_stream_drop() {
         let (_tx, rx) = mpsc::channel::<CanalResult<CanalEvent>>(4);
-        let mut stream = CanalEventStream { rx };
+        let bg = tokio::spawn(async {});
+        let mut stream = CanalEventStream { rx, _bg_task: bg };
         drop(_tx);
         assert!(stream.next_event().await.is_none());
     }
