@@ -12,21 +12,20 @@ use mysql_cdc::events::table_map_event::TableMapEvent;
 use mysql_cdc::replica_options::ReplicaOptions;
 use mysql_cdc::ssl_mode::SslMode;
 use tokio::sync::mpsc;
+use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info};
 
 use crate::table_map::ColumnInfo;
 use crate::EventConverter;
 
 /// Trait for MySQL binlog replication connectors.
-/// Abstracts the underlying binlog client library so implementations
-/// can be swapped (binlog crate, custom protocol, mock for testing).
 #[async_trait]
 pub trait BinlogConnector: Send {
     /// Connect to MySQL and start replicating from the given position
     async fn connect(&mut self, pos: &LogPosition) -> CanalResult<()>;
 
     /// Get the receiver end of the event channel.
-    /// Events from MySQL binlog are streamed through this channel.
+    /// Must be called BEFORE connect().
     fn take_receiver(&mut self) -> mpsc::Receiver<CanalResult<CanalEvent>>;
 
     /// Gracefully disconnect from MySQL
@@ -36,19 +35,19 @@ pub trait BinlogConnector: Send {
     fn current_position(&self) -> Option<LogPosition>;
 }
 
-/// Default binlog connector implementation using the `mysql_cdc` crate.
-///
-/// The connect() method spawns a blocking task that streams binlog events
-/// from a real MySQL/MariaDB server and feeds them into the event channel.
+/// Default binlog connector using `mysql_cdc`.
 pub struct DefaultBinlogConnector {
     host: String,
     port: u16,
     username: String,
     password: String,
     server_id: u64,
+    ssl_mode: SslMode,
     sender: Option<mpsc::Sender<CanalResult<CanalEvent>>>,
     current_pos: Option<LogPosition>,
     running: AtomicBool,
+    cancel_token: Option<CancellationToken>,
+    connected: AtomicBool,
 }
 
 impl DefaultBinlogConnector {
@@ -59,24 +58,30 @@ impl DefaultBinlogConnector {
             username: username.to_string(),
             password: password.to_string(),
             server_id,
+            ssl_mode: SslMode::IfAvailable,
             sender: None,
             current_pos: None,
             running: AtomicBool::new(false),
+            cancel_token: None,
+            connected: AtomicBool::new(false),
         }
     }
 
-    /// Create a connector with a pre-built channel for event streaming
+    /// Set the SSL mode for the MySQL connection.
+    pub fn with_ssl_mode(mut self, mode: SslMode) -> Self {
+        self.ssl_mode = mode;
+        self
+    }
+
+    /// Create a connector with a pre-built channel for event streaming.
     pub fn with_channel(mut self) -> (Self, mpsc::Receiver<CanalResult<CanalEvent>>) {
         let (tx, rx) = mpsc::channel(4096);
         self.sender = Some(tx);
         (self, rx)
     }
 
-    // ---------------------------------------------------------------------------
-    // Internal helpers — all synchronous because they run inside spawn_blocking
-    // ---------------------------------------------------------------------------
+    // -- Internal helpers --
 
-    /// Build ReplicaOptions from stored connection params and the given position.
     fn build_options(&self, pos: &LogPosition) -> ReplicaOptions {
         ReplicaOptions {
             hostname: self.host.clone(),
@@ -85,17 +90,17 @@ impl DefaultBinlogConnector {
             password: self.password.clone(),
             server_id: self.server_id as u32,
             blocking: true,
-            ssl_mode: SslMode::Disabled,
+            ssl_mode: self.ssl_mode,
             binlog: BinlogOptions::from_position(pos.journal_name.clone(), pos.position as u32),
             ..Default::default()
         }
     }
 
-    /// The synchronous replication loop. Runs inside tokio::task::spawn_blocking
-    /// because mysql_cdc's replicate() is a blocking iterator over network packets.
+    /// The synchronous replication loop.
     fn run_replication(
         options: ReplicaOptions,
         tx: mpsc::Sender<CanalResult<CanalEvent>>,
+        cancel: CancellationToken,
     ) {
         let mut client = BinlogClient::new(options);
         let mut converter = EventConverter::new();
@@ -113,6 +118,11 @@ impl DefaultBinlogConnector {
         };
 
         for result in events {
+            if cancel.is_cancelled() {
+                info!("Binlog replication cancelled");
+                break;
+            }
+
             let (header, event) = match result {
                 Ok(r) => r,
                 Err(e) => {
@@ -124,13 +134,10 @@ impl DefaultBinlogConnector {
                 }
             };
 
-            // Keep track of the current binlog file name (updated on RotateEvent)
             if let BinlogEvent::RotateEvent(ref re) = event {
                 current_binlog_file = re.binlog_filename.clone();
             }
 
-            // Convert and send. Non-row events (TableMap, Rotate, heartbeat,
-            // Xid, etc.) are handled internally and produce no CanalEvent.
             if let Err(e) = Self::process_and_send(
                 &header,
                 &event,
@@ -141,15 +148,13 @@ impl DefaultBinlogConnector {
                 let _ = tx.blocking_send(Err(e));
             }
 
-            // Always commit so the connector tracks progress for reconnection
             client.commit(&header, &event);
         }
 
         info!("Binlog replication stream ended");
     }
 
-    /// Process a single binlog event. Returns Ok(()) whether or not a
-    /// CanalEvent was produced (only row events produce one).
+    /// Process a single binlog event.
     fn process_and_send(
         header: &EventHeader,
         event: &BinlogEvent,
@@ -158,7 +163,6 @@ impl DefaultBinlogConnector {
         tx: &mpsc::Sender<CanalResult<CanalEvent>>,
     ) -> CanalResult<()> {
         match event {
-            // -- TableMap: register table metadata, no output event --
             BinlogEvent::TableMapEvent(e) => {
                 let columns = build_column_infos(e);
                 converter.handle_table_map_event(
@@ -170,19 +174,13 @@ impl DefaultBinlogConnector {
                 Ok(())
             }
 
-            // -- RotateEvent: clear stale TableMap entries, no output event --
             BinlogEvent::RotateEvent(_) => {
                 converter.clear_table_map();
                 Ok(())
             }
 
-            // -- Heartbeat: no output event --
-            BinlogEvent::HeartbeatEvent(_) => Ok(()),
+            BinlogEvent::HeartbeatEvent(_) | BinlogEvent::XidEvent(_) => Ok(()),
 
-            // -- Xid / transaction boundary: no output event --
-            BinlogEvent::XidEvent(_) => Ok(()),
-
-            // -- DDL / Query events: emitted as a DDL CanalEvent --
             BinlogEvent::QueryEvent(q) => {
                 let canal_event = CanalEvent {
                     journal_name: current_binlog_file.to_string(),
@@ -201,103 +199,29 @@ impl DefaultBinlogConnector {
                 Ok(())
             }
 
-            // -- WriteRows (INSERT) --
             BinlogEvent::WriteRowsEvent(e) => {
-                let columns = converter
-                    .get_columns(e.table_id)
-                    .cloned()
-                    .unwrap_or_default();
-                for row in &e.rows {
-                    let values = extract_column_values(row, &columns);
-                    match converter.handle_row_event(e.table_id, EventType::Insert, values) {
-                        Ok(change) => {
-                            let schema = change.schema_name.clone();
-                            let table = change.table_name.clone();
-                            let canal_event = Self::build_canal_event(
-                                header,
-                                current_binlog_file,
-                                EventType::Insert,
-                                &schema,
-                                &table,
-                                Some(change),
-                                None,
-                            );
-                            let _ = tx.blocking_send(Ok(canal_event));
-                        }
-                        Err(err) => {
-                            error!("Failed to convert WriteRows event: {:?}", err);
-                            let _ = tx.blocking_send(Err(err));
-                        }
-                    }
-                }
-                Ok(())
+                Self::send_row_events(
+                    header, current_binlog_file, EventType::Insert,
+                    e.table_id, &e.rows, converter, tx,
+                    extract_column_values,
+                )
             }
 
-            // -- UpdateRows (UPDATE) --
             BinlogEvent::UpdateRowsEvent(e) => {
-                let columns = converter
-                    .get_columns(e.table_id)
-                    .cloned()
-                    .unwrap_or_default();
-                for row in &e.rows {
-                    let values = extract_update_column_values(row, &columns);
-                    match converter.handle_row_event(e.table_id, EventType::Update, values) {
-                        Ok(change) => {
-                            let schema = change.schema_name.clone();
-                            let table = change.table_name.clone();
-                            let canal_event = Self::build_canal_event(
-                                header,
-                                current_binlog_file,
-                                EventType::Update,
-                                &schema,
-                                &table,
-                                Some(change),
-                                None,
-                            );
-                            let _ = tx.blocking_send(Ok(canal_event));
-                        }
-                        Err(err) => {
-                            error!("Failed to convert UpdateRows event: {:?}", err);
-                            let _ = tx.blocking_send(Err(err));
-                        }
-                    }
-                }
-                Ok(())
+                Self::send_update_events(
+                    header, current_binlog_file,
+                    e.table_id, &e.rows, converter, tx,
+                )
             }
 
-            // -- DeleteRows (DELETE) --
             BinlogEvent::DeleteRowsEvent(e) => {
-                let columns = converter
-                    .get_columns(e.table_id)
-                    .cloned()
-                    .unwrap_or_default();
-                for row in &e.rows {
-                    let values = extract_column_values(row, &columns);
-                    match converter.handle_row_event(e.table_id, EventType::Delete, values) {
-                        Ok(change) => {
-                            let schema = change.schema_name.clone();
-                            let table = change.table_name.clone();
-                            let canal_event = Self::build_canal_event(
-                                header,
-                                current_binlog_file,
-                                EventType::Delete,
-                                &schema,
-                                &table,
-                                Some(change),
-                                None,
-                            );
-                            let _ = tx.blocking_send(Ok(canal_event));
-                        }
-                        Err(err) => {
-                            error!("Failed to convert DeleteRows event: {:?}", err);
-                            let _ = tx.blocking_send(Err(err));
-                        }
-                    }
-                }
-                Ok(())
+                Self::send_row_events(
+                    header, current_binlog_file, EventType::Delete,
+                    e.table_id, &e.rows, converter, tx,
+                    extract_column_values,
+                )
             }
 
-            // Catch-all for unhandled events
             other => {
                 debug!("Skipping unhandled binlog event: {:?}", other);
                 Ok(())
@@ -305,7 +229,72 @@ impl DefaultBinlogConnector {
         }
     }
 
-    /// Build a CanalEvent from binlog event metadata and an optional RowChange / DDL sql.
+    #[allow(clippy::too_many_arguments)]
+    fn send_row_events(
+        header: &EventHeader,
+        current_binlog_file: &str,
+        entry_type: EventType,
+        table_id: u64,
+        rows: &[RowData],
+        converter: &mut EventConverter,
+        tx: &mpsc::Sender<CanalResult<CanalEvent>>,
+        extract: fn(&RowData, &[ColumnInfo]) -> Vec<ColumnValue>,
+    ) -> CanalResult<()> {
+        let columns = converter.get_columns(table_id).cloned().unwrap_or_default();
+        for row in rows {
+            let values = extract(row, &columns);
+            match converter.handle_row_event(table_id, entry_type, values) {
+                Ok(change) => {
+                    let schema = change.schema_name.clone();
+                    let table = change.table_name.clone();
+                    let event = Self::build_canal_event(
+                        header, current_binlog_file, entry_type,
+                        &schema, &table,
+                        Some(change), None,
+                    );
+                    let _ = tx.blocking_send(Ok(event));
+                }
+                Err(err) => {
+                    error!("Failed to convert {:?} event: {:?}", entry_type, err);
+                    let _ = tx.blocking_send(Err(err));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn send_update_events(
+        header: &EventHeader,
+        current_binlog_file: &str,
+        table_id: u64,
+        rows: &[UpdateRowData],
+        converter: &mut EventConverter,
+        tx: &mpsc::Sender<CanalResult<CanalEvent>>,
+    ) -> CanalResult<()> {
+        let columns = converter.get_columns(table_id).cloned().unwrap_or_default();
+        for row in rows {
+            let before_values = extract_column_values(&row.before_update, &columns);
+            let after_values = extract_column_values(&row.after_update, &columns);
+            match converter.handle_update_row_event(table_id, before_values, after_values) {
+                Ok(change) => {
+                    let schema = change.schema_name.clone();
+                    let table = change.table_name.clone();
+                    let event = Self::build_canal_event(
+                        header, current_binlog_file, EventType::Update,
+                        &schema, &table,
+                        Some(change), None,
+                    );
+                    let _ = tx.blocking_send(Ok(event));
+                }
+                Err(err) => {
+                    error!("Failed to convert Update event: {:?}", err);
+                    let _ = tx.blocking_send(Err(err));
+                }
+            }
+        }
+        Ok(())
+    }
+
     fn build_canal_event(
         header: &EventHeader,
         journal_name: &str,
@@ -331,9 +320,7 @@ impl DefaultBinlogConnector {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Async trait implementation
-// ---------------------------------------------------------------------------
+// -- Async trait implementation --
 
 #[async_trait]
 impl BinlogConnector for DefaultBinlogConnector {
@@ -350,6 +337,9 @@ impl BinlogConnector for DefaultBinlogConnector {
             .ok_or_else(|| CanalError::Internal("no sender configured".to_string()))?;
 
         let options = self.build_options(pos);
+        let cancel = CancellationToken::new();
+        let cancel_clone = cancel.clone();
+        self.cancel_token = Some(cancel);
 
         info!(
             "Connecting to MySQL {}:{} at {}:{}",
@@ -358,9 +348,10 @@ impl BinlogConnector for DefaultBinlogConnector {
 
         self.current_pos = Some(pos.clone());
         self.running.store(true, Ordering::SeqCst);
+        self.connected.store(true, Ordering::SeqCst);
 
         tokio::task::spawn_blocking(move || {
-            Self::run_replication(options, tx);
+            Self::run_replication(options, tx, cancel_clone);
         });
 
         Ok(())
@@ -368,10 +359,14 @@ impl BinlogConnector for DefaultBinlogConnector {
 
     /// Take the receiver end of the event channel.
     ///
-    /// **Must be called before `connect()`.** After `connect()` spawns a
-    /// blocking replication task that holds the sender, calling this after
-    /// connect will create a new channel whose receiver gets no events.
+    /// Must be called BEFORE connect(). Panics if already connected
+    /// to prevent silent data loss from channel mismatch.
     fn take_receiver(&mut self) -> mpsc::Receiver<CanalResult<CanalEvent>> {
+        assert!(
+            !self.connected.load(Ordering::SeqCst),
+            "take_receiver must be called before connect()"
+        );
+
         self.sender
             .take()
             .map(|_old_tx| {
@@ -388,6 +383,9 @@ impl BinlogConnector for DefaultBinlogConnector {
 
     async fn disconnect(&mut self) -> CanalResult<()> {
         self.running.store(false, Ordering::SeqCst);
+        if let Some(token) = self.cancel_token.take() {
+            token.cancel();
+        }
         info!("Disconnected from MySQL");
         Ok(())
     }
@@ -397,24 +395,17 @@ impl BinlogConnector for DefaultBinlogConnector {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Column extraction helpers
-// ---------------------------------------------------------------------------
+// -- Column extraction helpers --
 
-/// Build a Vec<ColumnInfo> from a mysql_cdc TableMapEvent.
-/// Uses column names from table metadata (MySQL 5.6+) when available,
-/// otherwise synthesises "col_N" names.
 fn build_column_infos(tm: &TableMapEvent) -> Vec<ColumnInfo> {
     let num_cols = tm.column_types.len();
 
-    // Column names: prefer what the server sends, else fall back to col_N
     let column_names: Vec<String> = tm
         .table_metadata
         .as_ref()
         .and_then(|m| m.column_names.clone())
         .unwrap_or_else(|| (0..num_cols).map(|i| format!("col_{}", i)).collect());
 
-    // Primary-key columns (from table metadata)
     let mut is_key = vec![false; num_cols];
     if let Some(ref meta) = tm.table_metadata {
         if let Some(ref pks) = meta.simple_primary_keys {
@@ -446,7 +437,6 @@ fn build_column_infos(tm: &TableMapEvent) -> Vec<ColumnInfo> {
         .collect()
 }
 
-/// Convert a MySqlValue into its string representation.
 fn mysql_value_to_string(v: &MySqlValue) -> String {
     match v {
         MySqlValue::TinyInt(n) => n.to_string(),
@@ -458,10 +448,13 @@ fn mysql_value_to_string(v: &MySqlValue) -> String {
         MySqlValue::Double(n) => n.to_string(),
         MySqlValue::Decimal(s) | MySqlValue::String(s) => s.clone(),
         MySqlValue::Blob(b) => String::from_utf8_lossy(b).to_string(),
-        MySqlValue::Bit(bits) => bits.iter().fold(String::new(), |mut s, b| {
-            s.push(if *b { '1' } else { '0' });
+        MySqlValue::Bit(bits) => {
+            let mut s = String::with_capacity(bits.len());
+            for &b in bits {
+                s.push(if b { '1' } else { '0' });
+            }
             s
-        }),
+        }
         MySqlValue::Enum(n) => n.to_string(),
         MySqlValue::Set(n) => n.to_string(),
         MySqlValue::Year(n) => n.to_string(),
@@ -477,8 +470,6 @@ fn mysql_value_to_string(v: &MySqlValue) -> String {
     }
 }
 
-/// Convert a mysql_cdc RowData into a Vec<ColumnValue> using column metadata
-/// for names, types, and key status.
 fn extract_column_values(row: &RowData, column_infos: &[ColumnInfo]) -> Vec<ColumnValue> {
     row.cells
         .iter()
@@ -494,16 +485,4 @@ fn extract_column_values(row: &RowData, column_infos: &[ColumnInfo]) -> Vec<Colu
             }
         })
         .collect()
-}
-
-/// Convert a mysql_cdc UpdateRowData (before + after images) into a flat
-/// Vec<ColumnValue> suitable for EventConverter::handle_row_event.
-fn extract_update_column_values(
-    row: &UpdateRowData,
-    column_infos: &[ColumnInfo],
-) -> Vec<ColumnValue> {
-    let mut values = extract_column_values(&row.before_update, column_infos);
-    let after = extract_column_values(&row.after_update, column_infos);
-    values.extend(after);
-    values
 }

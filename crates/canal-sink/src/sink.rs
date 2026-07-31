@@ -87,14 +87,9 @@ impl EventSink for DefaultEventSink {
             return Ok(Events::new(0));
         }
 
-        // Build start position for get_batch before filtered is moved
-        let first_pos = canal_common::LogPosition::new(
-            &filtered[0].journal_name,
-            filtered[0].position.saturating_sub(1),
-        );
-
-        // Phase 2: Store in memory for client subscription
-        self.store.put_batch(filtered.clone()).await?;
+        // Phase 2: Store in memory for client subscription.
+        // put_batch returns the batch_id, avoiding a race on get_batch.
+        let batch_id = self.store.put_batch(filtered.clone()).await?;
 
         // Phase 3: Fan out to external connectors (fire and forget pattern).
         // Use Arc to share the filtered batch across connectors.
@@ -126,9 +121,8 @@ impl EventSink for DefaultEventSink {
             }
         }
 
-        // Phase 4: Read back for client response (get exact batch_id from store)
-
-        let batch = self.store.get_batch(&first_pos, filtered_count).await?;
+        // Phase 4: Build the response from the shared batch (no re-read from store)
+        let batch = Events::with_events((*shared).clone(), batch_id);
         info!(
             "Sinked batch_id={} with {} events",
             batch.batch_id,

@@ -2,7 +2,6 @@ use crate::table_map::{ColumnInfo, TableMapCache};
 use canal_common::{CanalError, CanalResult, ColumnValue, DmlType, EventType, RowChange, RowData};
 
 /// Converts MySQL binlog raw events into Canal's normalized event format.
-/// Manages TableMap state and resolves table_id references.
 pub struct EventConverter {
     table_map: TableMapCache,
 }
@@ -20,14 +19,11 @@ impl EventConverter {
         }
     }
 
-    /// Process a TableMap event: register a table_id → (schema, table) mapping
     pub fn handle_table_map(&mut self, table_id: u64, schema: &str, table: &str) {
         self.table_map
             .put(table_id, schema.to_string(), table.to_string());
     }
 
-    /// Process a TableMap event with full column metadata from mysql_cdc.
-    /// Use this when column names, types, and key info are available.
     pub fn handle_table_map_event(
         &mut self,
         table_id: u64,
@@ -35,23 +31,15 @@ impl EventConverter {
         table: &str,
         columns: Vec<ColumnInfo>,
     ) {
-        self.table_map.put_with_columns(
-            table_id,
-            schema.to_string(),
-            table.to_string(),
-            columns,
-        );
+        self.table_map
+            .put_with_columns(table_id, schema.to_string(), table.to_string(), columns);
     }
 
-    /// Look up column metadata for a table_id.
     pub fn get_columns(&self, table_id: u64) -> Option<&Vec<ColumnInfo>> {
         self.table_map.get_columns(table_id)
     }
 
-    /// Process a Row event (INSERT / UPDATE / DELETE):
-    /// - Looks up the table name from TableMap
-    /// - Separates before-image and after-image columns (for UPDATEs)
-    /// - Produces a RowChange with the appropriate DML type
+    /// Process a Row event (INSERT / DELETE / single-image events).
     pub fn handle_row_event(
         &self,
         table_id: u64,
@@ -65,30 +53,9 @@ impl EventConverter {
         let (before, after, dml_type) = match event_type {
             EventType::Insert => (None, Some(RowData { columns }), DmlType::Insert),
             EventType::Delete => (Some(RowData { columns }), None, DmlType::Delete),
-            EventType::Update => {
-                // MySQL sends before-image columns followed by after-image columns
-                let mid = columns.len() / 2;
-                let before_cols = columns[..mid].to_vec();
-                let mut after_cols = columns[mid..].to_vec();
-
-                // Mark after-image columns as updated
-                for col in &mut after_cols {
-                    col.updated = true;
-                }
-
-                (
-                    Some(RowData {
-                        columns: before_cols,
-                    }),
-                    Some(RowData {
-                        columns: after_cols,
-                    }),
-                    DmlType::Update,
-                )
-            }
             _ => {
                 return Err(CanalError::Internal(format!(
-                    "unexpected event type {:?} for row event",
+                    "handle_row_event does not support {:?}; use handle_update_row_event",
                     event_type
                 )));
             }
@@ -103,9 +70,30 @@ impl EventConverter {
         })
     }
 
-    /// Must be called when a RotateEvent is received from binlog.
-    /// Clears the TableMap cache because table_id mappings are
-    /// no longer valid after log rotation.
+    /// Process an UPDATE with separate before-image and after-image column vectors.
+    pub fn handle_update_row_event(
+        &self,
+        table_id: u64,
+        before_columns: Vec<ColumnValue>,
+        mut after_columns: Vec<ColumnValue>,
+    ) -> CanalResult<RowChange> {
+        let (schema, table) = self.table_map.get(table_id).ok_or_else(|| {
+            CanalError::NotFound(format!("table_id {} not found in TableMap", table_id))
+        })?;
+
+        for col in &mut after_columns {
+            col.updated = true;
+        }
+
+        Ok(RowChange {
+            table_name: table,
+            schema_name: schema,
+            before: Some(RowData { columns: before_columns }),
+            after: Some(RowData { columns: after_columns }),
+            dml_type: DmlType::Update,
+        })
+    }
+
     pub fn clear_table_map(&mut self) {
         self.table_map.clear();
     }
@@ -144,28 +132,22 @@ mod tests {
     }
 
     #[test]
-    fn test_update_event_splits_before_after() {
+    fn test_update_event_separate_before_after() {
         let mut converter = EventConverter::new();
         converter.handle_table_map(10, "mydb", "products");
 
-        // 2 columns before + 2 columns after = 4 total
         let change = converter
-            .handle_row_event(
+            .handle_update_row_event(
                 10,
-                EventType::Update,
-                vec![
-                    make_column("id", "1"),
-                    make_column("price", "10"),
-                    make_column("id", "1"),
-                    make_column("price", "20"),
-                ],
+                vec![make_column("id", "1"), make_column("price", "10")],
+                vec![make_column("id", "1"), make_column("price", "20")],
             )
             .unwrap();
 
         assert_eq!(change.dml_type, DmlType::Update);
         assert_eq!(change.before.as_ref().unwrap().columns.len(), 2);
         assert_eq!(change.after.as_ref().unwrap().columns.len(), 2);
-        assert!(change.after.unwrap().columns[1].updated);
+        assert!(change.after.as_ref().unwrap().columns[1].updated);
     }
 
     #[test]
@@ -199,6 +181,6 @@ mod tests {
         converter.clear_table_map();
 
         let result = converter.handle_row_event(1, EventType::Insert, vec![]);
-        assert!(result.is_err()); // table_map cleared, table_id 1 unknown
+        assert!(result.is_err());
     }
 }

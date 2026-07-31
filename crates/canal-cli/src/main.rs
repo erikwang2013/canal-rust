@@ -9,7 +9,7 @@ use clap::{Parser, Subcommand};
 use serde::Deserialize;
 use tracing_subscriber::{fmt, EnvFilter};
 
-// ─── Configuration ───────────────────────────────────────
+// -- Configuration --
 
 #[derive(Debug, Deserialize)]
 struct CanalConfig {
@@ -18,10 +18,16 @@ struct CanalConfig {
 
 #[derive(Debug, Deserialize)]
 struct CanalSection {
+    #[serde(default = "default_server_id")]
+    server_id: u64,
     mysql: MysqlConfig,
     store: StoreSection,
     server: ServerSection,
     logging: LogSection,
+}
+
+fn default_server_id() -> u64 {
+    1001
 }
 
 #[derive(Debug, Deserialize)]
@@ -54,7 +60,7 @@ struct ServerSection {
 }
 
 fn default_bind() -> String {
-    "0.0.0.0:11111".to_string()
+    "127.0.0.1:11111".to_string()
 }
 
 #[derive(Debug, Deserialize)]
@@ -73,7 +79,7 @@ fn default_log_format() -> String {
     "json".to_string()
 }
 
-// ─── CLI ─────────────────────────────────────────────────
+// -- CLI --
 
 /// Canal Rust — MySQL binlog incremental subscription & consumption
 #[derive(Parser)]
@@ -91,19 +97,17 @@ struct Cli {
 enum Commands {
     /// Start the Canal server (MySQL binlog → clients)
     Server {
-        /// Path to configuration file
         #[arg(short, long, default_value = "canal.yaml")]
         config: PathBuf,
     },
     /// Dump binlog events to stdout (debugging)
     Dump {
-        /// Path to configuration file
         #[arg(short, long, default_value = "canal.yaml")]
         config: PathBuf,
     },
 }
 
-// ─── Main ────────────────────────────────────────────────
+// -- Main --
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -116,9 +120,14 @@ async fn main() -> Result<()> {
 }
 
 fn load_config(config_path: &std::path::Path) -> Result<CanalConfig> {
+    let metadata = std::fs::metadata(config_path)
+        .with_context(|| format!("Failed to read config metadata: {}", config_path.display()))?;
+    if metadata.len() > 10 * 1024 * 1024 {
+        anyhow::bail!("Config file exceeds maximum size (10MB)");
+    }
     let content = std::fs::read_to_string(config_path)
         .with_context(|| format!("Failed to read config: {}", config_path.display()))?;
-    serde_yaml::from_str(&content)
+    serde_yml::from_str(&content)
         .with_context(|| format!("Failed to parse config: {}", config_path.display()))
 }
 
@@ -133,6 +142,10 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
         .bind
         .parse()
         .with_context(|| format!("Invalid bind address: {}", config.canal.server.bind))?;
+
+    if bind_addr.ip().is_unspecified() {
+        tracing::warn!("Server binding to 0.0.0.0 — ensure firewall protection");
+    }
 
     tracing::info!("Starting canal-rust server v{}", env!("CARGO_PKG_VERSION"));
     tracing::info!(
@@ -150,9 +163,9 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
         config.canal.store.buffer_size,
     ));
 
-    // Spawn binlog connector to feed events into the store
     let store_for_binlog = Arc::clone(&store);
     let mysql_cfg = config.canal.mysql;
+    let server_id = config.canal.server_id;
     let binlog_handle = tokio::spawn(async move {
         let pos = canal_common::LogPosition::new("mysql-bin.000001", 4);
         let (mut connector, mut rx) =
@@ -161,7 +174,7 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
                 mysql_cfg.port,
                 &mysql_cfg.username,
                 &mysql_cfg.password,
-                1001,
+                server_id,
             )
             .with_channel();
 
@@ -199,7 +212,6 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
             }
         }
 
-        // Flush remaining events
         if !batch.is_empty() {
             let _ = store_for_binlog.put_batch(batch).await;
         }
@@ -208,7 +220,6 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
     let server = canal_server::server::CanalServer::new(bind_addr, store);
     server.serve().await?;
 
-    // Reap binlog connector task — log if it panicked
     binlog_handle.abort();
     match binlog_handle.await {
         Ok(()) => tracing::info!("Binlog connector task completed"),
@@ -230,13 +241,14 @@ async fn run_dump(config_path: PathBuf) -> Result<()> {
     );
 
     let pos = canal_common::LogPosition::new("mysql-bin.000001", 4);
+    let server_id = config.canal.server_id;
     let (mut connector, mut rx) =
         canal_binlog::connector::DefaultBinlogConnector::new(
             &config.canal.mysql.host,
             config.canal.mysql.port,
             &config.canal.mysql.username,
             &config.canal.mysql.password,
-            1001,
+            server_id,
         )
         .with_channel();
 

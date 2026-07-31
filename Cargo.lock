@@ -230,9 +230,12 @@ checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 
 [[package]]
 name = "canal-admin"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
+ "async-trait",
  "axum",
+ "canal-common",
+ "canal-instance",
  "serde",
  "tokio",
  "tracing",
@@ -240,18 +243,20 @@ dependencies = [
 
 [[package]]
 name = "canal-binlog"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "async-trait",
  "canal-common",
  "mysql_cdc",
+ "rustc-hash 1.1.0",
  "tokio",
+ "tokio-util",
  "tracing",
 ]
 
 [[package]]
 name = "canal-cli"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "anyhow",
  "canal-binlog",
@@ -260,7 +265,7 @@ dependencies = [
  "canal-store",
  "clap",
  "serde",
- "serde_yaml",
+ "serde_yml",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -268,7 +273,7 @@ dependencies = [
 
 [[package]]
 name = "canal-client"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "canal-common",
  "canal-proto",
@@ -279,7 +284,7 @@ dependencies = [
 
 [[package]]
 name = "canal-common"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "async-trait",
  "chrono",
@@ -291,7 +296,7 @@ dependencies = [
 
 [[package]]
 name = "canal-connector"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "async-trait",
  "canal-common",
@@ -305,7 +310,7 @@ dependencies = [
 
 [[package]]
 name = "canal-filter"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "canal-common",
  "regex",
@@ -314,7 +319,7 @@ dependencies = [
 
 [[package]]
 name = "canal-instance"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "async-trait",
  "canal-binlog",
@@ -329,7 +334,7 @@ dependencies = [
 
 [[package]]
 name = "canal-meta"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "canal-common",
  "chrono",
@@ -339,7 +344,7 @@ dependencies = [
 
 [[package]]
 name = "canal-prometheus"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "axum",
  "canal-instance",
@@ -351,7 +356,7 @@ dependencies = [
 
 [[package]]
 name = "canal-proto"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "bytes",
  "prost",
@@ -361,7 +366,7 @@ dependencies = [
 
 [[package]]
 name = "canal-server"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "async-trait",
  "bytes",
@@ -370,6 +375,7 @@ dependencies = [
  "canal-proto",
  "canal-store",
  "chrono",
+ "dashmap",
  "futures",
  "prost",
  "thiserror 2.0.19",
@@ -380,7 +386,7 @@ dependencies = [
 
 [[package]]
 name = "canal-sink"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "async-trait",
  "canal-common",
@@ -392,7 +398,7 @@ dependencies = [
 
 [[package]]
 name = "canal-store"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "async-trait",
  "canal-common",
@@ -535,6 +541,19 @@ checksum = "78c8292055d1c1df0cce5d180393dc8cce0abec0a7102adb6c7b1eef6016d60a"
 dependencies = [
  "generic-array",
  "typenum",
+]
+
+[[package]]
+name = "dashmap"
+version = "5.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "978747c1d849a7d2ee5e8adc0159961c48fb7e5db2f06af6723b80123bb53856"
+dependencies = [
+ "cfg-if",
+ "hashbrown 0.14.5",
+ "lock_api",
+ "once_cell",
+ "parking_lot_core",
 ]
 
 [[package]]
@@ -937,6 +956,8 @@ checksum = "d466e9454f08e4a911e14806c24e16fba1b4c121d1ea474396f396069cf949d9"
 dependencies = [
  "equivalent",
  "hashbrown 0.17.1",
+ "serde",
+ "serde_core",
 ]
 
 [[package]]
@@ -1133,6 +1154,19 @@ dependencies = [
  "openssl",
  "sha1",
  "sha2",
+]
+
+[[package]]
+name = "noyalib"
+version = "0.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e493c05128df7a83b9676b709d590e0ebc285c7ed3152bc679668e8c1e506af5"
+dependencies = [
+ "indexmap",
+ "memchr",
+ "rustc-hash 2.1.3",
+ "serde",
+ "smallvec",
 ]
 
 [[package]]
@@ -1499,6 +1533,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustc-hash"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
+
+[[package]]
+name = "rustc-hash"
+version = "2.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b1e7f9a428571be2dc5bc0505c13fb6bf936822b894ec87abf8a08a4e51742d"
+
+[[package]]
 name = "rustix"
 version = "1.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1676,16 +1722,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde_yaml"
-version = "0.9.34+deprecated"
+name = "serde_yml"
+version = "0.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a8b1a1a2ebf674015cc02edccce75287f1a0130d394307b36743c2f5d504b47"
+checksum = "909764a65f86829ccdb5eea9ab355843aa02c019a7bfd47465092953565caa05"
 dependencies = [
- "indexmap",
- "itoa",
- "ryu",
+ "noyalib",
  "serde",
- "unsafe-libyaml",
 ]
 
 [[package]]
@@ -2067,12 +2110,6 @@ name = "unicode-ident"
 version = "1.0.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75"
-
-[[package]]
-name = "unsafe-libyaml"
-version = "0.2.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "673aac59facbab8a9007c7f6108d11f63b603f7cabff99fabf650fea5c32b861"
 
 [[package]]
 name = "untrusted"

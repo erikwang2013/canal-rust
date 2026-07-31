@@ -1,10 +1,8 @@
 use canal_common::{FilterPattern, LogPosition};
 use chrono::Utc;
-use std::collections::HashMap;
-use std::sync::RwLock;
+use dashmap::DashMap;
 
 /// A connected Canal client session.
-/// Mirrors Java's ClientIdentity + session state.
 #[derive(Debug, Clone)]
 pub struct ClientSession {
     pub client_id: String,
@@ -30,84 +28,51 @@ impl ClientSession {
         }
     }
 
-    /// Update heartbeat timestamp (client is still alive)
     pub fn heartbeat(&mut self) {
         self.last_heartbeat = Utc::now();
     }
 }
 
-/// Manages all connected client sessions.
-/// Thread-safe; can be shared across Tokio tasks via Arc.
+/// Manages all connected client sessions. Uses DashMap for lock-free reads.
 #[derive(Debug, Default)]
 pub struct SessionManager {
-    sessions: RwLock<HashMap<String, ClientSession>>,
+    sessions: DashMap<String, ClientSession>,
 }
 
 impl SessionManager {
     pub fn new() -> Self {
         Self {
-            sessions: RwLock::new(HashMap::new()),
+            sessions: DashMap::new(),
         }
     }
 
-    /// Register a new client session
     pub fn register(&self, client_id: &str, destination: &str, filter: FilterPattern) {
         let session = ClientSession::new(client_id, destination, filter);
-        self.sessions
-            .write()
-            .unwrap_or_else(|e| e.into_inner())
-            .insert(client_id.to_string(), session);
+        self.sessions.insert(client_id.to_string(), session);
     }
 
-    /// Remove a client session (on disconnect)
     pub fn unregister(&self, client_id: &str) {
-        self.sessions
-            .write()
-            .unwrap_or_else(|e| e.into_inner())
-            .remove(client_id);
+        self.sessions.remove(client_id);
     }
 
-    /// Get a session by client_id
     pub fn get(&self, client_id: &str) -> Option<ClientSession> {
-        self.sessions
-            .read()
-            .unwrap_or_else(|e| e.into_inner())
-            .get(client_id)
-            .cloned()
+        self.sessions.get(client_id).map(|r| r.clone())
     }
 
-    /// Update a client's current read position
     pub fn update_position(&self, client_id: &str, pos: LogPosition) {
-        if let Some(s) = self
-            .sessions
-            .write()
-            .unwrap_or_else(|e| e.into_inner())
-            .get_mut(client_id)
-        {
+        if let Some(mut s) = self.sessions.get_mut(client_id) {
             s.last_position = Some(pos);
         }
     }
 
-    /// Update a client's acknowledged position
     pub fn update_ack(&self, client_id: &str, pos: LogPosition) {
-        if let Some(s) = self
-            .sessions
-            .write()
-            .unwrap_or_else(|e| e.into_inner())
-            .get_mut(client_id)
-        {
+        if let Some(mut s) = self.sessions.get_mut(client_id) {
             s.last_ack_position = Some(pos);
         }
     }
 
-    /// Record a heartbeat from a client
     pub fn heartbeat(&self, client_id: &str) {
-        if let Some(s) = self
-            .sessions
-            .write()
-            .unwrap_or_else(|e| e.into_inner())
-            .get_mut(client_id)
-        {
+        if let Some(mut s) = self.sessions.get_mut(client_id) {
             s.heartbeat();
         }
     }

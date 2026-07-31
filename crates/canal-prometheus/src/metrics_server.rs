@@ -7,7 +7,6 @@ use std::sync::OnceLock;
 use std::sync::atomic::{AtomicU64, Ordering};
 use tracing::info;
 
-/// Global Prometheus handle, initialized exactly once.
 static PROMETHEUS_HANDLE: OnceLock<PrometheusHandle> = OnceLock::new();
 
 fn init_metrics() -> &'static PrometheusHandle {
@@ -39,7 +38,6 @@ fn init_metrics() -> &'static PrometheusHandle {
     })
 }
 
-/// Canal metrics tracked for Prometheus scraping.
 pub struct CanalMetrics {
     handle: PrometheusHandle,
     events_parsed: AtomicU64,
@@ -71,37 +69,31 @@ impl Default for CanalMetrics {
 }
 
 impl CanalMetrics {
-    /// Record parsed events count
     pub fn inc_parsed(&self, count: u64) {
         counter!("canal_events_parsed_total").increment(count);
         self.events_parsed.fetch_add(count, Ordering::SeqCst);
     }
 
-    /// Record filtered (dropped) events count
     pub fn inc_filtered(&self, count: u64) {
         counter!("canal_events_filtered_total").increment(count);
         self.events_filtered.fetch_add(count, Ordering::SeqCst);
     }
 
-    /// Record successfully dispatched events count
     pub fn inc_dispatched(&self, count: u64) {
         counter!("canal_events_dispatched_total").increment(count);
         self.events_dispatched.fetch_add(count, Ordering::SeqCst);
     }
 
-    /// Record dispatch error count
     pub fn inc_dispatch_errors(&self, count: u64) {
         counter!("canal_dispatch_errors_total").increment(count);
         self.dispatch_errors.fetch_add(count, Ordering::SeqCst);
     }
 
-    /// Set the number of active instances
     pub fn set_instances_active(&self, count: u64) {
         gauge!("canal_instances_active").set(count as f64);
         self.instances_active.store(count, Ordering::SeqCst);
     }
 
-    /// Get a snapshot of all counters
     pub fn snapshot(&self) -> MetricsSnapshot {
         MetricsSnapshot {
             events_parsed: self.events_parsed.load(Ordering::SeqCst),
@@ -113,7 +105,6 @@ impl CanalMetrics {
     }
 }
 
-/// A point-in-time snapshot of Canal counters.
 #[derive(Debug, Clone)]
 pub struct MetricsSnapshot {
     pub events_parsed: u64,
@@ -123,8 +114,6 @@ pub struct MetricsSnapshot {
     pub instances_active: u64,
 }
 
-/// HTTP server exposing `/metrics` for Prometheus scraping.
-/// Runs on its own Tokio task.
 pub struct MetricsServer {
     bind_addr: SocketAddr,
     metrics: Arc<CanalMetrics>,
@@ -135,7 +124,6 @@ impl MetricsServer {
         Self { bind_addr, metrics }
     }
 
-    /// Start the metrics HTTP server. Does not block -- returns immediately.
     pub async fn start(self) -> std::io::Result<tokio::task::JoinHandle<()>> {
         let handle = self.metrics.handle.clone();
         info!("Metrics server starting on {}", self.bind_addr);

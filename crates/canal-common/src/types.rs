@@ -48,11 +48,12 @@ impl Ord for LogPosition {
 }
 
 /// Extract the numeric suffix from a binlog filename for ordering.
+/// Returns u64::MAX for non-numeric suffixes so they sort last.
 fn binlog_suffix(journal_name: &str) -> u64 {
     journal_name
         .rsplit('.').next()
         .and_then(|s| s.parse::<u64>().ok())
-        .unwrap_or(0)
+        .unwrap_or(u64::MAX)
 }
 
 /// Position range for a batch of events
@@ -139,15 +140,11 @@ pub struct CanalEvent {
     pub row_change: Option<RowChange>,
     pub ddl_sql: Option<String>,
     pub gtid: Option<String>,
-    /// Raw protobuf entry bytes carried through the wire protocol.
-    /// Set by canal-client when decoding server responses; used for
-    /// round-trip length tracking in canal-server's event-to-entry conversion.
     #[serde(default)]
     pub raw_bytes: Vec<u8>,
 }
 
 /// A batch of events returned to a client
-/// Corresponds to Java Events<Event>
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Events {
     pub position_range: PositionRange,
@@ -196,7 +193,7 @@ impl Events {
     }
 }
 
-/// Client subscription filter (regex patterns for included/excluded tables)
+/// Client subscription filter
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FilterPattern {
     pub pattern: String,
@@ -239,6 +236,27 @@ mod tests {
             gtid: Some("uuid:1-100".into()),
         };
         assert_eq!(format!("{}", pos), "bin.001:42:uuid:1-100");
+    }
+
+    #[test]
+    fn test_log_position_ord() {
+        // Same file: compare by position
+        let p1 = LogPosition::new("mysql-bin.000001", 100);
+        let p2 = LogPosition::new("mysql-bin.000001", 200);
+        assert!(p1 < p2);
+
+        // Across files: compare by numeric suffix
+        let p3 = LogPosition::new("mysql-bin.000001", 999);
+        let p4 = LogPosition::new("mysql-bin.000002", 4);
+        assert!(p3 < p4);
+    }
+
+    #[test]
+    fn test_log_position_ord_suffix_fallback() {
+        // Non-numeric suffix sorts last
+        let p1 = LogPosition::new("mysql-bin.000001", 100);
+        let p2 = LogPosition::new("relay-log", 100);
+        assert!(p1 < p2);
     }
 
     #[test]

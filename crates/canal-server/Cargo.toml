@@ -12,6 +12,7 @@ bytes.workspace = true
 chrono.workspace = true
 futures.workspace = true
 prost.workspace = true
+dashmap.workspace = true
 canal-common = { path = "../canal-common" }
 canal-proto = { path = "../canal-proto" }
 canal-binlog = { path = "../canal-binlog" }

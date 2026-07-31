@@ -37,12 +37,14 @@ impl MemoryEventStore {
         }
     }
 
-    /// Append a batch of events to the store
-    pub async fn put_batch(&self, events: Vec<CanalEvent>) -> CanalResult<()> {
+    /// Append a batch of events to the store.
+    /// Returns the batch_id assigned to this batch.
+    pub async fn put_batch(&self, events: Vec<CanalEvent>) -> CanalResult<i64> {
         if events.is_empty() {
-            return Ok(());
+            return Ok(0);
         }
 
+        let batch_id = self.batch_id_seq.fetch_add(1, Ordering::SeqCst);
         let first = LogPosition::new(&events[0].journal_name, events[0].position);
         let last_pos = events.last().unwrap();
 
@@ -72,7 +74,7 @@ impl MemoryEventStore {
         buffer.extend(events);
         self.notify.notify_waiters();
         debug!("buffer size after put: {}", buffer.len());
-        Ok(())
+        Ok(batch_id)
     }
 
     /// Get a batch of events starting after the given position.
@@ -87,8 +89,8 @@ impl MemoryEventStore {
                 // Use lexicographic (journal, position) comparison so binlog
                 // rotation (e.g. mysql-bin.000001 → mysql-bin.000002) works.
                 let start_idx = buffer.iter().position(|e| {
-                    (e.journal_name.as_str(), e.position)
-                        > (start.journal_name.as_str(), start.position)
+                    LogPosition::new(&e.journal_name, e.position)
+                        > LogPosition::new(&start.journal_name, start.position)
                 });
 
                 if let Some(idx) = start_idx {

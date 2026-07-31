@@ -1,41 +1,38 @@
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
-/// Metadata about a single table column learned from a TableMap event.
+/// Column metadata extracted from a MySQL TableMapEvent.
 #[derive(Debug, Clone)]
 pub struct ColumnInfo {
-    /// Column name (from table metadata if available, otherwise "col_N")
     pub name: String,
-    /// MySQL column type code (e.g. 3 = INT, 253 = VARCHAR)
     pub column_type: i32,
-    /// Whether this column is part of the primary key
     pub is_key: bool,
-    /// Whether the column is nullable
     pub is_nullable: bool,
 }
 
-/// Caches MySQL TableMap events: maps table_id → (schema_name, table_name)
-/// MySQL sends TableMap events once, then Row events reference tables by numeric ID.
-/// We must store these mappings to resolve table names for row-level changes.
-#[derive(Debug, Default)]
+/// Maps MySQL table_id → (schema, table, columns).
 pub struct TableMapCache {
-    tables: HashMap<u64, (String, String)>,
-    columns: HashMap<u64, Vec<ColumnInfo>>,
+    names: FxHashMap<u64, (String, String)>,
+    columns: FxHashMap<u64, Vec<ColumnInfo>>,
+}
+
+impl Default for TableMapCache {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TableMapCache {
     pub fn new() -> Self {
         Self {
-            tables: HashMap::new(),
-            columns: HashMap::new(),
+            names: FxHashMap::default(),
+            columns: FxHashMap::default(),
         }
     }
 
-    /// Store a table_id → (schema, table) mapping from a TableMap event
     pub fn put(&mut self, table_id: u64, schema: String, table: String) {
-        self.tables.insert(table_id, (schema, table));
+        self.names.insert(table_id, (schema, table));
     }
 
-    /// Store a table mapping with full column metadata.
     pub fn put_with_columns(
         &mut self,
         table_id: u64,
@@ -43,23 +40,20 @@ impl TableMapCache {
         table: String,
         cols: Vec<ColumnInfo>,
     ) {
-        self.tables.insert(table_id, (schema, table));
         self.columns.insert(table_id, cols);
+        self.names.insert(table_id, (schema, table));
     }
 
-    /// Look up a table_id (from a Row event) to get (schema, table)
     pub fn get(&self, table_id: u64) -> Option<(String, String)> {
-        self.tables.get(&table_id).cloned()
+        self.names.get(&table_id).cloned()
     }
 
-    /// Look up column metadata for a table_id
     pub fn get_columns(&self, table_id: u64) -> Option<&Vec<ColumnInfo>> {
         self.columns.get(&table_id)
     }
 
-    /// Clear all cached mappings (called on binlog RotateEvent)
     pub fn clear(&mut self) {
-        self.tables.clear();
+        self.names.clear();
         self.columns.clear();
     }
 }
@@ -71,16 +65,9 @@ mod tests {
     #[test]
     fn test_put_and_get() {
         let mut cache = TableMapCache::new();
-        cache.put(100, "test_db".into(), "users".into());
-        let (schema, table) = cache.get(100).unwrap();
-        assert_eq!(schema, "test_db");
-        assert_eq!(table, "users");
-    }
-
-    #[test]
-    fn test_missing_table_id() {
-        let cache = TableMapCache::new();
-        assert!(cache.get(999).is_none());
+        cache.put(42, "mydb".into(), "users".into());
+        assert_eq!(cache.get(42), Some(("mydb".into(), "users".into())));
+        assert_eq!(cache.get(99), None);
     }
 
     #[test]
@@ -91,5 +78,20 @@ mod tests {
         cache.clear();
         assert!(cache.get(1).is_none());
         assert!(cache.get(2).is_none());
+    }
+
+    #[test]
+    fn test_missing_table_id() {
+        let cache = TableMapCache::new();
+        assert!(cache.get(42).is_none());
+    }
+
+    #[test]
+    fn test_put_with_columns() {
+        let mut cache = TableMapCache::new();
+        let cols = vec![ColumnInfo { name: "id".into(), column_type: 3, is_key: true, is_nullable: false }];
+        cache.put_with_columns(1, "db".into(), "tbl".into(), cols);
+        assert_eq!(cache.get(1), Some(("db".into(), "tbl".into())));
+        assert_eq!(cache.get_columns(1).unwrap().len(), 1);
     }
 }

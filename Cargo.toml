@@ -3,7 +3,7 @@ members = ["crates/*"]
 resolver = "2"
 
 [workspace.package]
-version = "1.0.7"
+version = "1.0.8"
 edition = "2021"
 license = "Apache-2.0"
 
@@ -14,7 +14,7 @@ prost = "0.13"
 prost-types = "0.13"
 bytes = "1"
 serde = { version = "1", features = ["derive"] }
-serde_yaml = "0.9"
+serde_yml = "0.0"
 thiserror = "2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
@@ -29,3 +29,5 @@ rdkafka = { version = "0.36", features = ["tokio"] }
 axum = "0.7"
 metrics = "0.23"
 metrics-exporter-prometheus = "0.15"
+dashmap = "5"
+rustc-hash = "1"
