@@ -122,7 +122,6 @@ SHOW MASTER STATUS;
 
 ```yaml
 canal:
-  server_id: 1234
   mysql:
     host: "127.0.0.1"
     port: 3306
@@ -130,11 +129,8 @@ canal:
     password: "canal"
   store:
     buffer_size: 16384
-    batch_timeout_ms: 100
   server:
     bind: "0.0.0.0:11111"
-  filter:
-    pattern: ".*\\..*"
   logging:
     level: "info"
     format: "json"
@@ -217,11 +213,11 @@ canal-rust/
 
 | Metric | Value |
 |--------|-------|
-| Crates | 15 |
-| Lines of Rust | ~5,600 |
-| Tests | 77 |
+| Crates | 14 |
+| Lines of Rust | ~5,800 |
+| Tests | 88 |
 | Proto definitions | 2 |
-| Commits | 18 |
+| Clippy warnings | 0 |
 | License | Apache-2.0 |
 
 ## Usage Guide

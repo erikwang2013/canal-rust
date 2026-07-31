@@ -1,12 +1,10 @@
-# Canal Rust 重写 — 第一期实现计划
+# Canal Rust 重写 — 实现计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **状态：全部完成** | 日期：2026-07-30 | 更新：2026-07-31
 
-**Goal:** 从零搭建 canal-rust workspace，实现单机版 Canal Server
+**Goal:** 从零搭建 canal-rust workspace，实现单机版 Canal Server ✓ 三期全部完成
 
-**Architecture:** Cargo workspace 7 crates，按依赖分层构建：canal-common → canal-proto → canal-binlog → canal-store → canal-server → canal-client → canal-cli
-
-**Tech Stack:** Rust + tokio + prost + binlog crate + tracing + serde_yaml
+**Architecture:** Cargo workspace 14 crates
 
 **Spec:** `docs/superpowers/specs/2026-07-30-canal-rust-rewrite-design.md`
 

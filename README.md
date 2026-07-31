@@ -145,7 +145,6 @@ SHOW MASTER STATUS;
 
 ```yaml
 canal:
-  server_id: 1234
   mysql:
     host: "127.0.0.1"
     port: 3306
@@ -153,11 +152,8 @@ canal:
     password: "canal"
   store:
     buffer_size: 16384
-    batch_timeout_ms: 100
   server:
     bind: "0.0.0.0:11111"
-  filter:
-    pattern: ".*\\..*"
   logging:
     level: "info"
     format: "json"
@@ -230,7 +226,7 @@ canal-rust/
 │   ├── canal-instance/            # 多实例管理
 │   │   └── src/instance.rs
 │   ├── canal-server/              # TCP 服务（Canal wire protocol）
-│   │   └── src/ {codec, session, server}.rs
+│   │   └── src/ {codec, session, server, tests}.rs
 │   ├── canal-client/              # Rust 客户端 SDK
 │   │   └── src/lib.rs
 │   ├── canal-meta/                # DDL 追踪 + 表结构缓存
@@ -254,11 +250,11 @@ canal-rust/
 
 | 指标 | 数值 |
 |------|------|
-| Crates | 15 |
-| Rust 源码行数 | ~5,600 |
-| 单元/集成测试 | 77 |
+| Crates | 14 |
+| Rust 源码行数 | ~5,800 |
+| 单元/集成测试 | 88 |
 | Protobuf 定义 | 2 |
-| Commit | 18 |
+| Clippy 警告 | 0 |
 | 许可协议 | Apache-2.0 |
 
 ## 使用教程
