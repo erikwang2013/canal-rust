@@ -95,8 +95,13 @@ impl EventType {
     }
 
     /// Decode from the server-side proto EventType enum (canal protocol mapping).
+    ///
     /// The server maps domain event types to proto values differently from the
     /// simple 1:1 `From<i32>` mapping — e.g. Ddl→Query(7), Xid→Xacommit(13).
+    ///
+    /// Protocol limitation: Ddl, Query, and Rotate are all serialized as
+    /// proto `Query = 7` by the server, so all three round-trip as `EventType::Ddl`
+    /// on the client. This is by design in the original Canal wire protocol.
     pub fn from_proto(v: i32) -> Self {
         match v {
             1 => EventType::Insert,

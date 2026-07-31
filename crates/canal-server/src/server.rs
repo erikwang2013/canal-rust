@@ -206,6 +206,8 @@ struct ClientState {
     client_id: Option<String>,
     current_pos: Option<LogPosition>,
     last_ack_pos: Option<LogPosition>,
+    last_get_batch_id: i64,
+    last_get_end_pos: Option<LogPosition>,
     authenticated: bool,
     auth_error_count: u32,
     unknown_packet_count: u32,
@@ -386,21 +388,16 @@ async fn handle_get(
     let mut msgs = Messages::default();
     if !events.is_empty() {
         state.current_pos = Some(events.position_range.end.clone());
+        state.last_get_batch_id = events.batch_id;
+        state.last_get_end_pos = Some(events.position_range.end.clone());
         if let Some(ref pos) = state.current_pos {
             sessions.update_position(&cid, pos.clone());
         }
 
-        // Apply per-client session filter
-        let pattern_re = sessions.get(&cid).and_then(|s| {
-            regex::Regex::new(&s.filter.pattern).ok()
-        });
-        let black_re = sessions.get(&cid).and_then(|s| {
-            if s.filter.black_list.is_empty() {
-                None
-            } else {
-                regex::Regex::new(&s.filter.black_list).ok()
-            }
-        });
+        // Apply per-client session filter (use cached compiled regex)
+        let session = sessions.get(&cid);
+        let pattern_re = session.as_ref().and_then(|s| s.compiled_pattern.as_ref());
+        let black_re = session.as_ref().and_then(|s| s.compiled_black_list.as_ref());
 
         let to_send: Vec<_> = events
             .events
@@ -446,10 +443,20 @@ async fn handle_get(
 }
 
 fn handle_client_ack(packet: &Packet, state: &mut ClientState, sessions: &SessionManager) {
-    if ClientAck::decode(&packet.body[..]).is_ok() {
-        if let (Some(ref pos), Some(ref cid)) = (&state.current_pos, &state.client_id) {
+    if let Ok(client_ack) = ClientAck::decode(&packet.body[..]) {
+        if let (Some(ref cid), Some(ref pos)) =
+            (&state.client_id, &state.last_get_end_pos)
+        {
             state.last_ack_pos = Some(pos.clone());
             sessions.update_ack(cid, pos.clone());
+            if client_ack.batch_id != 0
+                && client_ack.batch_id != state.last_get_batch_id
+            {
+                warn!(
+                    "Client {} acked batch {} but last sent was {}",
+                    cid, client_ack.batch_id, state.last_get_batch_id,
+                );
+            }
         }
     }
 }

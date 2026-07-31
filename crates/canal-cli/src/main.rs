@@ -266,7 +266,11 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
         .context("Failed to start instances")?;
 
     // Start admin API
-    let admin_bind = format!("127.0.0.1:{}", bind_addr.port() + 1);
+    let admin_port = bind_addr.port().saturating_add(1);
+    if admin_port == 0 {
+        anyhow::bail!("Admin port overflow: main port {} is 65535", bind_addr.port());
+    }
+    let admin_bind = format!("127.0.0.1:{}", admin_port);
     let admin_server = AdminServer::new(&admin_bind, instance_mgr.clone());
     let _admin_task = admin_server
         .start()

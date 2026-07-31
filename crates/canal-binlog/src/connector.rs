@@ -43,6 +43,7 @@ pub struct DefaultBinlogConnector {
     port: u16,
     username: String,
     password: String,
+    original_password: Option<String>,
     server_id: u64,
     ssl_mode: SslMode,
     connect_timeout_secs: u64,
@@ -72,6 +73,7 @@ impl DefaultBinlogConnector {
             port,
             username: username.to_string(),
             password: password.to_string(),
+            original_password: Some(password.to_string()),
             server_id,
             ssl_mode: SslMode::Require,
             connect_timeout_secs: 30,
@@ -129,6 +131,10 @@ impl DefaultBinlogConnector {
         let mut client = BinlogClient::new(options);
         let mut converter = EventConverter::new();
         let mut current_binlog_file = start_journal.to_string();
+        // Livelock guard: skip permanently-undecodable events after N attempts
+        let mut consecutive_errors: u32 = 0;
+        let mut last_error_pos: Option<(String, u64)> = None;
+        const MAX_CONSECUTIVE_ERRORS: u32 = 3;
 
         let events = match client.replicate() {
             Ok(e) => e,
@@ -192,14 +198,36 @@ impl DefaultBinlogConnector {
                 gtid_ref,
                 &tx,
             ) {
-                Ok(()) => client.commit(&header, &event),
+                Ok(()) => {
+                    consecutive_errors = 0;
+                    last_error_pos = None;
+                    client.commit(&header, &event)
+                }
                 Err(e) => {
+                    let current_pos = (
+                        current_binlog_file.clone(),
+                        header.next_event_position as u64,
+                    );
+                    if last_error_pos.as_ref() == Some(&current_pos) {
+                        consecutive_errors += 1;
+                    } else {
+                        consecutive_errors = 1;
+                        last_error_pos = Some(current_pos);
+                    }
                     if tx.blocking_send(Err(e)).is_err() {
                         error!("Channel closed during error delivery, stopping replication");
                         break;
                     }
-                    // Commit to avoid stalling replication on a bad event.
-                    // The error has been forwarded downstream for handling.
+                    if consecutive_errors >= MAX_CONSECUTIVE_ERRORS {
+                        error!(
+                            "Skipping permanently-undecodable event at {}:{} after {} attempts",
+                            current_binlog_file,
+                            header.next_event_position,
+                            consecutive_errors,
+                        );
+                        consecutive_errors = 0;
+                        last_error_pos = None;
+                    }
                     client.commit(&header, &event);
                 }
             }
@@ -453,9 +481,7 @@ impl BinlogConnector for DefaultBinlogConnector {
         match started_result {
             Ok(()) => self.connected.store(true, Ordering::Release),
             Err(_) => {
-                // The oneshot sender was dropped without sending, meaning
-                // run_replication returned early with an error — the error
-                // was already sent via the event channel.
+                self.running.store(false, Ordering::Release);
             }
         }
 
@@ -487,6 +513,12 @@ impl BinlogConnector for DefaultBinlogConnector {
         self.sender = None;
         if let Some(token) = self.cancel_token.take() {
             token.cancel();
+        }
+        // Restore password for reconnection
+        if self.password.is_empty() {
+            if let Some(ref orig) = self.original_password {
+                self.password = orig.clone();
+            }
         }
         info!("Disconnected from MySQL");
         Ok(())

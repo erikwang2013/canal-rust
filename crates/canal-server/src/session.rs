@@ -1,12 +1,10 @@
 use canal_common::{FilterPattern, LogPosition, MutexLockExt};
 use chrono::Utc;
 use dashmap::DashMap;
+use regex::Regex;
 use std::sync::{Arc, Mutex};
 
 /// A connected Canal client session.
-/// Mutable fields are behind Mutex to avoid Arc::make_mut clone overhead
-/// when updating from SessionManager.
-#[derive(Debug)]
 pub struct ClientSession {
     pub client_id: String,
     pub destination: String,
@@ -15,11 +13,30 @@ pub struct ClientSession {
     pub last_ack_position: Mutex<Option<LogPosition>>,
     pub connected_at: chrono::DateTime<Utc>,
     pub last_heartbeat: Mutex<chrono::DateTime<Utc>>,
+    pub compiled_pattern: Option<Regex>,
+    pub compiled_black_list: Option<Regex>,
+}
+
+impl std::fmt::Debug for ClientSession {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ClientSession")
+            .field("client_id", &self.client_id)
+            .field("destination", &self.destination)
+            .field("filter", &self.filter)
+            .field("connected_at", &self.connected_at)
+            .finish_non_exhaustive()
+    }
 }
 
 impl ClientSession {
     pub fn new(client_id: &str, destination: &str, filter: FilterPattern) -> Self {
         let now = Utc::now();
+        let compiled_pattern = Regex::new(&filter.pattern).ok();
+        let compiled_black_list = if filter.black_list.is_empty() {
+            None
+        } else {
+            Regex::new(&filter.black_list).ok()
+        };
         Self {
             client_id: client_id.to_string(),
             destination: destination.to_string(),
@@ -28,6 +45,8 @@ impl ClientSession {
             last_ack_position: Mutex::new(None),
             connected_at: now,
             last_heartbeat: Mutex::new(now),
+            compiled_pattern,
+            compiled_black_list,
         }
     }
 }
