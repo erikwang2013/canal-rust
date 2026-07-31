@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
@@ -9,7 +8,7 @@ use canal_filter::EventFilter;
 use canal_sink::connector::SinkConnector;
 use canal_sink::sink::{DefaultEventSink, EventSink};
 use canal_store::memory::MemoryEventStore;
-use tokio::sync::RwLock;
+use dashmap::DashMap;
 use tracing::info;
 
 pub struct InstanceConfig {
@@ -126,14 +125,15 @@ impl CanalLifecycle for CanalInstance {
     }
 }
 
+/// Manages Canal instances with lock-free DashMap (L3 fix).
 pub struct InstanceManager {
-    instances: RwLock<HashMap<String, Arc<CanalInstance>>>,
+    instances: DashMap<String, Arc<CanalInstance>>,
 }
 
 impl InstanceManager {
     pub fn new() -> Self {
         Self {
-            instances: RwLock::new(HashMap::new()),
+            instances: DashMap::new(),
         }
     }
 }
@@ -145,54 +145,49 @@ impl Default for InstanceManager {
 }
 
 impl InstanceManager {
-    pub async fn register(&self, instance: CanalInstance) {
+    pub fn register(&self, instance: CanalInstance) {
         let dest = instance.destination().to_string();
-        self.instances
-            .write()
-            .await
-            .insert(dest.clone(), Arc::new(instance));
+        self.instances.insert(dest.clone(), Arc::new(instance));
         info!("Registered instance '{}'", dest);
     }
 
-    pub async fn get(&self, destination: &str) -> Option<Arc<CanalInstance>> {
-        self.instances.read().await.get(destination).cloned()
+    pub fn get(&self, destination: &str) -> Option<Arc<CanalInstance>> {
+        self.instances.get(destination).map(|r| r.clone())
     }
 
-    pub async fn remove(&self, destination: &str) -> Option<Arc<CanalInstance>> {
-        let removed = self.instances.write().await.remove(destination);
+    pub fn remove(&self, destination: &str) -> Option<Arc<CanalInstance>> {
+        let removed = self.instances.remove(destination).map(|(_, v)| v);
         if removed.is_some() {
             info!("Removed instance '{}'", destination);
         }
         removed
     }
 
-    pub async fn list(&self) -> Vec<String> {
-        self.instances.read().await.keys().cloned().collect()
+    pub fn list(&self) -> Vec<String> {
+        self.instances.iter().map(|r| r.key().clone()).collect()
     }
 
-    pub async fn running_count(&self) -> usize {
+    pub fn running_count(&self) -> usize {
         self.instances
-            .read()
-            .await
-            .values()
-            .filter(|i| i.is_running())
+            .iter()
+            .filter(|r| r.value().is_running())
             .count()
     }
 
     /// Start all instances via CanalLifecycle trait methods.
     pub async fn start_all(&self) -> CanalResult<()> {
-        for (dest, instance) in self.instances.read().await.iter() {
-            info!("Starting instance '{}'", dest);
-            instance.start().await?;
+        for entry in self.instances.iter() {
+            info!("Starting instance '{}'", entry.key());
+            entry.value().start().await?;
         }
         Ok(())
     }
 
     /// Stop all instances via CanalLifecycle trait methods.
     pub async fn stop_all(&self) -> CanalResult<()> {
-        for (dest, instance) in self.instances.read().await.iter() {
-            info!("Stopping instance '{}'", dest);
-            instance.stop().await?;
+        for entry in self.instances.iter() {
+            info!("Stopping instance '{}'", entry.key());
+            entry.value().stop().await?;
         }
         Ok(())
     }
@@ -238,34 +233,26 @@ mod tests {
     async fn test_manager_register_and_lookup() {
         let manager = InstanceManager::new();
         let instance = CanalInstance::new(make_config("my-dest"), vec![]).unwrap();
-        manager.register(instance).await;
-        let found = manager.get("my-dest").await;
+        manager.register(instance);
+        let found = manager.get("my-dest");
         assert!(found.is_some());
     }
 
     #[tokio::test]
     async fn test_manager_list_instances() {
         let manager = InstanceManager::new();
-        manager
-            .register(CanalInstance::new(make_config("a"), vec![]).unwrap())
-            .await;
-        manager
-            .register(CanalInstance::new(make_config("b"), vec![]).unwrap())
-            .await;
-        manager
-            .register(CanalInstance::new(make_config("c"), vec![]).unwrap())
-            .await;
-        assert_eq!(manager.list().await.len(), 3);
+        manager.register(CanalInstance::new(make_config("a"), vec![]).unwrap());
+        manager.register(CanalInstance::new(make_config("b"), vec![]).unwrap());
+        manager.register(CanalInstance::new(make_config("c"), vec![]).unwrap());
+        assert_eq!(manager.list().len(), 3);
     }
 
     #[tokio::test]
     async fn test_manager_remove() {
         let manager = InstanceManager::new();
-        manager
-            .register(CanalInstance::new(make_config("x"), vec![]).unwrap())
-            .await;
-        assert!(manager.remove("x").await.is_some());
-        assert!(manager.get("x").await.is_none());
+        manager.register(CanalInstance::new(make_config("x"), vec![]).unwrap());
+        assert!(manager.remove("x").is_some());
+        assert!(manager.get("x").is_none());
     }
 
     #[tokio::test]

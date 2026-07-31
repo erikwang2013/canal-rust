@@ -111,13 +111,28 @@ fn check_auth(headers: &HeaderMap, expected: &Option<String>) -> Result<(), Stat
                 .get("Authorization")
                 .and_then(|v| v.to_str().ok())
                 .unwrap_or("");
-            if auth == format!("Bearer {}", token) || auth == token.as_str() {
+            let expected_bearer = format!("Bearer {}", token);
+            if constant_time_eq(auth.as_bytes(), expected_bearer.as_bytes())
+                || constant_time_eq(auth.as_bytes(), token.as_bytes())
+            {
                 Ok(())
             } else {
                 Err(StatusCode::UNAUTHORIZED)
             }
         }
     }
+}
+
+/// Constant-time byte comparison to prevent timing side-channel attacks
+/// on authentication tokens.
+fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    a.iter()
+        .zip(b.iter())
+        .fold(0, |acc, (x, y)| acc | (x ^ y))
+        == 0
 }
 
 async fn health_handler(State(state): State<AdminState>) -> Json<HealthResponse> {
@@ -133,13 +148,12 @@ async fn list_instances(
     headers: HeaderMap,
 ) -> Result<Json<InstanceListResponse>, StatusCode> {
     check_auth(&headers, &state.admin_token)?;
-    let dests = state.instance_manager.list().await;
+    let dests = state.instance_manager.list();
     let mut instances = Vec::new();
     for d in dests {
         let running = state
             .instance_manager
             .get(&d)
-            .await
             .map(|i| i.is_running())
             .unwrap_or(false);
         instances.push(InstanceSummary {
@@ -157,7 +171,7 @@ async fn start_instance(
     Path(name): Path<String>,
 ) -> Result<Json<StatusMessage>, StatusCode> {
     check_auth(&headers, &state.admin_token)?;
-    match state.instance_manager.get(&name).await {
+    match state.instance_manager.get(&name) {
         Some(instance) => match instance.start().await {
             Ok(()) => Ok(Json(StatusMessage {
                 status: "ok".into(),
@@ -181,7 +195,7 @@ async fn stop_instance(
     Path(name): Path<String>,
 ) -> Result<Json<StatusMessage>, StatusCode> {
     check_auth(&headers, &state.admin_token)?;
-    match state.instance_manager.get(&name).await {
+    match state.instance_manager.get(&name) {
         Some(instance) => match instance.stop().await {
             Ok(()) => Ok(Json(StatusMessage {
                 status: "ok".into(),

@@ -165,6 +165,7 @@ impl Events {
         }
     }
 
+    #[must_use]
     pub fn with_events(events: Vec<CanalEvent>, batch_id: i64) -> Self {
         let (first, last) = if let (Some(f), Some(l)) = (events.first(), events.last()) {
             (

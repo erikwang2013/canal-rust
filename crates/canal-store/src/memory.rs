@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use canal_common::lifecycle::CanalLifecycle;
 use canal_common::{binlog_suffix, CanalEvent, CanalResult, Events, LockExt, LogPosition};
 use tokio::sync::Notify;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 pub struct MemoryEventStore {
     buffer: Mutex<VecDeque<CanalEvent>>,
@@ -49,6 +49,12 @@ impl MemoryEventStore {
         // If a single batch exceeds capacity, keep only the tail-most events
         if events.len() > self.capacity {
             let skip = events.len() - self.capacity;
+            warn!(
+                "Oversized batch: {} of {} events dropped (capacity={})",
+                skip,
+                skip + events.len(),
+                self.capacity
+            );
             events = events.split_off(skip);
         }
 

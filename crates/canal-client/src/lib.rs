@@ -122,6 +122,7 @@ impl CanalClient {
 
         // Spawn background poll loop: Get → Messages → ClientAck → repeat
         let bg_task: JoinHandle<()> = tokio::spawn(async move {
+            #[allow(unused_assignments)]
             let mut idle_count: u32 = 0;
             loop {
                 // Send Get
@@ -205,11 +206,14 @@ impl CanalClient {
                             "Client {} unexpected packet type: {}",
                             client_id, resp.r#type
                         );
+                        idle_count = 0;
                     }
                 }
 
-                // Adaptive backoff: exponential when idle, reset on events
-                idle_count += 1;
+                // Adaptive backoff: exponential when idle, reset on events.
+                // Only Messages resets idle_count; non-Messages branches fall
+                // through and increment, growing the backoff.
+                idle_count = idle_count.saturating_add(1);
                 let delay_ms = (100u64).saturating_mul(2u64.saturating_pow(idle_count.min(6)));
                 tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
             }

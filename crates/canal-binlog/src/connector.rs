@@ -426,6 +426,8 @@ impl BinlogConnector for DefaultBinlogConnector {
 
     async fn disconnect(&mut self) -> CanalResult<()> {
         self.running.store(false, Ordering::SeqCst);
+        self.connected.store(false, Ordering::SeqCst);
+        self.sender = None;
         if let Some(token) = self.cancel_token.take() {
             token.cancel();
         }

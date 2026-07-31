@@ -11,4 +11,5 @@ canal-store = { path = "../canal-store" }
 canal-filter = { path = "../canal-filter" }
 canal-sink = { path = "../canal-sink" }
 canal-connector = { path = "../canal-connector" }
+dashmap.workspace = true
 async-trait.workspace = true

@@ -59,36 +59,25 @@ impl TableMetaCache {
     /// Store or update table metadata.
     pub fn put(&self, key: &str, meta: TableMeta) {
         self.tables
-            .write()
-            .unwrap_or_else(|e| e.into_inner())
+            .write_or_recover()
             .insert(key.to_string(), meta);
         debug!("Table metadata updated: {}", key);
     }
 
     /// Get table metadata by "schema.table" key.
     pub fn get(&self, key: &str) -> Option<TableMeta> {
-        self.tables
-            .read()
-            .unwrap_or_else(|e| e.into_inner())
-            .get(key)
-            .cloned()
+        self.tables.read_or_recover().get(key).cloned()
     }
 
     /// Remove table metadata (e.g., after DROP TABLE).
     pub fn remove(&self, key: &str) {
-        self.tables
-            .write()
-            .unwrap_or_else(|e| e.into_inner())
-            .remove(key);
+        self.tables.write_or_recover().remove(key);
         debug!("Table metadata removed: {}", key);
     }
 
     /// Check if metadata exists for a table.
     pub fn contains(&self, key: &str) -> bool {
-        self.tables
-            .read()
-            .unwrap_or_else(|e| e.into_inner())
-            .contains_key(key)
+        self.tables.read_or_recover().contains_key(key)
     }
 
     /// Number of cached tables.
@@ -103,10 +92,7 @@ impl TableMetaCache {
 
     /// Clear all cached table metadata.
     pub fn clear(&self) {
-        self.tables
-            .write()
-            .unwrap_or_else(|e| e.into_inner())
-            .clear();
+        self.tables.write_or_recover().clear();
     }
 }
 
