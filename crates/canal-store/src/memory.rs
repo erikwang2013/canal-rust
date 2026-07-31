@@ -53,7 +53,9 @@ impl MemoryEventStore {
         }
 
         let first = LogPosition::new(&events[0].journal_name, events[0].position);
-        let last_event = events.last().expect("events is non-empty after guard above");
+        let last_event = events
+            .last()
+            .expect("events is non-empty after guard above");
         let last = LogPosition::new(&last_event.journal_name, last_event.position);
 
         let mut first_pos = self
@@ -81,6 +83,7 @@ impl MemoryEventStore {
         loop {
             let notified = self.notify.notified();
 
+            // Lock scope is explicit — released before the await below
             let result = {
                 let buffer = self.buffer.lock().unwrap_or_else(|e| e.into_inner());
 

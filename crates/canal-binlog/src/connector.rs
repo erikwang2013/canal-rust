@@ -383,17 +383,15 @@ impl BinlogConnector for DefaultBinlogConnector {
             Self::run_replication(options, tx, cancel_clone, started_tx);
         });
 
-        let started_result = tokio::time::timeout(
-            std::time::Duration::from_secs(timeout_secs),
-            started_rx,
-        )
-        .await
-        .map_err(|_| {
-            CanalError::BinlogConnection(format!(
-                "connection timed out after {}s",
-                timeout_secs
-            ))
-        })?;
+        let started_result =
+            tokio::time::timeout(std::time::Duration::from_secs(timeout_secs), started_rx)
+                .await
+                .map_err(|_| {
+                    CanalError::BinlogConnection(format!(
+                        "connection timed out after {}s",
+                        timeout_secs
+                    ))
+                })?;
 
         match started_result {
             Ok(()) => {}
@@ -417,18 +415,9 @@ impl BinlogConnector for DefaultBinlogConnector {
             "take_receiver must be called before connect()"
         );
 
-        self.sender
-            .take()
-            .map(|_old_tx| {
-                let (tx, rx) = mpsc::channel(4096);
-                self.sender = Some(tx);
-                rx
-            })
-            .unwrap_or_else(|| {
-                let (tx, rx) = mpsc::channel(4096);
-                self.sender = Some(tx);
-                rx
-            })
+        let (tx, rx) = mpsc::channel(4096);
+        self.sender = Some(tx);
+        rx
     }
 
     async fn disconnect(&mut self) -> CanalResult<()> {

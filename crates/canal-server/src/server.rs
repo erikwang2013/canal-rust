@@ -97,12 +97,22 @@ impl CanalServer {
             });
         }
 
-        // Await all client tasks to finish gracefully
+        // Await all client tasks to finish gracefully, with a timeout
         let mut tasks = self.client_tasks.lock().await;
         info!("Waiting for {} client tasks to complete...", tasks.len());
-        while let Some(result) = tasks.join_next().await {
-            if let Err(e) = result {
-                error!("Client task panicked: {}", e);
+
+        let drain_fut = async {
+            while let Some(result) = tasks.join_next().await {
+                if let Err(e) = result {
+                    error!("Client task panicked: {}", e);
+                }
+            }
+        };
+
+        match tokio::time::timeout(std::time::Duration::from_secs(30), drain_fut).await {
+            Ok(()) => info!("All client tasks completed gracefully"),
+            Err(_) => {
+                warn!("Shutdown timeout reached — some client tasks may be forcibly aborted");
             }
         }
 
@@ -129,10 +139,9 @@ async fn handle_client(
         let ptype = packet.r#type;
 
         if ptype == PacketType::Clientauthentication as i32 {
-            handle_auth(&mut transport, &packet, &mut state, &auth_token, &sessions)
-                .await?;
+            handle_auth(&mut transport, &packet, &mut state, &auth_token, &sessions).await?;
         } else if !state.authenticated {
-            send_ack(&mut transport, Some("not authenticated")).await?;
+            send_ack_err(&mut transport, "not authenticated").await?;
             continue;
         } else if ptype == PacketType::Subscription as i32 {
             handle_sub(&mut transport, &packet, &mut state, &sessions).await?;
@@ -180,7 +189,7 @@ async fn handle_auth(
         if pass.as_ref() != token.as_str() {
             state.auth_error_count += 1;
             warn!("Auth failed for client '{}': bad password", auth.client_id);
-            send_ack(transport, Some("authentication failed")).await?;
+            send_ack_err(transport, "authentication failed").await?;
             if state.auth_error_count >= 3 {
                 info!("Too many auth failures, disconnecting");
                 return Err(CanalError::AuthFailed("too many failures".into()));
@@ -219,7 +228,7 @@ async fn handle_auth(
     }
 
     info!("Client authenticated: {} (dest={})", cid, auth.destination);
-    send_ack(transport, None).await?;
+    send_ack_ok(transport).await?;
     Ok(())
 }
 
@@ -247,7 +256,7 @@ async fn handle_sub(
         },
     );
     state.client_id = Some(cid);
-    send_ack(transport, None).await?;
+    send_ack_ok(transport).await?;
     Ok(())
 }
 
@@ -270,7 +279,7 @@ async fn handle_get(
     let cid = state
         .client_id
         .clone()
-        .unwrap_or_else(|| "anonymous".to_string());
+        .unwrap_or_else(|| "anonymous".into());
     let start = state
         .current_pos
         .clone()
@@ -333,29 +342,35 @@ async fn handle_heartbeat(
     if let Some(ref cid) = state.client_id {
         sessions.heartbeat(cid);
     }
-    send_ack(transport, None).await?;
+    send_ack_ok(transport).await?;
     Ok(())
 }
 
-async fn send_ack(
+async fn send_ack_ok(
     transport: &mut (impl SinkExt<Vec<u8>, Error = CanalError> + Unpin),
-    error_message: Option<&str>,
 ) -> CanalResult<()> {
-    let ack = if let Some(msg) = error_message {
-        Ack {
-            error_message: msg.to_string(),
-            error_code_present: Some(canal_proto::ack::ErrorCodePresent::ErrorCode(1)),
-        }
-    } else {
-        Ack::default()
+    let packet = Packet {
+        r#type: PacketType::Ack as i32,
+        body: Ack::default().encode_to_vec(),
+        ..Default::default()
     };
+    transport.send(packet.encode_to_vec()).await?;
+    Ok(())
+}
 
+async fn send_ack_err(
+    transport: &mut (impl SinkExt<Vec<u8>, Error = CanalError> + Unpin),
+    message: &str,
+) -> CanalResult<()> {
+    let ack = Ack {
+        error_message: message.to_string(),
+        error_code_present: Some(canal_proto::ack::ErrorCodePresent::ErrorCode(1)),
+    };
     let packet = Packet {
         r#type: PacketType::Ack as i32,
         body: ack.encode_to_vec(),
         ..Default::default()
     };
-
     transport.send(packet.encode_to_vec()).await?;
     Ok(())
 }

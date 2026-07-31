@@ -197,7 +197,7 @@ docker compose -f docker/docker-compose.yml up -d
 
 ```
 canal-rust/
-├── Cargo.toml                     # Cargo workspace，15 个成员 crate
+├── Cargo.toml                     # Cargo workspace，14 个成员 crate
 ├── canal.yaml                     # 默认配置文件
 ├── rust-toolchain.toml            # Rust 工具链固定
 ├── README.md                      # 本文件（中文）
@@ -254,8 +254,7 @@ canal-rust/
 | Rust 源码行数 | ~5,800 |
 | 单元/集成测试 | 100 |
 | Protobuf 定义 | 2 |
-| 版本 | v1.0.6 |
-| 版本 | v1.0.6 |
+| 版本 | v1.1.3 |
 | Clippy 警告 | 0 |
 | 许可协议 | Apache-2.0 |
 
@@ -274,11 +273,13 @@ canal:
 ```
 
 ```rust
-use canal_connector::kafka::KafkaConnector;
+use canal_connector::kafka::{KafkaConfig, KafkaConnector};
 use canal_instance::{CanalInstance, InstanceConfig};
 use canal_common::{FilterPattern, LogPosition};
+use std::sync::Arc;
 
-let kafka = KafkaConnector::new("kafka-sync", "localhost:9092", "mysql-changes");
+let kafka_config = KafkaConfig::new("localhost:9092", "mysql-changes");
+let kafka = Arc::new(KafkaConnector::new("kafka-sync", kafka_config).unwrap());
 let config = InstanceConfig {
     destination: "mydb-sync".into(),
     mysql_host: "10.0.0.1".into(),

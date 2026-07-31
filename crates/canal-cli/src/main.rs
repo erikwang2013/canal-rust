@@ -135,7 +135,7 @@ fn load_config(config_path: &std::path::Path) -> Result<CanalConfig> {
     }
     let content = std::fs::read_to_string(config_path)
         .with_context(|| format!("Failed to read config: {}", config_path.display()))?;
-    serde_yml::from_str(&content)
+    serde_yaml::from_str(&content)
         .with_context(|| format!("Failed to parse config: {}", config_path.display()))
 }
 

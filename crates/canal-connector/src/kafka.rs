@@ -150,13 +150,16 @@ impl SinkConnector for KafkaConnector {
             self.name, self.config.servers
         );
 
-        producer
-            .client()
-            .fetch_metadata(
-                Some(&self.config.topic),
-                Timeout::After(Duration::from_secs(10)),
-            )
-            .map_err(|e| CanalError::Internal(format!("Kafka metadata: {}", e)))?;
+        let topic = self.config.topic.clone();
+        let p_clone = producer.clone();
+        tokio::task::spawn_blocking(move || {
+            p_clone
+                .client()
+                .fetch_metadata(Some(&topic), Timeout::After(Duration::from_secs(10)))
+        })
+        .await
+        .map_err(|e| CanalError::Internal(format!("Kafka metadata join error: {}", e)))?
+        .map_err(|e| CanalError::Internal(format!("Kafka metadata: {}", e)))?;
 
         *self.producer.lock().unwrap_or_else(|e| e.into_inner()) = Some(producer);
         info!(
@@ -178,11 +181,7 @@ impl SinkConnector for KafkaConnector {
             let guard = self.producer.lock().unwrap_or_else(|e| e.into_inner());
             match guard.as_ref() {
                 Some(p) => p.clone(),
-                None => {
-                    return Err(CanalError::Internal(
-                        "KafkaConnector: not connected".into(),
-                    ))
-                }
+                None => return Err(CanalError::Internal("KafkaConnector: not connected".into())),
             }
         };
 

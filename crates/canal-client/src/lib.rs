@@ -204,6 +204,9 @@ impl CanalClient {
                         );
                     }
                 }
+
+                // Avoid tight-loop polling when no events are available
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             }
         });
 
@@ -289,9 +292,9 @@ fn entry_bytes_to_event(data: &[u8]) -> CanalResult<CanalEvent> {
         ))
     })?;
 
-    let hdr = entry.header.ok_or_else(|| {
-        canal_common::CanalError::Protocol("Entry missing header".to_string())
-    })?;
+    let hdr = entry
+        .header
+        .ok_or_else(|| canal_common::CanalError::Protocol("Entry missing header".to_string()))?;
 
     let ev_type = hdr
         .event_type_present
@@ -380,6 +383,10 @@ fn entry_bytes_to_event(data: &[u8]) -> CanalResult<CanalEvent> {
 
             (change, ddl)
         } else {
+            tracing::warn!(
+                "Failed to decode RowChange from {} bytes of store_value",
+                entry.store_value.len()
+            );
             (None, None)
         }
     } else {

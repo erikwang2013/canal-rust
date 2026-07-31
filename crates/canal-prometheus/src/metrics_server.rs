@@ -31,7 +31,7 @@ fn init_metrics() -> &'static PrometheusHandle {
 
         PrometheusBuilder::new()
             .install_recorder()
-            .expect("Failed to install Prometheus recorder")
+            .expect("Failed to install Prometheus recorder — already initialized?")
     })
 }
 

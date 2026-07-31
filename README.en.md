@@ -217,7 +217,7 @@ canal-rust/
 | Lines of Rust | ~5,800 |
 | Tests | 100 |
 | Proto definitions | 2 |
-| Version | v1.0.6 |
+| Version | v1.1.3 |
 | Clippy warnings | 0 |
 | License | Apache-2.0 |
 
@@ -226,11 +226,13 @@ canal-rust/
 ### Scenario 1: Real-time sync to Kafka
 
 ```rust
-use canal_connector::kafka::KafkaConnector;
+use canal_connector::kafka::{KafkaConfig, KafkaConnector};
 use canal_instance::{CanalInstance, InstanceConfig};
 use canal_common::{FilterPattern, LogPosition};
+use std::sync::Arc;
 
-let kafka = KafkaConnector::new("kafka-sync", "localhost:9092", "mysql-changes");
+let kafka_config = KafkaConfig::new("localhost:9092", "mysql-changes");
+let kafka = Arc::new(KafkaConnector::new("kafka-sync", kafka_config).unwrap());
 let config = InstanceConfig {
     destination: "mydb-sync".into(),
     mysql_host: "10.0.0.1".into(),

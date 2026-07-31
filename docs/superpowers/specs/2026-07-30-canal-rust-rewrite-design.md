@@ -411,4 +411,4 @@ canal-client ──▶ canal-server (连接远端)
 |------|------|
 | 2026-07-30 | 初始版本：分期规划 + 第一期架构设计 |
 | 2026-07-30 | 新增：Java→Rust 核心映射、Wire Protocol 实现、错误处理、配置文件、Cargo.toml、测试策略 |
-| 2026-07-31 | 三期全部完成：14 crate，100 测试，版本 v1.0.6。Kafka connector，多实例管理，Prometheus，Admin API，Docker 部署。五轮审查修复（v1~v5）：死锁、竞态、认证、TLS、BLOB hex 编码、auth 测试覆盖等 50+ 项 |
+| 2026-07-31 | 三期全部完成：14 crate，100 测试，版本 v1.1.3。Kafka connector，多实例管理，Prometheus，Admin API，Docker 部署。七轮审查修复（v1~v7）：死锁、竞态、认证、TLS、BLOB hex 编码、auth 测试覆盖、serde_yml→serde_yaml 迁移、服务关闭超时、客户端轮询优化、Kafka spawn_blocking、send_ack 拆分等 60+ 项 |
