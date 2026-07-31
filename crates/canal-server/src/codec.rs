@@ -32,11 +32,10 @@ impl Decoder for CanalCodec {
         len_bytes.copy_from_slice(&src[..4]);
         let len = u32::from_be_bytes(len_bytes) as usize;
 
-        // Reject zero-length packets as protocol error
+        // Skip zero-length frames (compat with keepalive packets)
         if len == 0 {
-            return Err(CanalError::Protocol(
-                "received zero-length packet".to_string(),
-            ));
+            src.advance(4);
+            return Ok(Some(Vec::new()));
         }
 
         // Safety limit: max 64MB per packet

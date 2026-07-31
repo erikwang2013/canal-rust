@@ -206,14 +206,20 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
             &config.canal.start_journal_name,
             config.canal.start_position,
         );
-        let (mut connector, mut rx) = canal_binlog::connector::DefaultBinlogConnector::new(
+        let (mut connector, mut rx) = match canal_binlog::connector::DefaultBinlogConnector::new(
             &mysql_cfg.host,
             mysql_cfg.port,
             &mysql_cfg.username,
             &mysql_cfg.password,
             server_id,
-        )
-        .with_channel();
+        ) {
+            Ok(c) => c.with_channel(),
+            Err(e) => {
+                tracing::error!("Failed to create binlog connector: {}", e);
+                shutdown_for_binlog.cancel();
+                return;
+            }
+        };
 
         if let Err(e) = connector.connect(&pos).await {
             tracing::error!("Binlog connector failed to connect: {}", e);
@@ -307,6 +313,7 @@ async fn run_dump(config_path: PathBuf) -> Result<()> {
         &config.canal.mysql.password,
         server_id,
     )
+    .context("Failed to create binlog connector")?
     .with_channel();
 
     connector
@@ -345,8 +352,12 @@ async fn run_dump(config_path: PathBuf) -> Result<()> {
 }
 
 fn setup_logging(logging: &LogSection) {
-    let filter =
-        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(&logging.level));
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+        EnvFilter::try_new(&logging.level).unwrap_or_else(|_| {
+            tracing::warn!("Invalid log level '{}', falling back to 'info'", logging.level);
+            EnvFilter::new("info")
+        })
+    });
 
     match logging.format.as_str() {
         "json" => {

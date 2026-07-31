@@ -39,22 +39,35 @@ impl EventFilter {
     /// Check whether a CanalEvent passes this filter.
     /// Returns true if the event's schema.table matches.
     pub fn matches(&self, event: &CanalEvent) -> bool {
-        let full_name = format!("{}.{}", event.schema_name, event.table_name);
+        // Thread-local buffer to avoid per-event String allocation
+        std::thread_local! {
+            static FULL_NAME: std::cell::RefCell<String> =
+                std::cell::RefCell::new(String::with_capacity(128));
+        }
 
-        // Check exclude (blacklist) first
-        if let Some(ref exclude) = self.exclude {
-            if exclude.is_match(&full_name) {
-                debug!("Filtered out (blacklist): {}", full_name);
-                return false;
+        FULL_NAME.with(|buf| {
+            let mut buf = buf.borrow_mut();
+            buf.clear();
+            buf.push_str(&event.schema_name);
+            buf.push('.');
+            buf.push_str(&event.table_name);
+            let full_name: &str = &buf;
+
+            // Check exclude (blacklist) first
+            if let Some(ref exclude) = self.exclude {
+                if exclude.is_match(full_name) {
+                    debug!("Filtered out (blacklist): {}", full_name);
+                    return false;
+                }
             }
-        }
 
-        // Check include (whitelist)
-        let matched = self.include.is_match(&full_name);
-        if !matched {
-            debug!("Filtered out: {}", full_name);
-        }
-        matched
+            // Check include (whitelist)
+            let matched = self.include.is_match(full_name);
+            if !matched {
+                debug!("Filtered out: {}", full_name);
+            }
+            matched
+        })
     }
 }
 

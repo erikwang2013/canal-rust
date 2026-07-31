@@ -52,22 +52,33 @@ pub struct DefaultBinlogConnector {
 }
 
 impl DefaultBinlogConnector {
-    pub fn new(host: &str, port: u16, username: &str, password: &str, server_id: u64) -> Self {
-        assert!(server_id <= u32::MAX as u64, "server_id must fit in u32");
-        Self {
+    pub fn new(
+        host: &str,
+        port: u16,
+        username: &str,
+        password: &str,
+        server_id: u64,
+    ) -> CanalResult<Self> {
+        if server_id > u32::MAX as u64 {
+            return Err(CanalError::Config(format!(
+                "server_id {} exceeds u32::MAX",
+                server_id
+            )));
+        }
+        Ok(Self {
             host: host.to_string(),
             port,
             username: username.to_string(),
             password: password.to_string(),
             server_id,
-            ssl_mode: SslMode::IfAvailable,
+            ssl_mode: SslMode::Require,
             connect_timeout_secs: 30,
             sender: None,
             current_pos: None,
             running: AtomicBool::new(false),
             cancel_token: None,
             connected: AtomicBool::new(false),
-        }
+        })
     }
 
     /// Set the SSL mode for the MySQL connection.
@@ -363,6 +374,9 @@ impl BinlogConnector for DefaultBinlogConnector {
             .ok_or_else(|| CanalError::Internal("no sender configured".to_string()))?;
 
         let options = self.build_options(pos);
+        // Clear password from memory after use
+        self.password.clear();
+        self.password.shrink_to_fit();
         let cancel = CancellationToken::new();
         let cancel_clone = cancel.clone();
         self.cancel_token = Some(cancel);

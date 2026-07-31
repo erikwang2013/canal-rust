@@ -44,8 +44,8 @@ impl TableMapCache {
         self.names.insert(table_id, (schema, table));
     }
 
-    pub fn get(&self, table_id: u64) -> Option<(String, String)> {
-        self.names.get(&table_id).cloned()
+    pub fn get(&self, table_id: u64) -> Option<(&String, &String)> {
+        self.names.get(&table_id).map(|(s, t)| (s, t))
     }
 
     pub fn get_columns(&self, table_id: u64) -> Option<&Vec<ColumnInfo>> {
@@ -66,7 +66,9 @@ mod tests {
     fn test_put_and_get() {
         let mut cache = TableMapCache::new();
         cache.put(42, "mydb".into(), "users".into());
-        assert_eq!(cache.get(42), Some(("mydb".into(), "users".into())));
+        let result = cache.get(42).unwrap();
+        assert_eq!(result.0.as_str(), "mydb");
+        assert_eq!(result.1.as_str(), "users");
         assert_eq!(cache.get(99), None);
     }
 
@@ -96,7 +98,9 @@ mod tests {
             is_nullable: false,
         }];
         cache.put_with_columns(1, "db".into(), "tbl".into(), cols);
-        assert_eq!(cache.get(1), Some(("db".into(), "tbl".into())));
+        let result = cache.get(1).unwrap();
+        assert_eq!(result.0.as_str(), "db");
+        assert_eq!(result.1.as_str(), "tbl");
         assert_eq!(cache.get_columns(1).unwrap().len(), 1);
     }
 }

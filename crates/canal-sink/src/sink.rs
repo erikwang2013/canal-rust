@@ -140,7 +140,7 @@ impl EventSink for DefaultEventSink {
                     warn!("Connector {} had {} failures in this batch", name, failures);
                 }
                 Ok((_name, _)) => {
-                    self.metrics.inc_dispatched(1);
+                    self.metrics.inc_dispatched(filtered_count as u64);
                 }
                 Err(e) => {
                     self.metrics.inc_dispatch_errors(1);

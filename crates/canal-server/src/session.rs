@@ -1,4 +1,4 @@
-use canal_common::{FilterPattern, LogPosition};
+use canal_common::{FilterPattern, LockExt, LogPosition};
 use chrono::Utc;
 use dashmap::DashMap;
 use std::sync::{Arc, Mutex};
@@ -61,19 +61,19 @@ impl SessionManager {
 
     pub fn update_position(&self, client_id: &str, pos: LogPosition) {
         if let Some(s) = self.sessions.get(client_id) {
-            *s.last_position.lock().unwrap() = Some(pos);
+            *s.last_position.lock_or_recover() = Some(pos);
         }
     }
 
     pub fn update_ack(&self, client_id: &str, pos: LogPosition) {
         if let Some(s) = self.sessions.get(client_id) {
-            *s.last_ack_position.lock().unwrap() = Some(pos);
+            *s.last_ack_position.lock_or_recover() = Some(pos);
         }
     }
 
     pub fn heartbeat(&self, client_id: &str) {
         if let Some(s) = self.sessions.get(client_id) {
-            *s.last_heartbeat.lock().unwrap() = Utc::now();
+            *s.last_heartbeat.lock_or_recover() = Utc::now();
         }
     }
 }

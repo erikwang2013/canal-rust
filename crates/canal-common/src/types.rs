@@ -78,6 +78,22 @@ pub enum EventType {
     Unknown(i32),
 }
 
+impl EventType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            EventType::Insert => "INSERT",
+            EventType::Update => "UPDATE",
+            EventType::Delete => "DELETE",
+            EventType::Ddl => "DDL",
+            EventType::Query => "QUERY",
+            EventType::Rotate => "ROTATE",
+            EventType::Xid => "XID",
+            EventType::Heartbeat => "HEARTBEAT",
+            EventType::Unknown(_) => "UNKNOWN",
+        }
+    }
+}
+
 impl From<i32> for EventType {
     fn from(v: i32) -> Self {
         match v {
@@ -100,6 +116,16 @@ pub enum DmlType {
     Insert,
     Update,
     Delete,
+}
+
+impl DmlType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            DmlType::Insert => "INSERT",
+            DmlType::Update => "UPDATE",
+            DmlType::Delete => "DELETE",
+        }
+    }
 }
 
 /// A single column's value
@@ -208,6 +234,17 @@ impl Default for FilterPattern {
             pattern: ".*\\..*".to_string(),
             black_list: String::new(),
         }
+    }
+}
+
+impl FilterPattern {
+    pub fn validate(&self) -> Result<(), String> {
+        regex::Regex::new(&self.pattern).map_err(|e| format!("invalid pattern: {}", e))?;
+        if !self.black_list.is_empty() {
+            regex::Regex::new(&self.black_list)
+                .map_err(|e| format!("invalid blacklist: {}", e))?;
+        }
+        Ok(())
     }
 }
 

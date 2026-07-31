@@ -62,7 +62,7 @@ fn test_canal_event_to_entry_header_fields() {
         raw_bytes: vec![0u8; 100],
     };
 
-    let entry = canal_event_to_entry(&event);
+    let entry = canal_event_to_entry(&event).unwrap();
 
     let h = entry.header.unwrap();
     assert_eq!(h.logfile_name, "mysql-bin.000001");
@@ -123,7 +123,7 @@ fn test_canal_event_to_entry_with_row_change() {
         raw_bytes: vec![],
     };
 
-    let entry = canal_event_to_entry(&event);
+    let entry = canal_event_to_entry(&event).unwrap();
 
     assert!(!entry.store_value.is_empty());
     let rc = RowChange::decode(&entry.store_value[..]).unwrap();
@@ -182,7 +182,7 @@ fn test_canal_event_to_entry_update_with_before_and_after() {
         raw_bytes: vec![],
     };
 
-    let entry = canal_event_to_entry(&event);
+    let entry = canal_event_to_entry(&event).unwrap();
     assert!(!entry.store_value.is_empty());
 
     let rc = RowChange::decode(&entry.store_value[..]).unwrap();
@@ -229,7 +229,7 @@ fn test_canal_event_to_entry_delete() {
         raw_bytes: vec![],
     };
 
-    let entry = canal_event_to_entry(&event);
+    let entry = canal_event_to_entry(&event).unwrap();
     let rc = RowChange::decode(&entry.store_value[..]).unwrap();
     let rd = &rc.row_datas[0];
 
@@ -254,7 +254,7 @@ fn test_canal_event_to_entry_ddl() {
         raw_bytes: vec![],
     };
 
-    let entry = canal_event_to_entry(&event);
+    let entry = canal_event_to_entry(&event).unwrap();
     let rc = RowChange::decode(&entry.store_value[..]).unwrap();
     assert_eq!(rc.sql, "ALTER TABLE users ADD COLUMN age INT");
     assert_eq!(rc.ddl_schema_name, "mydb");
@@ -340,7 +340,7 @@ fn test_messages_packet_roundtrip() {
         raw_bytes: vec![],
     };
 
-    let entry = canal_event_to_entry(&event);
+    let entry = canal_event_to_entry(&event).unwrap();
     let entry_bytes = entry.encode_to_vec();
 
     let mut msgs = Messages {

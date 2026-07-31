@@ -69,8 +69,8 @@ impl EventConverter {
         };
 
         Ok(RowChange {
-            table_name: table,
-            schema_name: schema,
+            table_name: table.clone(),
+            schema_name: schema.clone(),
             before,
             after,
             dml_type,
@@ -97,8 +97,8 @@ impl EventConverter {
         }
 
         Ok(RowChange {
-            table_name: table,
-            schema_name: schema,
+            table_name: table.clone(),
+            schema_name: schema.clone(),
             before: Some(RowData {
                 columns: before_columns,
             }),

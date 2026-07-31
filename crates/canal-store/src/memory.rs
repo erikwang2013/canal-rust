@@ -43,8 +43,11 @@ impl MemoryEventStore {
 
         let mut buffer = self.buffer.lock_or_recover();
 
-        while buffer.len() + events.len() > self.capacity && !buffer.is_empty() {
-            buffer.pop_front();
+        // Batch-evict overflow: drain n oldest events at once
+        let total = buffer.len() + events.len();
+        if total > self.capacity {
+            let drain_count = (total - self.capacity).min(buffer.len());
+            buffer.drain(..drain_count);
         }
         // If a single batch exceeds capacity, keep only the tail-most events
         if events.len() > self.capacity {
@@ -80,7 +83,6 @@ impl MemoryEventStore {
     }
 
     pub async fn get_batch(&self, start: &LogPosition, batch_size: usize) -> CanalResult<Events> {
-        // Pre-compute comparison key to avoid per-iteration allocations (P1 fix)
         let start_suffix = binlog_suffix(&start.journal_name);
         let start_pos = start.position;
 
@@ -88,16 +90,22 @@ impl MemoryEventStore {
             let notified = self.notify.notified();
 
             let result = {
-                let buffer = self.buffer.lock_or_recover();
+                let mut buffer = self.buffer.lock_or_recover();
+                let slice = buffer.make_contiguous();
 
-                let start_idx = buffer.iter().position(|e| {
-                    (binlog_suffix(&e.journal_name), e.position) > (start_suffix, start_pos)
-                });
+                // Binary search: events are ordered by (journal_suffix, position)
+                let target = (start_suffix, start_pos);
+                let start_idx = match slice.binary_search_by(|e| {
+                    (binlog_suffix(&e.journal_name), e.position).cmp(&target)
+                }) {
+                    Ok(i) => i + 1,
+                    Err(i) => i,
+                };
 
-                if let Some(idx) = start_idx {
+                if start_idx < slice.len() {
                     let batch_id = self.batch_id_seq.fetch_add(1, Ordering::SeqCst);
                     let events: Vec<CanalEvent> =
-                        buffer.iter().skip(idx).take(batch_size).cloned().collect();
+                        slice[start_idx..].iter().take(batch_size).cloned().collect();
 
                     if !events.is_empty() {
                         Some(Events::with_events(events, batch_id))

@@ -69,7 +69,7 @@ impl KafkaConnector {
                 let payload = serde_json::json!({
                     "schema": event.schema_name,
                     "table": event.table_name,
-                    "type": format!("{:?}", event.entry_type),
+                    "type": event.entry_type.as_str(),
                     "position": event.position,
                     "journal": event.journal_name,
                     "server_id": event.server_id,
@@ -77,7 +77,7 @@ impl KafkaConnector {
                     "gtid": event.gtid,
                     "row_change": event.row_change.as_ref().map(|rc| {
                         serde_json::json!({
-                            "dml_type": format!("{:?}", rc.dml_type),
+                            "dml_type": rc.dml_type.as_str(),
                             "before": rc.before.as_ref().map(|r| {
                                 r.columns.iter().map(|c| {
                                     serde_json::json!({

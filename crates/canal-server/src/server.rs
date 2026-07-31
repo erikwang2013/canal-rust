@@ -144,14 +144,19 @@ async fn handle_client(
             send_ack_err(&mut transport, "not authenticated").await?;
             continue;
         } else if ptype == PacketType::Subscription as i32 {
+            state.unknown_packet_count = 0;
             handle_sub(&mut transport, &packet, &mut state, &sessions).await?;
         } else if ptype == PacketType::Get as i32 {
+            state.unknown_packet_count = 0;
             handle_get(&mut transport, &packet, &mut state, &store, &sessions).await?;
         } else if ptype == PacketType::Clientack as i32 {
+            state.unknown_packet_count = 0;
             handle_client_ack(&packet, &mut state, &sessions);
         } else if ptype == PacketType::Clientrollback as i32 {
+            state.unknown_packet_count = 0;
             handle_client_rollback(&packet, &mut state);
         } else if ptype == PacketType::Heartbeat as i32 {
+            state.unknown_packet_count = 0;
             handle_heartbeat(&mut transport, &state, &sessions).await?;
         } else {
             state.unknown_packet_count += 1;
@@ -197,8 +202,16 @@ async fn handle_auth(
         .map_err(|e| CanalError::Protocol(format!("failed to decode ClientAuth: {}", e)))?;
 
     if let Some(ref token) = auth_token {
-        let pass = String::from_utf8_lossy(&auth.password);
-        if pass.as_ref() != token.as_str() {
+        let pass_bytes = &auth.password;
+        let token_bytes = token.as_bytes();
+        // Constant-time comparison to prevent timing side-channel
+        if pass_bytes.len() != token_bytes.len()
+            || pass_bytes
+                .iter()
+                .zip(token_bytes.iter())
+                .fold(0, |acc, (a, b)| acc | (a ^ b))
+                != 0
+        {
             state.auth_error_count += 1;
             warn!("Auth failed for client '{}': bad password", auth.client_id);
             send_ack_err(transport, "authentication failed").await?;
@@ -285,15 +298,21 @@ async fn handle_get(
         .map_err(|e| CanalError::Protocol(format!("failed to decode Get: {}", e)))?;
 
     let batch_size = if get.fetch_size > 0 {
-        get.fetch_size as usize
+        (get.fetch_size as usize).min(10_000)
     } else {
         100
     };
+    if get.fetch_size as usize > 10_000 {
+        warn!(
+            "Client requested fetch_size {} exceeding max 10000, clamped",
+            get.fetch_size
+        );
+    }
 
     let cid = state
         .client_id
         .clone()
-        .unwrap_or_else(|| "anonymous".into());
+        .expect("client_id must be set after authentication");
     let start = state
         .current_pos
         .clone()
@@ -315,7 +334,7 @@ async fn handle_get(
             ..Default::default()
         };
         for event in &events.events {
-            let entry = canal_event_to_entry(event);
+            let entry = canal_event_to_entry(event)?;
             msgs.messages.push(entry.encode_to_vec());
         }
     }
@@ -389,7 +408,7 @@ async fn send_ack_err(
     Ok(())
 }
 
-fn canal_event_to_entry(event: &CanalEvent) -> Entry {
+fn canal_event_to_entry(event: &CanalEvent) -> CanalResult<Entry> {
     let mut entry = Entry::default();
 
     let event_type_i32 = match event.entry_type {
@@ -402,8 +421,10 @@ fn canal_event_to_entry(event: &CanalEvent) -> Entry {
         EventType::Xid => ProtoEventType::Xacommit as i32,
         EventType::Heartbeat => ProtoEventType::Mheartbeat as i32,
         EventType::Unknown(v) => {
-            warn!("Unknown event type {} mapped to Insert", v);
-            ProtoEventType::Insert as i32
+            return Err(CanalError::Protocol(format!(
+                "unknown event type {} — cannot serialize to proto",
+                v
+            )))
         }
     };
 
@@ -475,7 +496,7 @@ fn canal_event_to_entry(event: &CanalEvent) -> Entry {
         };
     }
 
-    entry
+    Ok(entry)
 }
 
 fn column_value_to_proto(col: &ColumnValue, updated: bool) -> Column {
