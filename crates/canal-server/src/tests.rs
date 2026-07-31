@@ -1,5 +1,7 @@
 use super::*;
-use canal_common::CanalEvent;
+use crate::conversion::{canal_event_to_entry, column_value_to_proto};
+use canal_common::{CanalEvent, ColumnValue, DmlType, EventType};
+use canal_proto::{header, row_change, Entry, EventType as ProtoEventType, RowChange};
 
 #[tokio::test]
 async fn test_handle_client_registers_and_sends_events() {

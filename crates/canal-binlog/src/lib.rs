@@ -1,3 +1,4 @@
+mod column_serde;
 pub mod connector;
 pub mod converter;
 pub mod table_map;

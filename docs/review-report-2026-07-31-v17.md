@@ -370,7 +370,7 @@ canal-cli            0      -     无测试（入口点，手动集成）
 | F11 | 魔法默认值 | `server.rs` | ✅ 常量化 |
 | F12 | i32→usize 隐式转换 | `server.rs` | ✅ try_from().clamp() |
 | F13 | DDL SQL 无界 | `connector.rs` | ✅ 64KB 截断 |
-| F14 | JSON 双重序列化 | `kafka.rs` | ⏸ 推迟 |
+| F14 | JSON 双重序列化 | `kafka.rs` | ✅ Serialize struct 直接序列化 |
 | F15 | constant_time_eq 长度泄露 | `admin/lib.rs` | ✅ |
 | F16 | cargo fmt | 12 files | ✅ |
 | F17 | SeqCst 过度使用 | `connector.rs` | ✅ Acquire/Release |
@@ -380,4 +380,10 @@ canal-cli            0      -     无测试（入口点，手动集成）
 | F21 | #[non_exhaustive] | `types.rs` | ✅ |
 | F22 | 更新报告 | 本文件 | ✅ |
 
-**22 项修复, 2 项推迟 (F14 JSON, 文件拆分) · 105 tests · 0 clippy warnings**
+**22 项全部修复 · 105 tests · 0 clippy warnings**
+
+### 文件拆分结果
+| 文件 | 修复前 | 修复后 | 提取到 |
+|------|--------|--------|--------|
+| `connector.rs` | 605 | 504 | `column_serde.rs` (107) |
+| `server.rs` | 560 | 443 | `conversion.rs` (118) |

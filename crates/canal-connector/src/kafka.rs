@@ -5,10 +5,46 @@ use canal_sink::connector::SinkConnector;
 use rdkafka::config::ClientConfig;
 use rdkafka::producer::{FutureProducer, FutureRecord, Producer};
 use rdkafka::util::Timeout;
-use serde_json;
+use serde::Serialize;
 use std::sync::Mutex;
 use std::time::Duration;
 use tracing::{error, info, warn};
+
+#[derive(Serialize)]
+struct KafkaColumn<'a> {
+    name: &'a str,
+    value: &'a Option<String>,
+    is_key: bool,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    updated: bool,
+}
+
+#[derive(Serialize)]
+struct KafkaRowChange<'a> {
+    dml_type: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    before: Option<Vec<KafkaColumn<'a>>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    after: Option<Vec<KafkaColumn<'a>>>,
+}
+
+#[derive(Serialize)]
+struct KafkaPayload<'a> {
+    schema: &'a str,
+    table: &'a str,
+    #[serde(rename = "type")]
+    event_type: &'a str,
+    position: u64,
+    journal: &'a str,
+    server_id: u64,
+    execute_time: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    gtid: &'a Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    row_change: Option<KafkaRowChange<'a>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ddl_sql: &'a Option<String>,
+}
 
 #[derive(Debug)]
 pub struct KafkaConfig {
@@ -66,41 +102,44 @@ impl KafkaConnector {
         let messages: Vec<_> = events
             .iter()
             .filter_map(|event| {
-                let payload = serde_json::json!({
-                    "schema": event.schema_name,
-                    "table": event.table_name,
-                    "type": event.entry_type.as_str(),
-                    "position": event.position,
-                    "journal": event.journal_name,
-                    "server_id": event.server_id,
-                    "execute_time": event.execute_time,
-                    "gtid": event.gtid,
-                    "row_change": event.row_change.as_ref().map(|rc| {
-                        serde_json::json!({
-                            "dml_type": rc.dml_type.as_str(),
-                            "before": rc.before.as_ref().map(|r| {
-                                r.columns.iter().map(|c| {
-                                    serde_json::json!({
-                                        "name": c.name,
-                                        "value": c.value,
-                                        "is_key": c.is_key,
-                                    })
-                                }).collect::<Vec<_>>()
-                            }),
-                            "after": rc.after.as_ref().map(|r| {
-                                r.columns.iter().map(|c| {
-                                    serde_json::json!({
-                                        "name": c.name,
-                                        "value": c.value,
-                                        "is_key": c.is_key,
-                                        "updated": c.updated,
-                                    })
-                                }).collect::<Vec<_>>()
-                            }),
-                        })
+                let row_change = event.row_change.as_ref().map(|rc| KafkaRowChange {
+                    dml_type: rc.dml_type.as_str(),
+                    before: rc.before.as_ref().map(|r| {
+                        r.columns
+                            .iter()
+                            .map(|c| KafkaColumn {
+                                name: &c.name,
+                                value: &c.value,
+                                is_key: c.is_key,
+                                updated: false,
+                            })
+                            .collect()
                     }),
-                    "ddl_sql": event.ddl_sql,
+                    after: rc.after.as_ref().map(|r| {
+                        r.columns
+                            .iter()
+                            .map(|c| KafkaColumn {
+                                name: &c.name,
+                                value: &c.value,
+                                is_key: c.is_key,
+                                updated: c.updated,
+                            })
+                            .collect()
+                    }),
                 });
+
+                let payload = KafkaPayload {
+                    schema: &event.schema_name,
+                    table: &event.table_name,
+                    event_type: event.entry_type.as_str(),
+                    position: event.position,
+                    journal: &event.journal_name,
+                    server_id: event.server_id,
+                    execute_time: event.execute_time,
+                    gtid: &event.gtid,
+                    row_change,
+                    ddl_sql: &event.ddl_sql,
+                };
 
                 serde_json::to_string(&payload)
                     .inspect_err(|e| warn!("Kafka '{}': failed to serialize: {}", self.name, e))
