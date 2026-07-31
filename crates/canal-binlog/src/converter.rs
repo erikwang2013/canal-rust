@@ -19,11 +19,14 @@ impl EventConverter {
         }
     }
 
+    /// Store table name only (without column metadata).
+    /// Prefer `handle_table_map_event` so column metadata is available for row events.
     pub fn handle_table_map(&mut self, table_id: u64, schema: &str, table: &str) {
         self.table_map
             .put(table_id, schema.to_string(), table.to_string());
     }
 
+    /// Store table name with column info for row-event conversion.
     pub fn handle_table_map_event(
         &mut self,
         table_id: u64,
@@ -46,9 +49,13 @@ impl EventConverter {
         event_type: EventType,
         columns: Vec<ColumnValue>,
     ) -> CanalResult<RowChange> {
-        let (schema, table) = self.table_map.get(table_id).ok_or_else(|| {
-            CanalError::NotFound(format!("table_id {} not found in TableMap", table_id))
+        let schema_table = self.table_map.get(table_id).ok_or_else(|| {
+            CanalError::NotFound(format!(
+                "table_id {} not found in TableMap — did you call handle_table_map_event?",
+                table_id
+            ))
         })?;
+        let (schema, table) = schema_table;
 
         let (before, after, dml_type) = match event_type {
             EventType::Insert => (None, Some(RowData { columns }), DmlType::Insert),
@@ -77,9 +84,13 @@ impl EventConverter {
         before_columns: Vec<ColumnValue>,
         mut after_columns: Vec<ColumnValue>,
     ) -> CanalResult<RowChange> {
-        let (schema, table) = self.table_map.get(table_id).ok_or_else(|| {
-            CanalError::NotFound(format!("table_id {} not found in TableMap", table_id))
+        let schema_table = self.table_map.get(table_id).ok_or_else(|| {
+            CanalError::NotFound(format!(
+                "table_id {} not found in TableMap — did you call handle_table_map_event?",
+                table_id
+            ))
         })?;
+        let (schema, table) = schema_table;
 
         for col in &mut after_columns {
             col.updated = true;

@@ -1,3 +1,4 @@
+use canal_common::LockExt;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -92,7 +93,7 @@ impl TableMetaCache {
 
     /// Number of cached tables.
     pub fn len(&self) -> usize {
-        self.tables.read().unwrap_or_else(|e| e.into_inner()).len()
+        self.tables.read_or_recover().len()
     }
 
     /// Whether the cache is empty.

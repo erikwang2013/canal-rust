@@ -122,6 +122,7 @@ impl CanalClient {
 
         // Spawn background poll loop: Get → Messages → ClientAck → repeat
         let bg_task: JoinHandle<()> = tokio::spawn(async move {
+            let mut idle_count: u32 = 0;
             loop {
                 // Send Get
                 let get = Get {
@@ -177,6 +178,8 @@ impl CanalClient {
                             }
                         }
 
+                        idle_count = 0;
+
                         // Send ClientAck
                         let ack = ClientAck {
                             destination: destination.clone(),
@@ -205,8 +208,10 @@ impl CanalClient {
                     }
                 }
 
-                // Avoid tight-loop polling when no events are available
-                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                // Adaptive backoff: exponential when idle, reset on events
+                idle_count += 1;
+                let delay_ms = (100u64).saturating_mul(2u64.saturating_pow(idle_count.min(6)));
+                tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
             }
         });
 
@@ -264,6 +269,11 @@ async fn read_packet(stream: &mut TcpStream) -> CanalResult<Packet> {
         .map_err(canal_common::CanalError::Io)?;
     let len = u32::from_be_bytes(header) as usize;
 
+    if len == 0 {
+        return Err(canal_common::CanalError::Protocol(
+            "received zero-length packet".into(),
+        ));
+    }
     if len > 64 * 1024 * 1024 {
         return Err(canal_common::CanalError::Protocol(format!(
             "packet too large: {} bytes",

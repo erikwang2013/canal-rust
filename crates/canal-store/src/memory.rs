@@ -49,7 +49,7 @@ impl MemoryEventStore {
         // If a single batch exceeds capacity, keep only the tail-most events
         if events.len() > self.capacity {
             let skip = events.len() - self.capacity;
-            events.drain(..skip);
+            events = events.split_off(skip);
         }
 
         // Compute positions AFTER truncation (B1 fix)

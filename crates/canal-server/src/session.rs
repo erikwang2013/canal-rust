@@ -1,6 +1,7 @@
 use canal_common::{FilterPattern, LogPosition};
 use chrono::Utc;
 use dashmap::DashMap;
+use std::sync::Arc;
 
 /// A connected Canal client session.
 #[derive(Debug, Clone)]
@@ -36,7 +37,7 @@ impl ClientSession {
 /// Manages all connected client sessions. Uses DashMap for lock-free reads.
 #[derive(Debug, Default)]
 pub struct SessionManager {
-    sessions: DashMap<String, ClientSession>,
+    sessions: DashMap<String, Arc<ClientSession>>,
 }
 
 impl SessionManager {
@@ -48,32 +49,33 @@ impl SessionManager {
 
     pub fn register(&self, client_id: &str, destination: &str, filter: FilterPattern) {
         let session = ClientSession::new(client_id, destination, filter);
-        self.sessions.insert(client_id.to_string(), session);
+        self.sessions
+            .insert(client_id.to_string(), Arc::new(session));
     }
 
     pub fn unregister(&self, client_id: &str) {
         self.sessions.remove(client_id);
     }
 
-    pub fn get(&self, client_id: &str) -> Option<ClientSession> {
-        self.sessions.get(client_id).map(|r| r.clone())
+    pub fn get(&self, client_id: &str) -> Option<Arc<ClientSession>> {
+        self.sessions.get(client_id).map(|r| Arc::clone(&*r))
     }
 
     pub fn update_position(&self, client_id: &str, pos: LogPosition) {
         if let Some(mut s) = self.sessions.get_mut(client_id) {
-            s.last_position = Some(pos);
+            Arc::make_mut(&mut s).last_position = Some(pos);
         }
     }
 
     pub fn update_ack(&self, client_id: &str, pos: LogPosition) {
         if let Some(mut s) = self.sessions.get_mut(client_id) {
-            s.last_ack_position = Some(pos);
+            Arc::make_mut(&mut s).last_ack_position = Some(pos);
         }
     }
 
     pub fn heartbeat(&self, client_id: &str) {
         if let Some(mut s) = self.sessions.get_mut(client_id) {
-            s.heartbeat();
+            Arc::make_mut(&mut s).heartbeat();
         }
     }
 }
@@ -104,8 +106,8 @@ mod tests {
         mgr.update_ack("client-1", pos);
 
         let session = mgr.get("client-1").unwrap();
-        assert_eq!(session.last_position.unwrap().position, 500);
-        assert_eq!(session.last_ack_position.unwrap().position, 500);
+        assert_eq!(session.last_position.as_ref().unwrap().position, 500);
+        assert_eq!(session.last_ack_position.as_ref().unwrap().position, 500);
     }
 
     #[test]
