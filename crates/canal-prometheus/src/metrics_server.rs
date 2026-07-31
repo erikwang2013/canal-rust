@@ -1,4 +1,4 @@
-use axum::{response::IntoResponse, routing::get, Router};
+use axum::{http::HeaderMap, response::IntoResponse, routing::get, Router};
 use metrics::{counter, describe_counter, describe_gauge, gauge};
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle};
 use std::net::SocketAddr;
@@ -75,20 +75,54 @@ impl Default for CanalMetrics {
 }
 
 pub struct MetricsServer {
+    auth_token: Option<String>,
     bind_addr: SocketAddr,
     metrics: Arc<CanalMetrics>,
 }
 
 impl MetricsServer {
     pub fn new(bind_addr: SocketAddr, metrics: Arc<CanalMetrics>) -> Self {
-        Self { bind_addr, metrics }
+        Self { bind_addr, metrics, auth_token: None }
+    }
+
+    pub fn with_auth(mut self, token: String) -> Self {
+        self.auth_token = Some(token);
+        self
     }
 
     pub async fn start(self) -> std::io::Result<tokio::task::JoinHandle<()>> {
         let handle = self.metrics.handle.clone();
+        let auth_token = self.auth_token.clone();
+
+        if self.bind_addr.ip().is_unspecified() {
+            tracing::warn!(
+                "Metrics server binding to {} — ensure firewall protection",
+                self.bind_addr
+            );
+        }
+        if auth_token.is_none() {
+            tracing::warn!("Metrics endpoint /metrics has no authentication configured");
+        }
+
         info!("Metrics server starting on {}", self.bind_addr);
 
-        let app = Router::new().route("/metrics", get(move || metrics_handler(handle.clone())));
+        let app = Router::new().route(
+            "/metrics",
+            get(move |headers: axum::http::HeaderMap| {
+                let handle = handle.clone();
+                let token = auth_token.clone();
+                async move {
+                    if !check_metrics_auth(&headers, &token) {
+                        return (
+                            axum::http::StatusCode::UNAUTHORIZED,
+                            "unauthorized",
+                        )
+                            .into_response();
+                    }
+                    handle.render().into_response()
+                }
+            }),
+        );
 
         let listener = tokio::net::TcpListener::bind(&self.bind_addr).await?;
         let task = tokio::spawn(async move {
@@ -101,8 +135,24 @@ impl MetricsServer {
     }
 }
 
-async fn metrics_handler(handle: PrometheusHandle) -> impl IntoResponse {
-    handle.render()
+fn check_metrics_auth(headers: &HeaderMap, expected: &Option<String>) -> bool {
+    match expected {
+        None => true,
+        Some(token) => {
+            let auth = headers
+                .get("Authorization")
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("");
+            let expected_bearer = format!("Bearer {}", token);
+            // Constant-time comparison
+            let a = auth.as_bytes();
+            let b = expected_bearer.as_bytes();
+            let t = token.as_bytes();
+            (a.len() == b.len() && a.iter().zip(b.iter()).fold(0, |acc, (x, y)| acc | (x ^ y)) == 0)
+                || (a.len() == t.len()
+                    && a.iter().zip(t.iter()).fold(0, |acc, (x, y)| acc | (x ^ y)) == 0)
+        }
+    }
 }
 
 #[cfg(test)]

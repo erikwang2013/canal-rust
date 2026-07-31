@@ -1,5 +1,8 @@
 use canal_common::CanalEvent;
-use regex::Regex;
+use regex::{Regex, RegexBuilder};
+
+const MAX_FILTER_LEN: usize = 256;
+const MAX_REGEX_SIZE: usize = 1024 * 1024; // 1MB DFA size limit
 use tracing::debug;
 
 /// Table/schema filter for binlog events.
@@ -17,21 +20,52 @@ impl EventFilter {
     /// Create a new filter with the given include pattern.
     /// The default pattern ".*\\..*" matches all tables in all databases.
     pub fn new(pattern: &str) -> Result<Self, regex::Error> {
+        if pattern.len() > MAX_FILTER_LEN {
+            return Err(regex::Error::Syntax(format!(
+                "pattern too long: {} exceeds max {}",
+                pattern.len(),
+                MAX_FILTER_LEN
+            )));
+        }
+        let include = RegexBuilder::new(pattern)
+            .size_limit(MAX_REGEX_SIZE)
+            .build()?;
         Ok(Self {
-            include: Regex::new(pattern)?,
+            include,
             exclude: None,
         })
     }
 
     /// Create a filter with both include and exclude patterns.
     pub fn with_blacklist(pattern: &str, black_list: &str) -> Result<Self, regex::Error> {
+        if pattern.len() > MAX_FILTER_LEN {
+            return Err(regex::Error::Syntax(format!(
+                "pattern too long: {} exceeds max {}",
+                pattern.len(),
+                MAX_FILTER_LEN
+            )));
+        }
+        let include = RegexBuilder::new(pattern)
+            .size_limit(MAX_REGEX_SIZE)
+            .build()?;
         let exclude = if black_list.is_empty() {
             None
         } else {
-            Some(Regex::new(black_list)?)
+            if black_list.len() > MAX_FILTER_LEN {
+                return Err(regex::Error::Syntax(format!(
+                    "blacklist too long: {} exceeds max {}",
+                    black_list.len(),
+                    MAX_FILTER_LEN
+                )));
+            }
+            Some(
+                RegexBuilder::new(black_list)
+                    .size_limit(MAX_REGEX_SIZE)
+                    .build()?,
+            )
         };
         Ok(Self {
-            include: Regex::new(pattern)?,
+            include,
             exclude,
         })
     }

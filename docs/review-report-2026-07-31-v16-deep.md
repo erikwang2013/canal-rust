@@ -465,3 +465,58 @@ let payload = src[..len].to_vec(); // 分配 + 完整拷贝
 ---
 
 *审查基于 34 个 Rust 源文件、6,144 行代码的完整阅读，结合了代码质量、安全审计和性能优化三个维度的专业 Agent 并行审查。*
+
+---
+
+## 修复记录 (2026-07-31)
+
+### 第一轮（已合并到代码）
+
+| 类型 | 修复项 | 文件 |
+|------|--------|------|
+| 严重 | EnvFilter::new() → try_new() + fallback | `main.rs` |
+| 严重 | assert! → CanalError::Config | `connector.rs` |
+| 严重 | SSL 默认 Require | `connector.rs` |
+| 严重 | O(n) → O(log n) 二分搜索 | `memory.rs` |
+| 严重 | format!() → thread-local 缓冲区 | `filter.rs` |
+| 高 | TCP 认证常量时间比较 | `server.rs` |
+| 高 | fetch_size 上限 10000 | `server.rs` |
+| 高 | 未知包计数器重置 | `server.rs` |
+| 高 | canal_event_to_entry 返回 Result | `server.rs` |
+| 高 | Mutex → LockExt::lock_or_recover | `session.rs` |
+| 高 | inc_dispatched 按事件数计数 | `sink.rs` |
+| 高 | TableMapCache::get 返回引用 | `table_map.rs`, `converter.rs` |
+| 中 | 零长度包 skip | `codec.rs` |
+| 中 | EventType::as_str() + DmlType::as_str() | `types.rs` |
+| 低 | 缓冲区批量 drain | `memory.rs` |
+| 低 | expect() 替代 dead fallback | `server.rs` |
+| 低 | Unknown 事件返回错误 | `server.rs` |
+
+### 第二轮（跳过项修复）
+
+| 类型 | 修复项 | 文件 |
+|------|--------|------|
+| 安全 | ReDoS: RegexBuilder size_limit + 长度限制 | `filter.rs` |
+| 安全 | Prometheus /metrics 可选 Bearer 认证 + 绑定警告 | `metrics_server.rs` |
+| 架构 | CLI run_server 集成 InstanceManager | `main.rs` |
+| 性能 | Sink 消除双克隆: Arc dispatch → store 获得所有权 | `sink.rs` |
+| 缺陷 | InstanceConfig Clone 不清除密码 (Debug 已掩码) | `instance.rs` |
+| 质量 | FilterPattern::validate() | `types.rs` |
+
+### 第三轮（最后跳过项）
+
+| 类型 | 修复项 | 文件 |
+|------|--------|------|
+| 功能 | GTID 支持: 从 mysql_cdc 提取 GTID 并写入 CanalEvent | `connector.rs` |
+| 安全 | 客户端空闲超时 (10 分钟) | `server.rs` |
+| 清理 | 移除未使用的 PositionTracker | `position.rs`, `lib.rs` |
+
+### 未修复（需要基础设施/外部变更）
+
+| 项 | 原因 |
+|----|------|
+| TCP TLS 支持 | 需要证书管理 + rustls acceptor 重构 |
+| 集成/压力测试 | 需要 MySQL testcontainer + 测试框架 |
+| serde_yaml 迁移 | serde_yml 也已废弃；需社区共识选替代方案 |
+| Codec 零拷贝 | 需将 PacketBytes 从 Vec<u8> 改为 BytesMut |
+| 客户端轮询延迟 | 需要 Canal 协议层面优化 |

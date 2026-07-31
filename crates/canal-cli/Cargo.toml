@@ -18,3 +18,5 @@ canal-binlog = { path = "../canal-binlog" }
 canal-store = { path = "../canal-store" }
 canal-server = { path = "../canal-server" }
 canal-prometheus = { path = "../canal-prometheus" }
+canal-instance = { path = "../canal-instance" }
+canal-admin = { path = "../canal-admin" }

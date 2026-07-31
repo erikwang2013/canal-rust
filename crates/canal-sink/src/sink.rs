@@ -111,14 +111,12 @@ impl EventSink for DefaultEventSink {
             return Ok(Events::new(0));
         }
 
-        // Wrap in Arc so we share a single allocation with the store and connectors.
+        let filtered_count = filtered.len();
+        // Wrap in Arc for shared connector access; store gets ownership after dispatch.
         let filtered = Arc::new(filtered);
 
-        // Phase 2: Store in memory for client subscription.
-        // put_batch returns the batch_id, avoiding a race on get_batch.
-        let batch_id = self.store.put_batch(Vec::clone(&filtered)).await?;
-
-        // Phase 3: Fan out to external connectors (fire and forget pattern)
+        // Phase 2: Fan out to external connectors (fire and forget pattern).
+        // Dispatch before store so connectors share the Arc without a store clone.
         let mut join_handles = Vec::new();
         for connector in &self.connectors {
             let events = Arc::clone(&filtered);
@@ -149,14 +147,12 @@ impl EventSink for DefaultEventSink {
             }
         }
 
-        // Phase 4: Build the response (no re-read from store)
+        // Phase 3: Store in memory. After connector tasks complete, try_unwrap
+        // succeeds (no remaining Arc references). Fallback clone only on shared case.
         let events = Arc::try_unwrap(filtered).unwrap_or_else(|arc| (*arc).clone());
-        let batch = Events::with_events(events, batch_id);
-        info!(
-            "Sinked batch_id={} with {} events",
-            batch.batch_id,
-            batch.len()
-        );
+        let batch_id = self.store.put_batch(events).await?;
+        let batch = Events::new(batch_id);
+        info!("Sinked batch_id={} with {} events", batch_id, filtered_count);
 
         Ok(batch)
     }
@@ -226,8 +222,13 @@ mod tests {
         let events = vec![make_event("test_db", "users", 100)];
         let batch = sink.sink(events).await.unwrap();
 
-        assert_eq!(batch.len(), 1);
         assert!(batch.batch_id >= 0);
+        // Events are stored in the store; verify they're retrievable
+        let stored = store
+            .get_batch(&canal_common::LogPosition::new("mysql-bin.000001", 0), 10)
+            .await
+            .unwrap();
+        assert_eq!(stored.len(), 1);
     }
 
     #[tokio::test]
@@ -242,8 +243,13 @@ mod tests {
         ];
         let batch = sink.sink(events).await.unwrap();
 
-        assert_eq!(batch.len(), 1);
-        assert_eq!(batch.events[0].table_name, "users");
+        assert!(batch.batch_id >= 0);
+        let stored = store
+            .get_batch(&canal_common::LogPosition::new("mysql-bin.000001", 0), 10)
+            .await
+            .unwrap();
+        assert_eq!(stored.len(), 1);
+        assert_eq!(stored.events[0].table_name, "users");
     }
 
     #[tokio::test]

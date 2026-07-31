@@ -141,6 +141,7 @@ impl DefaultBinlogConnector {
 
         // Signal that we've successfully connected and started replicating
         let _ = started.send(());
+        let mut current_gtid: Option<String> = None;
 
         for result in events {
             if cancel.is_cancelled() {
@@ -159,13 +160,30 @@ impl DefaultBinlogConnector {
                 }
             };
 
+            // Track GTID from GTID events for inclusion in subsequent CanalEvents
+            match &event {
+                BinlogEvent::MySqlGtidEvent(ge) => {
+                    current_gtid = Some(ge.gtid.to_string());
+                }
+                BinlogEvent::MariaDbGtidEvent(ge) => {
+                    current_gtid = Some(ge.gtid.to_string());
+                }
+                _ => {}
+            }
+            let gtid_ref: Option<&str> = current_gtid.as_deref();
+
             if let BinlogEvent::RotateEvent(ref re) = event {
                 current_binlog_file = re.binlog_filename.clone();
             }
 
-            if let Err(e) =
-                Self::process_and_send(&header, &event, &mut converter, &current_binlog_file, &tx)
-            {
+            if let Err(e) = Self::process_and_send(
+                &header,
+                &event,
+                &mut converter,
+                &current_binlog_file,
+                gtid_ref,
+                &tx,
+            ) {
                 let _ = tx.blocking_send(Err(e));
             }
 
@@ -181,6 +199,7 @@ impl DefaultBinlogConnector {
         event: &BinlogEvent,
         converter: &mut EventConverter,
         current_binlog_file: &str,
+        gtid: Option<&str>,
         tx: &mpsc::Sender<CanalResult<CanalEvent>>,
     ) -> CanalResult<()> {
         match event {
@@ -213,7 +232,7 @@ impl DefaultBinlogConnector {
                     table_name: String::new(),
                     row_change: None,
                     ddl_sql: Some(q.sql_statement.clone()),
-                    gtid: None,
+                    gtid: gtid.map(|s| s.to_string()),
                     raw_bytes: vec![],
                 };
                 let _ = tx.blocking_send(Ok(canal_event));
@@ -227,6 +246,7 @@ impl DefaultBinlogConnector {
                 e.table_id,
                 &e.rows,
                 converter,
+                gtid,
                 tx,
                 extract_column_values,
             ),
@@ -237,6 +257,7 @@ impl DefaultBinlogConnector {
                 e.table_id,
                 &e.rows,
                 converter,
+                gtid,
                 tx,
             ),
 
@@ -247,6 +268,7 @@ impl DefaultBinlogConnector {
                 e.table_id,
                 &e.rows,
                 converter,
+                gtid,
                 tx,
                 extract_column_values,
             ),
@@ -266,6 +288,7 @@ impl DefaultBinlogConnector {
         table_id: u64,
         rows: &[RowData],
         converter: &mut EventConverter,
+        gtid: Option<&str>,
         tx: &mpsc::Sender<CanalResult<CanalEvent>>,
         extract: fn(&RowData, &[ColumnInfo]) -> Vec<ColumnValue>,
     ) -> CanalResult<()> {
@@ -284,6 +307,7 @@ impl DefaultBinlogConnector {
                         &table,
                         Some(change),
                         None,
+                        gtid.map(|s| s.to_string()),
                     );
                     let _ = tx.blocking_send(Ok(event));
                 }
@@ -302,6 +326,7 @@ impl DefaultBinlogConnector {
         table_id: u64,
         rows: &[UpdateRowData],
         converter: &mut EventConverter,
+        gtid: Option<&str>,
         tx: &mpsc::Sender<CanalResult<CanalEvent>>,
     ) -> CanalResult<()> {
         let columns = converter.get_columns(table_id).cloned().unwrap_or_default();
@@ -320,6 +345,7 @@ impl DefaultBinlogConnector {
                         &table,
                         Some(change),
                         None,
+                        gtid.map(|s| s.to_string()),
                     );
                     let _ = tx.blocking_send(Ok(event));
                 }
@@ -340,6 +366,7 @@ impl DefaultBinlogConnector {
         table_name: &str,
         row_change: Option<canal_common::RowChange>,
         ddl_sql: Option<String>,
+        gtid: Option<String>,
     ) -> CanalEvent {
         CanalEvent {
             journal_name: journal_name.to_string(),
@@ -351,7 +378,7 @@ impl DefaultBinlogConnector {
             table_name: table_name.to_string(),
             row_change,
             ddl_sql,
-            gtid: None,
+            gtid,
             raw_bytes: vec![],
         }
     }

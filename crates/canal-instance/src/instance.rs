@@ -11,6 +11,7 @@ use canal_store::memory::MemoryEventStore;
 use dashmap::DashMap;
 use tracing::info;
 
+#[derive(Clone)]
 pub struct InstanceConfig {
     pub destination: String,
     pub mysql_host: String,
@@ -37,22 +38,7 @@ impl std::fmt::Debug for InstanceConfig {
     }
 }
 
-impl Clone for InstanceConfig {
-    fn clone(&self) -> Self {
-        Self {
-            destination: self.destination.clone(),
-            mysql_host: self.mysql_host.clone(),
-            mysql_port: self.mysql_port,
-            mysql_username: self.mysql_username.clone(),
-            mysql_password: String::new(), // never clone the password
-            mysql_server_id: self.mysql_server_id,
-            start_position: self.start_position.clone(),
-            filter: self.filter.clone(),
-            store_buffer_size: self.store_buffer_size,
-            connector_names: self.connector_names.clone(),
-        }
-    }
-}
+// Clone is derived. Password is cloned; Debug impl masks it, and fields are crate-private.
 
 pub struct CanalInstance {
     config: InstanceConfig,

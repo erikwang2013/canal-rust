@@ -25,6 +25,7 @@ use crate::codec::CanalCodec;
 use crate::session::SessionManager;
 
 const MAX_CONNECTIONS: usize = 1024;
+const CLIENT_IDLE_TIMEOUT_SECS: u64 = 600; // 10 minutes
 
 /// Canal TCP server.
 pub struct CanalServer {
@@ -130,7 +131,20 @@ async fn handle_client(
 ) -> CanalResult<()> {
     let mut state = ClientState::default();
 
-    while let Some(frame_bytes) = transport.next().await {
+    loop {
+        let frame_bytes = match tokio::time::timeout(
+            std::time::Duration::from_secs(CLIENT_IDLE_TIMEOUT_SECS),
+            transport.next(),
+        )
+        .await
+        {
+            Ok(Some(bytes)) => bytes,
+            Ok(None) => break, // stream ended
+            Err(_) => {
+                warn!("Client idle timeout after {}s, disconnecting", CLIENT_IDLE_TIMEOUT_SECS);
+                break;
+            }
+        };
         let frame_bytes = frame_bytes?;
 
         let packet = Packet::decode(&frame_bytes[..])

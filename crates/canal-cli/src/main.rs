@@ -4,7 +4,10 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
+use canal_admin::AdminServer;
 use canal_binlog::BinlogConnector;
+use canal_common::FilterPattern;
+use canal_instance::instance::{CanalInstance, InstanceConfig, InstanceManager};
 use canal_prometheus::{CanalMetrics, MetricsServer};
 use clap::{Parser, Subcommand};
 use serde::Deserialize;
@@ -187,15 +190,43 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
         .context("Failed to start metrics server")?;
     tracing::info!("Metrics server listening on {}", metrics_bind);
 
-    let store = Arc::new(canal_store::memory::MemoryEventStore::new(
-        config.canal.store.buffer_size,
-    ));
+    // -- InstanceManager setup --
+    let instance_mgr = Arc::new(InstanceManager::new());
+
+    let instance_config = InstanceConfig {
+        destination: "default".to_string(),
+        mysql_host: config.canal.mysql.host.clone(),
+        mysql_port: config.canal.mysql.port,
+        mysql_username: config.canal.mysql.username.clone(),
+        mysql_password: config.canal.mysql.password.clone(),
+        mysql_server_id: config.canal.server_id,
+        start_position: canal_common::LogPosition::new(
+            &config.canal.start_journal_name,
+            config.canal.start_position,
+        ),
+        filter: FilterPattern::default(),
+        store_buffer_size: config.canal.store.buffer_size,
+        connector_names: vec![],
+    };
+    let instance = CanalInstance::new(instance_config, vec![]).context("Failed to create instance")?;
+    let store = instance.store();
+    instance_mgr.register(instance);
+
+    // Start instances via manager
+    instance_mgr.start_all().await.context("Failed to start instances")?;
+
+    // Start admin API
+    let admin_bind = format!("127.0.0.1:{}", bind_addr.port() + 1);
+    let admin_server = AdminServer::new(&admin_bind, instance_mgr.clone());
+    let _admin_task = admin_server.start().await.context("Failed to start admin API")?;
+    tracing::info!("Admin API listening on {}", admin_bind);
 
     let server = canal_server::server::CanalServer::new(bind_addr, store.clone());
     let shutdown_token = server.shutdown_token();
 
     // Spawn binlog connector
-    let store_for_binlog = store.clone();
+    let instance_for_binlog = instance_mgr.get("default")
+        .expect("instance must be registered");
     let mysql_cfg = config.canal.mysql;
     let server_id = config.canal.server_id;
     let shutdown_for_binlog = shutdown_token.clone();
@@ -238,8 +269,8 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
                             metrics_for_binlog.inc_parsed(1);
                             batch.push(event);
                             if batch.len() >= 256 {
-                                if let Err(e) = store_for_binlog.put_batch(batch.split_off(0)).await {
-                                    tracing::error!("Failed to store events: {}", e);
+                                if let Err(e) = instance_for_binlog.feed(batch.split_off(0)).await {
+                                    tracing::error!("Failed to feed events: {}", e);
                                 }
                             }
                         }
@@ -255,7 +286,7 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
                 }
                 _ = flush_interval.tick() => {
                     if !batch.is_empty() {
-                        if let Err(e) = store_for_binlog.put_batch(batch.split_off(0)).await {
+                        if let Err(e) = instance_for_binlog.feed(batch.split_off(0)).await {
                             tracing::error!("Failed to flush batch: {}", e);
                         }
                     }
@@ -265,7 +296,7 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
 
         // Flush remaining events before shutdown
         if !batch.is_empty() {
-            if let Err(e) = store_for_binlog.put_batch(batch).await {
+            if let Err(e) = instance_for_binlog.feed(batch).await {
                 tracing::error!("Failed to flush remaining batch on shutdown: {}", e);
             }
         }
