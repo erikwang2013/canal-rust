@@ -46,7 +46,6 @@ struct KafkaPayload<'a> {
     ddl_sql: &'a Option<String>,
 }
 
-#[derive(Debug)]
 pub struct KafkaConfig {
     pub servers: String,
     pub topic: String,
@@ -54,6 +53,19 @@ pub struct KafkaConfig {
     pub sasl_username: Option<String>,
     pub sasl_password: Option<String>,
     pub sasl_mechanism: Option<String>,
+}
+
+impl std::fmt::Debug for KafkaConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("KafkaConfig")
+            .field("servers", &self.servers)
+            .field("topic", &self.topic)
+            .field("ssl_ca_location", &self.ssl_ca_location)
+            .field("sasl_username", &self.sasl_username)
+            .field("sasl_password", &"<redacted>")
+            .field("sasl_mechanism", &self.sasl_mechanism)
+            .finish()
+    }
 }
 
 impl KafkaConfig {
@@ -76,7 +88,7 @@ impl Clone for KafkaConfig {
             topic: self.topic.clone(),
             ssl_ca_location: self.ssl_ca_location.clone(),
             sasl_username: self.sasl_username.clone(),
-            sasl_password: None,
+            sasl_password: self.sasl_password.clone(),
             sasl_mechanism: self.sasl_mechanism.clone(),
         }
     }
@@ -249,12 +261,16 @@ impl SinkConnector for KafkaConnector {
         let messages = self.serialize_events(events);
 
         let topic = &self.config.topic;
+        // Limit concurrent in-flight sends to avoid overwhelming the broker
+        let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(50));
         let send_futures: Vec<_> = messages
             .into_iter()
             .map(|(key, msg)| {
                 let p = producer.clone();
                 let t = topic.clone();
+                let permit = semaphore.clone();
                 async move {
+                    let _guard = permit.acquire().await;
                     let record = FutureRecord::to(&t).payload(&msg).key(&key);
                     p.send(record, Timeout::After(Duration::from_secs(5))).await
                 }

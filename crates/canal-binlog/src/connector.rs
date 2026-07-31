@@ -124,10 +124,11 @@ impl DefaultBinlogConnector {
         tx: mpsc::Sender<CanalResult<CanalEvent>>,
         cancel: CancellationToken,
         started: tokio::sync::oneshot::Sender<()>,
+        start_journal: &str,
     ) {
         let mut client = BinlogClient::new(options);
         let mut converter = EventConverter::new();
-        let mut current_binlog_file = String::new();
+        let mut current_binlog_file = start_journal.to_string();
 
         let events = match client.replicate() {
             Ok(e) => e,
@@ -197,8 +198,8 @@ impl DefaultBinlogConnector {
                         error!("Channel closed during error delivery, stopping replication");
                         break;
                     }
-                    // Still commit after conversion errors — the binlog event was
-                    // consumed; we sent the error downstream for handling.
+                    // Commit to avoid stalling replication on a bad event.
+                    // The error has been forwarded downstream for handling.
                     client.commit(&header, &event);
                 }
             }
@@ -253,7 +254,7 @@ impl DefaultBinlogConnector {
                                 sql.len(),
                                 DDL_SQL_MAX_LEN
                             );
-                            Some(sql[..DDL_SQL_MAX_LEN].to_string())
+                            Some(sql.chars().take(DDL_SQL_MAX_LEN).collect())
                         } else {
                             Some(sql)
                         }
@@ -434,8 +435,9 @@ impl BinlogConnector for DefaultBinlogConnector {
 
         let (started_tx, started_rx) = tokio::sync::oneshot::channel();
 
+        let journal_name = pos.journal_name.clone();
         tokio::task::spawn_blocking(move || {
-            Self::run_replication(options, tx, cancel_clone, started_tx);
+            Self::run_replication(options, tx, cancel_clone, started_tx, &journal_name);
         });
 
         let started_result =

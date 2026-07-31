@@ -95,7 +95,7 @@ impl CanalClient {
             .take()
             .ok_or_else(|| canal_common::CanalError::Internal("not connected".into()))?;
 
-        // Send Sub
+        // Send Sub with optional start position
         let sub = Sub {
             destination: self.destination.clone(),
             client_id: self.client_id.to_string(),
@@ -196,6 +196,8 @@ impl CanalClient {
                             warn!("Client {} ack failed: {}", client_id, e);
                             break;
                         }
+                        // Immediately poll again — no backoff on steady-state Messages
+                        continue;
                     }
                     Ok(PacketType::Ack) => {
                         debug!("Client {} received terminal Ack", client_id);
@@ -206,13 +208,10 @@ impl CanalClient {
                             "Client {} unexpected packet type: {}",
                             client_id, resp.r#type
                         );
-                        idle_count = 0;
                     }
                 }
 
-                // Adaptive backoff: exponential when idle, reset on events.
-                // Only Messages resets idle_count; non-Messages branches fall
-                // through and increment, growing the backoff.
+                // Adaptive backoff: exponential when idle (non-Messages responses).
                 idle_count = idle_count.saturating_add(1);
                 let delay_ms = (100u64).saturating_mul(2u64.saturating_pow(idle_count.min(6)));
                 tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
@@ -221,7 +220,7 @@ impl CanalClient {
 
         Ok(CanalEventStream {
             rx,
-            _bg_task: bg_task,
+            bg_task,
         })
     }
 
@@ -233,18 +232,27 @@ impl CanalClient {
 /// An async stream of Canal binlog events.
 pub struct CanalEventStream {
     rx: mpsc::Receiver<CanalResult<CanalEvent>>,
-    _bg_task: JoinHandle<()>,
+    bg_task: JoinHandle<()>,
 }
 
 impl CanalEventStream {
     pub async fn next_event(&mut self) -> Option<CanalResult<CanalEvent>> {
-        self.rx.recv().await
+        let result = self.rx.recv().await;
+        if result.is_none() && self.bg_task.is_finished() {
+            let old_task = std::mem::replace(&mut self.bg_task, tokio::spawn(async {}));
+            if let Err(e) = old_task.await {
+                if e.is_panic() {
+                    tracing::error!("Background poll task panicked");
+                }
+            }
+        }
+        result
     }
 }
 
 impl Drop for CanalEventStream {
     fn drop(&mut self) {
-        self._bg_task.abort();
+        self.bg_task.abort();
     }
 }
 
@@ -278,9 +286,9 @@ async fn read_packet(stream: &mut TcpStream) -> CanalResult<Packet> {
             "received zero-length packet".into(),
         ));
     }
-    if len > 64 * 1024 * 1024 {
+    if len > 8 * 1024 * 1024 {
         return Err(canal_common::CanalError::Protocol(format!(
-            "packet too large: {} bytes",
+            "packet too large: {} bytes (max 8MB)",
             len
         )));
     }
@@ -412,7 +420,7 @@ fn entry_bytes_to_event(data: &[u8]) -> CanalResult<CanalEvent> {
         position: hdr.logfile_offset as u64,
         server_id: hdr.server_id as u64,
         execute_time: hdr.execute_time,
-        entry_type: canal_common::EventType::from(ev_type),
+        entry_type: canal_common::EventType::from_proto(ev_type),
         schema_name: hdr.schema_name,
         table_name: hdr.table_name,
         row_change,
@@ -452,7 +460,7 @@ mod tests {
     async fn test_canal_event_stream_drop() {
         let (_tx, rx) = mpsc::channel::<CanalResult<CanalEvent>>(4);
         let bg = tokio::spawn(async {});
-        let mut stream = CanalEventStream { rx, _bg_task: bg };
+        let mut stream = CanalEventStream { rx, bg_task: bg };
         drop(_tx);
         assert!(stream.next_event().await.is_none());
     }

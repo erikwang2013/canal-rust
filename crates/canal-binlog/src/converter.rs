@@ -92,8 +92,11 @@ impl EventConverter {
         })?;
         let (schema, table) = schema_table;
 
-        for col in &mut after_columns {
-            col.updated = true;
+        // Only mark columns as updated when their value actually changed
+        for (i, col) in after_columns.iter_mut().enumerate() {
+            col.updated = before_columns
+                .get(i)
+                .map_or(true, |before| before.value != col.value);
         }
 
         Ok(RowChange {

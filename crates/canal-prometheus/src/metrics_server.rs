@@ -30,7 +30,7 @@ fn init_metrics() -> &'static PrometheusHandle {
 
         PrometheusBuilder::new()
             .install_recorder()
-            .expect("Failed to install Prometheus recorder — already initialized?")
+            .expect("Failed to install Prometheus recorder — ensure only one CanalMetrics is created per process")
     })
 }
 

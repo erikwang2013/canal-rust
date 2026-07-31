@@ -17,6 +17,8 @@ use tokio_util::codec::Framed;
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 
+use canal_common::MutexLockExt;
+
 use crate::codec::CanalCodec;
 use crate::session::SessionManager;
 
@@ -145,6 +147,11 @@ async fn handle_client(
             }
         };
         let frame_bytes = frame_bytes?;
+
+        // Skip zero-length keepalive frames
+        if frame_bytes.is_empty() {
+            continue;
+        }
 
         let packet = Packet::decode(&frame_bytes[..])
             .map_err(|e| CanalError::Protocol(format!("failed to decode Packet: {}", e)))?;
@@ -296,21 +303,45 @@ async fn handle_sub(
     let sub = Sub::decode(&packet.body[..])
         .map_err(|e| CanalError::Protocol(format!("failed to decode Sub: {}", e)))?;
 
-    let cid = sub.client_id.clone();
+    // Validate client_id matches authenticated identity
+    if let Some(ref auth_cid) = state.client_id {
+        if sub.client_id != *auth_cid {
+            return send_ack_err(
+                transport,
+                &format!(
+                    "client_id mismatch: sub has '{}' but authenticated as '{}'",
+                    sub.client_id, auth_cid
+                ),
+            )
+            .await;
+        }
+    }
+
+    const MAX_FILTER_PATTERN_LEN: usize = 256;
+    if sub.filter.len() > MAX_FILTER_PATTERN_LEN {
+        return send_ack_err(
+            transport,
+            &format!("filter pattern too long: {} > {}", sub.filter.len(), MAX_FILTER_PATTERN_LEN),
+        )
+        .await;
+    }
+
     let black_list = sessions
-        .get(&cid)
+        .get(&sub.client_id)
         .map(|s| s.filter.black_list.clone())
         .unwrap_or_default();
 
-    sessions.register(
-        &cid,
-        &sub.destination,
-        FilterPattern {
-            pattern: sub.filter.clone(),
-            black_list,
-        },
-    );
-    state.client_id = Some(cid);
+    let fp = FilterPattern {
+        pattern: sub.filter.clone(),
+        black_list,
+    };
+    if let Err(e) = fp.validate() {
+        let msg = format!("invalid filter pattern: {}", e);
+        return send_ack_err(transport, &msg).await;
+    }
+
+    sessions.register(&sub.client_id, &sub.destination, fp);
+    state.client_id = Some(sub.client_id);
     send_ack_ok(transport).await?;
     Ok(())
 }
@@ -328,7 +359,7 @@ async fn handle_get(
     let batch_size = usize::try_from(get.fetch_size)
         .unwrap_or(100)
         .clamp(1, MAX_FETCH_SIZE);
-    if get.fetch_size as usize > MAX_FETCH_SIZE {
+    if get.fetch_size > MAX_FETCH_SIZE as i32 {
         warn!(
             "Client requested fetch_size {} exceeding max {}, clamped",
             get.fetch_size, MAX_FETCH_SIZE
@@ -343,27 +374,63 @@ async fn handle_get(
         .client_id
         .clone()
         .ok_or_else(|| CanalError::Protocol("not authenticated — client_id missing".into()))?;
-    let start = state
-        .current_pos
-        .clone()
-        .unwrap_or_else(|| LogPosition::new(DEFAULT_START_JOURNAL, DEFAULT_START_POSITION));
+    let start = state.current_pos.clone().unwrap_or_else(|| {
+        sessions
+            .get(&cid)
+            .and_then(|s| s.last_ack_position.lock_or_recover().clone())
+            .unwrap_or_else(|| LogPosition::new(DEFAULT_START_JOURNAL, DEFAULT_START_POSITION))
+    });
 
     let events: Events = store.get_batch(&start, batch_size).await?;
 
     let mut msgs = Messages::default();
     if !events.is_empty() {
         state.current_pos = Some(events.position_range.end.clone());
-        if sessions.get(&cid).is_some() {
-            if let Some(ref pos) = state.current_pos {
-                sessions.update_position(&cid, pos.clone());
+        if let Some(ref pos) = state.current_pos {
+            sessions.update_position(&cid, pos.clone());
+        }
+
+        // Apply per-client session filter
+        let pattern_re = sessions.get(&cid).and_then(|s| {
+            regex::Regex::new(&s.filter.pattern).ok()
+        });
+        let black_re = sessions.get(&cid).and_then(|s| {
+            if s.filter.black_list.is_empty() {
+                None
+            } else {
+                regex::Regex::new(&s.filter.black_list).ok()
             }
+        });
+
+        let to_send: Vec<_> = events
+            .events
+            .iter()
+            .filter(|event| {
+                let table = format!("{}.{}", event.schema_name, event.table_name);
+                let matches = pattern_re.as_ref().map_or(true, |re| re.is_match(&table));
+                let blocked = black_re.as_ref().map_or(false, |re| re.is_match(&table));
+                matches && !blocked
+            })
+            .collect();
+
+        if to_send.is_empty() {
+            transport.send(
+                Packet {
+                    r#type: PacketType::Messages as i32,
+                    body: msgs.encode_to_vec(),
+                    ..Default::default()
+                }
+                .encode_to_vec(),
+            )
+            .await?;
+            return Ok(());
         }
 
         msgs = Messages {
             batch_id: events.batch_id,
             ..Default::default()
         };
-        for event in &events.events {
+        for event in to_send {
             let entry = canal_event_to_entry(event)?;
             msgs.messages.push(entry.encode_to_vec());
         }
@@ -379,10 +446,10 @@ async fn handle_get(
 }
 
 fn handle_client_ack(packet: &Packet, state: &mut ClientState, sessions: &SessionManager) {
-    if let Ok(client_ack) = ClientAck::decode(&packet.body[..]) {
-        if let Some(ref pos) = state.current_pos {
+    if ClientAck::decode(&packet.body[..]).is_ok() {
+        if let (Some(ref pos), Some(ref cid)) = (&state.current_pos, &state.client_id) {
             state.last_ack_pos = Some(pos.clone());
-            sessions.update_ack(&client_ack.client_id, pos.clone());
+            sessions.update_ack(cid, pos.clone());
         }
     }
 }

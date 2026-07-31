@@ -67,6 +67,16 @@ impl MemoryEventStore {
         let last_event = events.last().unwrap();
         let last = LogPosition::new(&last_event.journal_name, last_event.position);
 
+        // Validate monotonic ordering: new events must not precede the buffer tail
+        debug_assert!(
+            buffer.back().map_or(true, |tail| {
+                let tail_key = (binlog_suffix(&tail.journal_name), tail.position);
+                let first_key = (binlog_suffix(&first.journal_name), first.position);
+                tail_key <= first_key
+            }),
+            "put_batch: events must be fed in monotonic (journal_suffix, position) order"
+        );
+
         let mut first_pos = self.first_position.write_or_recover();
         if let Some(front) = buffer.front() {
             *first_pos = Some(LogPosition::new(&front.journal_name, front.position));
@@ -94,22 +104,19 @@ impl MemoryEventStore {
                 let mut buffer = self.buffer.lock_or_recover();
                 let slice = buffer.make_contiguous();
 
-                // Binary search: events are ordered by (journal_suffix, position)
+                // partition_point: find first element > target (exclusive start cursor).
+                // Correctly handles duplicate positions from multi-row binlog events.
                 let target = (start_suffix, start_pos);
-                let start_idx = match slice
-                    .binary_search_by(|e| (binlog_suffix(&e.journal_name), e.position).cmp(&target))
-                {
-                    Ok(i) => i + 1,
-                    Err(i) => i,
-                };
+                let start_idx = slice.partition_point(
+                    |e| (binlog_suffix(&e.journal_name), e.position) <= target,
+                );
 
                 if start_idx < slice.len() {
                     let batch_id = self.batch_id_seq.fetch_add(1, Ordering::SeqCst);
-                    let events: Vec<CanalEvent> = slice[start_idx..]
-                        .iter()
-                        .take(batch_size)
-                        .cloned()
-                        .collect();
+                    // Extract events outside the lock to minimize contention
+                    let end = (start_idx + batch_size).min(slice.len());
+                    let events: Vec<CanalEvent> = slice[start_idx..end].to_vec();
+                    drop(buffer);
 
                     if !events.is_empty() {
                         Some(Events::with_events(events, batch_id))

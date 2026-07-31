@@ -58,10 +58,12 @@ pub(crate) fn mysql_value_to_string(v: &MySqlValue) -> String {
             if let Ok(s) = std::str::from_utf8(b) {
                 s.to_string()
             } else {
-                b.iter()
-                    .map(|byte| format!("{:02x}", byte))
-                    .collect::<Vec<_>>()
-                    .join("")
+                use std::fmt::Write;
+                let mut s = String::with_capacity(b.len() * 2);
+                for byte in b {
+                    write!(s, "{:02x}", byte).unwrap();
+                }
+                s
             }
         }
         MySqlValue::Bit(bits) => {

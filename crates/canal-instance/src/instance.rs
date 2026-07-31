@@ -85,7 +85,10 @@ impl CanalInstance {
 
     pub async fn feed(&self, events: Vec<CanalEvent>) -> CanalResult<()> {
         if !self.running.load(Ordering::SeqCst) {
-            return Ok(());
+            return Err(CanalError::Internal(format!(
+                "instance '{}' is not running — cannot feed events",
+                self.config.destination
+            )));
         }
         self.sink.sink(events).await?;
         Ok(())

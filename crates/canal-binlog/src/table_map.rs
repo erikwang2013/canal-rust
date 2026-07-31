@@ -30,6 +30,7 @@ impl TableMapCache {
     }
 
     pub fn put(&mut self, table_id: u64, schema: String, table: String) {
+        self.columns.remove(&table_id);
         self.names.insert(table_id, (schema, table));
     }
 

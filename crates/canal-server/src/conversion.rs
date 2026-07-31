@@ -87,6 +87,12 @@ pub(crate) fn canal_event_to_entry(event: &CanalEvent) -> CanalResult<Entry> {
             ..Default::default()
         };
         entry.store_value = rc.encode_to_vec();
+    } else {
+        let rc = RowChange {
+            event_type_present: Some(row_change::EventTypePresent::EventType(event_type_i32)),
+            ..Default::default()
+        };
+        entry.store_value = rc.encode_to_vec();
     }
 
     if let Some(ref mut hdr) = entry.header {

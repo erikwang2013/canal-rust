@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Binlog position (corresponds to Java LogPosition/EntryPosition)
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct LogPosition {
     pub journal_name: String,
     pub position: u64,
@@ -58,7 +58,7 @@ pub fn binlog_suffix(journal_name: &str) -> u64 {
 }
 
 /// Position range for a batch of events
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PositionRange {
     pub start: LogPosition,
     pub end: LogPosition,
@@ -91,6 +91,23 @@ impl EventType {
             EventType::Xid => "XID",
             EventType::Heartbeat => "HEARTBEAT",
             EventType::Unknown(_) => "UNKNOWN",
+        }
+    }
+
+    /// Decode from the server-side proto EventType enum (canal protocol mapping).
+    /// The server maps domain event types to proto values differently from the
+    /// simple 1:1 `From<i32>` mapping — e.g. Ddl→Query(7), Xid→Xacommit(13).
+    pub fn from_proto(v: i32) -> Self {
+        match v {
+            1 => EventType::Insert,
+            2 => EventType::Update,
+            3 => EventType::Delete,
+            4 => EventType::Ddl,
+            5 => EventType::Query,
+            7 => EventType::Ddl,       // server sends Ddl/Query/Rotate as Query=7
+            13 => EventType::Xid,       // server sends Xid as Xacommit=13
+            15 => EventType::Heartbeat, // server sends Heartbeat as Mheartbeat=15
+            _ => EventType::Unknown(v),
         }
     }
 }
@@ -130,7 +147,7 @@ impl DmlType {
 }
 
 /// A single column's value
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ColumnValue {
     pub name: String,
     pub value: Option<String>,
@@ -140,13 +157,13 @@ pub struct ColumnValue {
 }
 
 /// A row's data (set of columns)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RowData {
     pub columns: Vec<ColumnValue>,
 }
 
 /// A change to a row (before/after images and DML type)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RowChange {
     pub table_name: String,
     pub schema_name: String,
@@ -156,7 +173,7 @@ pub struct RowChange {
 }
 
 /// A single binlog event as stored in Canal's event store
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CanalEvent {
     pub journal_name: String,
     pub position: u64,
@@ -173,7 +190,7 @@ pub struct CanalEvent {
 }
 
 /// A batch of events returned to a client
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Events {
     pub position_range: PositionRange,
     pub events: Vec<CanalEvent>,
@@ -240,9 +257,15 @@ impl Default for FilterPattern {
 
 impl FilterPattern {
     pub fn validate(&self) -> Result<(), String> {
-        regex::Regex::new(&self.pattern).map_err(|e| format!("invalid pattern: {}", e))?;
+        regex::RegexBuilder::new(&self.pattern)
+            .size_limit(1 << 20)
+            .build()
+            .map_err(|e| format!("invalid pattern: {}", e))?;
         if !self.black_list.is_empty() {
-            regex::Regex::new(&self.black_list).map_err(|e| format!("invalid blacklist: {}", e))?;
+            regex::RegexBuilder::new(&self.black_list)
+                .size_limit(1 << 20)
+                .build()
+                .map_err(|e| format!("invalid blacklist: {}", e))?;
         }
         Ok(())
     }

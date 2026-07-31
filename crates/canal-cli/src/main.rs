@@ -30,10 +30,27 @@ struct CanalSection {
     start_journal_name: String,
     #[serde(default = "default_start_position")]
     start_position: u64,
+    #[serde(default)]
+    auth_token: Option<String>,
     mysql: MysqlConfig,
     store: StoreSection,
     server: ServerSection,
+    #[serde(default)]
+    filter: FilterSection,
     logging: LogSection,
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(deny_unknown_fields)]
+struct FilterSection {
+    #[serde(default = "default_filter_pattern")]
+    pattern: String,
+    #[serde(default)]
+    black_list: String,
+}
+
+fn default_filter_pattern() -> String {
+    ".*\\..*".to_string()
 }
 
 fn default_server_id() -> u64 {
@@ -56,6 +73,8 @@ struct MysqlConfig {
     port: u16,
     username: String,
     password: String,
+    #[serde(default)]
+    charset: Option<String>,
 }
 
 impl std::fmt::Debug for MysqlConfig {
@@ -91,6 +110,12 @@ struct ServerSection {
     bind: String,
     #[serde(default = "default_metrics_bind")]
     metrics_bind: String,
+    #[serde(default = "default_idle_timeout")]
+    idle_timeout_secs: u64,
+}
+
+fn default_idle_timeout() -> u64 {
+    3600
 }
 
 fn default_metrics_bind() -> String {
@@ -222,7 +247,10 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
             &config.canal.start_journal_name,
             config.canal.start_position,
         ),
-        filter: FilterPattern::default(),
+        filter: FilterPattern {
+            pattern: config.canal.filter.pattern.clone(),
+            black_list: config.canal.filter.black_list.clone(),
+        },
         store_buffer_size: config.canal.store.buffer_size,
         connector_names: vec![],
     };
@@ -246,8 +274,19 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
         .context("Failed to start admin API")?;
     tracing::info!("Admin API listening on {}", admin_bind);
 
-    let server = canal_server::server::CanalServer::new(bind_addr, store.clone());
+    let mut server = canal_server::server::CanalServer::new(bind_addr, store.clone());
+    if let Some(ref token) = config.canal.auth_token {
+        server = server.with_auth(token.clone());
+    }
     let shutdown_token = server.shutdown_token();
+
+    // Graceful shutdown on Ctrl-C
+    let shutdown_for_signal = shutdown_token.clone();
+    tokio::spawn(async move {
+        tokio::signal::ctrl_c().await.ok();
+        tracing::info!("Received SIGINT, initiating graceful shutdown...");
+        shutdown_for_signal.cancel();
+    });
 
     // Spawn binlog connector
     let instance_for_binlog = instance_mgr

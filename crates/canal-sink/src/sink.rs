@@ -4,7 +4,7 @@ use canal_filter::EventFilter;
 use canal_prometheus::CanalMetrics;
 use canal_store::memory::MemoryEventStore;
 use std::sync::Arc;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 
 use crate::connector::SinkConnector;
 
@@ -112,45 +112,25 @@ impl EventSink for DefaultEventSink {
         }
 
         let filtered_count = filtered.len();
-        // Wrap in Arc for shared connector access; store gets ownership after dispatch.
-        let filtered = Arc::new(filtered);
+        // Phase 2: Store events in memory immediately (don't block on connectors).
+        let batch_id = self.store.put_batch(filtered.clone()).await?;
 
-        // Phase 2: Fan out to external connectors (fire and forget pattern).
-        // Dispatch before store so connectors share the Arc without a store clone.
-        let mut join_handles = Vec::new();
+        // Phase 3: Fire-and-forget dispatch to external connectors.
         for connector in &self.connectors {
-            let events = Arc::clone(&filtered);
+            let events = filtered.clone();
             let conn = Arc::clone(connector);
-            join_handles.push(tokio::spawn(async move {
+            let metrics = self.metrics.clone();
+            tokio::spawn(async move {
                 match conn.dispatch(&events).await {
-                    Ok(()) => (conn.name().to_string(), 0u64),
+                    Ok(()) => metrics.inc_dispatched(filtered_count as u64),
                     Err(e) => {
                         error!("Connector {} dispatch failed: {}", conn.name(), e);
-                        (conn.name().to_string(), 1u64)
+                        metrics.inc_dispatch_errors(1);
                     }
                 }
-            }));
-        }
-        for handle in join_handles {
-            match handle.await {
-                Ok((name, failures)) if failures > 0 => {
-                    self.metrics.inc_dispatch_errors(failures);
-                    warn!("Connector {} had {} failures in this batch", name, failures);
-                }
-                Ok((_name, _)) => {
-                    self.metrics.inc_dispatched(filtered_count as u64);
-                }
-                Err(e) => {
-                    self.metrics.inc_dispatch_errors(1);
-                    error!("Connector task panicked: {}", e);
-                }
-            }
+            });
         }
 
-        // Phase 3: Store in memory. After connector tasks complete, try_unwrap
-        // succeeds (no remaining Arc references). Fallback clone only on shared case.
-        let events = Arc::try_unwrap(filtered).unwrap_or_else(|arc| (*arc).clone());
-        let batch_id = self.store.put_batch(events).await?;
         let batch = Events::new(batch_id);
         info!(
             "Sinked batch_id={} with {} events",
