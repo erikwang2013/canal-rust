@@ -66,6 +66,7 @@ pub struct PositionRange {
 
 /// Event type classifications
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub enum EventType {
     Insert,
     Update,
@@ -241,8 +242,7 @@ impl FilterPattern {
     pub fn validate(&self) -> Result<(), String> {
         regex::Regex::new(&self.pattern).map_err(|e| format!("invalid pattern: {}", e))?;
         if !self.black_list.is_empty() {
-            regex::Regex::new(&self.black_list)
-                .map_err(|e| format!("invalid blacklist: {}", e))?;
+            regex::Regex::new(&self.black_list).map_err(|e| format!("invalid blacklist: {}", e))?;
         }
         Ok(())
     }

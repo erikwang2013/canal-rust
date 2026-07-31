@@ -152,7 +152,10 @@ impl EventSink for DefaultEventSink {
         let events = Arc::try_unwrap(filtered).unwrap_or_else(|arc| (*arc).clone());
         let batch_id = self.store.put_batch(events).await?;
         let batch = Events::new(batch_id);
-        info!("Sinked batch_id={} with {} events", batch_id, filtered_count);
+        info!(
+            "Sinked batch_id={} with {} events",
+            batch_id, filtered_count
+        );
 
         Ok(batch)
     }

@@ -1,40 +1,39 @@
 use std::sync::{Mutex, MutexGuard, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-/// Extension trait to recover from a poisoned Mutex or RwLock.
+/// Extension trait to recover from a poisoned Mutex.
 /// When a lock is poisoned, continuing with the inner state
 /// is the best available option — the invariant is already broken.
-pub trait LockExt<T> {
+pub trait MutexLockExt<T> {
     fn lock_or_recover(&self) -> MutexGuard<'_, T>;
+}
+
+impl<T> MutexLockExt<T> for Mutex<T> {
+    fn lock_or_recover(&self) -> MutexGuard<'_, T> {
+        self.lock().unwrap_or_else(|e| {
+            tracing::error!("Recovered from poisoned Mutex — data may be inconsistent");
+            PoisonError::into_inner(e)
+        })
+    }
+}
+
+/// Extension trait to recover from a poisoned RwLock.
+pub trait RwLockExt<T> {
     fn read_or_recover(&self) -> RwLockReadGuard<'_, T>;
     fn write_or_recover(&self) -> RwLockWriteGuard<'_, T>;
 }
 
-impl<T> LockExt<T> for Mutex<T> {
-    fn lock_or_recover(&self) -> MutexGuard<'_, T> {
-        self.lock().unwrap_or_else(PoisonError::into_inner)
-    }
-
+impl<T> RwLockExt<T> for RwLock<T> {
     fn read_or_recover(&self) -> RwLockReadGuard<'_, T> {
-        unreachable!("read_or_recover is not valid for Mutex; use lock_or_recover")
+        self.read().unwrap_or_else(|e| {
+            tracing::error!("Recovered from poisoned RwLock — data may be inconsistent");
+            PoisonError::into_inner(e)
+        })
     }
 
     fn write_or_recover(&self) -> RwLockWriteGuard<'_, T> {
-        unreachable!("write_or_recover is not valid for Mutex; use lock_or_recover")
-    }
-}
-
-impl<T> LockExt<T> for RwLock<T> {
-    fn lock_or_recover(&self) -> MutexGuard<'_, T> {
-        unreachable!(
-            "lock_or_recover is not valid for RwLock; use read_or_recover or write_or_recover"
-        )
-    }
-
-    fn read_or_recover(&self) -> RwLockReadGuard<'_, T> {
-        self.read().unwrap_or_else(PoisonError::into_inner)
-    }
-
-    fn write_or_recover(&self) -> RwLockWriteGuard<'_, T> {
-        self.write().unwrap_or_else(PoisonError::into_inner)
+        self.write().unwrap_or_else(|e| {
+            tracing::error!("Recovered from poisoned RwLock — data may be inconsistent");
+            PoisonError::into_inner(e)
+        })
     }
 }

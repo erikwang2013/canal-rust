@@ -1,4 +1,4 @@
-use canal_common::LockExt;
+use canal_common::RwLockExt;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -58,9 +58,7 @@ impl TableMetaCache {
 
     /// Store or update table metadata.
     pub fn put(&self, key: &str, meta: TableMeta) {
-        self.tables
-            .write_or_recover()
-            .insert(key.to_string(), meta);
+        self.tables.write_or_recover().insert(key.to_string(), meta);
         debug!("Table metadata updated: {}", key);
     }
 

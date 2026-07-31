@@ -1,5 +1,7 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 
+const DDL_SQL_MAX_LEN: usize = 64 * 1024;
+
 use async_trait::async_trait;
 use canal_common::{CanalError, CanalEvent, CanalResult, ColumnValue, EventType, LogPosition};
 use mysql_cdc::binlog_client::BinlogClient;
@@ -13,7 +15,7 @@ use mysql_cdc::replica_options::ReplicaOptions;
 use mysql_cdc::ssl_mode::SslMode;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 use crate::table_map::ColumnInfo;
 use crate::EventConverter;
@@ -130,17 +132,21 @@ impl DefaultBinlogConnector {
         let events = match client.replicate() {
             Ok(e) => e,
             Err(e) => {
-                let _ = tx.blocking_send(Err(CanalError::BinlogConnection(format!(
+                let send_err = CanalError::BinlogConnection(format!(
                     "failed to start binlog replication: {:?}",
                     e
-                ))));
+                ));
+                if tx.blocking_send(Err(send_err)).is_err() {
+                    error!("Failed to send binlog connection error: channel closed");
+                    return;
+                }
                 let _ = started.send(());
                 return;
             }
         };
 
         // Signal that we've successfully connected and started replicating
-        let _ = started.send(());
+        let _ = started.send(()); // oneshot — caller may have timed out, that's fine
         let mut current_gtid: Option<String> = None;
 
         for result in events {
@@ -152,10 +158,11 @@ impl DefaultBinlogConnector {
             let (header, event) = match result {
                 Ok(r) => r,
                 Err(e) => {
-                    let _ = tx.blocking_send(Err(CanalError::Protocol(format!(
-                        "binlog stream error: {:?}",
-                        e
-                    ))));
+                    let stream_err = CanalError::Protocol(format!("binlog stream error: {:?}", e));
+                    if tx.blocking_send(Err(stream_err)).is_err() {
+                        error!("Binlog stream error: channel closed, stopping replication");
+                        break;
+                    }
                     continue;
                 }
             };
@@ -176,7 +183,7 @@ impl DefaultBinlogConnector {
                 current_binlog_file = re.binlog_filename.clone();
             }
 
-            if let Err(e) = Self::process_and_send(
+            match Self::process_and_send(
                 &header,
                 &event,
                 &mut converter,
@@ -184,10 +191,17 @@ impl DefaultBinlogConnector {
                 gtid_ref,
                 &tx,
             ) {
-                let _ = tx.blocking_send(Err(e));
+                Ok(()) => client.commit(&header, &event),
+                Err(e) => {
+                    if tx.blocking_send(Err(e)).is_err() {
+                        error!("Channel closed during error delivery, stopping replication");
+                        break;
+                    }
+                    // Still commit after conversion errors — the binlog event was
+                    // consumed; we sent the error downstream for handling.
+                    client.commit(&header, &event);
+                }
             }
-
-            client.commit(&header, &event);
         }
 
         info!("Binlog replication stream ended");
@@ -231,11 +245,25 @@ impl DefaultBinlogConnector {
                     schema_name: q.database_name.clone(),
                     table_name: String::new(),
                     row_change: None,
-                    ddl_sql: Some(q.sql_statement.clone()),
+                    ddl_sql: {
+                        let sql = q.sql_statement.clone();
+                        if sql.len() > DDL_SQL_MAX_LEN {
+                            warn!(
+                                "DDL SQL truncated: {} bytes → {} bytes",
+                                sql.len(),
+                                DDL_SQL_MAX_LEN
+                            );
+                            Some(sql[..DDL_SQL_MAX_LEN].to_string())
+                        } else {
+                            Some(sql)
+                        }
+                    },
                     gtid: gtid.map(|s| s.to_string()),
                     raw_bytes: vec![],
                 };
-                let _ = tx.blocking_send(Ok(canal_event));
+                if tx.blocking_send(Ok(canal_event)).is_err() {
+                    error!("Channel closed during DDL event send");
+                }
                 Ok(())
             }
 
@@ -293,27 +321,33 @@ impl DefaultBinlogConnector {
         extract: fn(&RowData, &[ColumnInfo]) -> Vec<ColumnValue>,
     ) -> CanalResult<()> {
         let columns = converter.get_columns(table_id).cloned().unwrap_or_default();
+        let gtid_owned = gtid.map(|s| s.to_string());
         for row in rows {
             let values = extract(row, &columns);
             match converter.handle_row_event(table_id, entry_type, values) {
                 Ok(change) => {
-                    let schema = change.schema_name.clone();
-                    let table = change.table_name.clone();
-                    let event = Self::build_canal_event(
-                        header,
-                        current_binlog_file,
+                    let event = CanalEvent {
+                        journal_name: current_binlog_file.to_string(),
+                        position: header.next_event_position as u64,
+                        server_id: header.server_id as u64,
+                        execute_time: header.timestamp as i64,
                         entry_type,
-                        &schema,
-                        &table,
-                        Some(change),
-                        None,
-                        gtid.map(|s| s.to_string()),
-                    );
-                    let _ = tx.blocking_send(Ok(event));
+                        schema_name: change.schema_name.clone(),
+                        table_name: change.table_name.clone(),
+                        row_change: Some(change),
+                        ddl_sql: None,
+                        gtid: gtid_owned.clone(),
+                        raw_bytes: vec![],
+                    };
+                    if tx.blocking_send(Ok(event)).is_err() {
+                        error!("Channel closed during row event send");
+                    }
                 }
                 Err(err) => {
                     error!("Failed to convert {:?} event: {:?}", entry_type, err);
-                    let _ = tx.blocking_send(Err(err));
+                    if tx.blocking_send(Err(err)).is_err() {
+                        error!("Channel closed during error delivery");
+                    }
                 }
             }
         }
@@ -330,57 +364,38 @@ impl DefaultBinlogConnector {
         tx: &mpsc::Sender<CanalResult<CanalEvent>>,
     ) -> CanalResult<()> {
         let columns = converter.get_columns(table_id).cloned().unwrap_or_default();
+        let gtid_owned = gtid.map(|s| s.to_string());
         for row in rows {
             let before_values = extract_column_values(&row.before_update, &columns);
             let after_values = extract_column_values(&row.after_update, &columns);
             match converter.handle_update_row_event(table_id, before_values, after_values) {
                 Ok(change) => {
-                    let schema = change.schema_name.clone();
-                    let table = change.table_name.clone();
-                    let event = Self::build_canal_event(
-                        header,
-                        current_binlog_file,
-                        EventType::Update,
-                        &schema,
-                        &table,
-                        Some(change),
-                        None,
-                        gtid.map(|s| s.to_string()),
-                    );
-                    let _ = tx.blocking_send(Ok(event));
+                    let event = CanalEvent {
+                        journal_name: current_binlog_file.to_string(),
+                        position: header.next_event_position as u64,
+                        server_id: header.server_id as u64,
+                        execute_time: header.timestamp as i64,
+                        entry_type: EventType::Update,
+                        schema_name: change.schema_name.clone(),
+                        table_name: change.table_name.clone(),
+                        row_change: Some(change),
+                        ddl_sql: None,
+                        gtid: gtid_owned.clone(),
+                        raw_bytes: vec![],
+                    };
+                    if tx.blocking_send(Ok(event)).is_err() {
+                        error!("Channel closed during update event send");
+                    }
                 }
                 Err(err) => {
                     error!("Failed to convert Update event: {:?}", err);
-                    let _ = tx.blocking_send(Err(err));
+                    if tx.blocking_send(Err(err)).is_err() {
+                        error!("Channel closed during error delivery");
+                    }
                 }
             }
         }
         Ok(())
-    }
-
-    fn build_canal_event(
-        header: &EventHeader,
-        journal_name: &str,
-        entry_type: EventType,
-        schema_name: &str,
-        table_name: &str,
-        row_change: Option<canal_common::RowChange>,
-        ddl_sql: Option<String>,
-        gtid: Option<String>,
-    ) -> CanalEvent {
-        CanalEvent {
-            journal_name: journal_name.to_string(),
-            position: header.next_event_position as u64,
-            server_id: header.server_id as u64,
-            execute_time: header.timestamp as i64,
-            entry_type,
-            schema_name: schema_name.to_string(),
-            table_name: table_name.to_string(),
-            row_change,
-            ddl_sql,
-            gtid,
-            raw_bytes: vec![],
-        }
     }
 }
 
@@ -389,7 +404,7 @@ impl DefaultBinlogConnector {
 #[async_trait]
 impl BinlogConnector for DefaultBinlogConnector {
     async fn connect(&mut self, pos: &LogPosition) -> CanalResult<()> {
-        if self.running.load(Ordering::SeqCst) {
+        if self.running.load(Ordering::Acquire) {
             return Err(CanalError::Internal(
                 "already connected — disconnect first".to_string(),
             ));
@@ -415,8 +430,7 @@ impl BinlogConnector for DefaultBinlogConnector {
         );
 
         self.current_pos = Some(pos.clone());
-        self.running.store(true, Ordering::SeqCst);
-        self.connected.store(true, Ordering::SeqCst);
+        self.running.store(true, Ordering::Release);
 
         let (started_tx, started_rx) = tokio::sync::oneshot::channel();
 
@@ -435,7 +449,7 @@ impl BinlogConnector for DefaultBinlogConnector {
                 })?;
 
         match started_result {
-            Ok(()) => {}
+            Ok(()) => self.connected.store(true, Ordering::Release),
             Err(_) => {
                 // The oneshot sender was dropped without sending, meaning
                 // run_replication returned early with an error — the error
@@ -452,7 +466,7 @@ impl BinlogConnector for DefaultBinlogConnector {
     /// Panics if already connected or if a sender already exists.
     fn take_receiver(&mut self) -> mpsc::Receiver<CanalResult<CanalEvent>> {
         assert!(
-            !self.connected.load(Ordering::SeqCst),
+            !self.connected.load(Ordering::Acquire),
             "take_receiver must be called before connect()"
         );
         assert!(
@@ -466,8 +480,8 @@ impl BinlogConnector for DefaultBinlogConnector {
     }
 
     async fn disconnect(&mut self) -> CanalResult<()> {
-        self.running.store(false, Ordering::SeqCst);
-        self.connected.store(false, Ordering::SeqCst);
+        self.running.store(false, Ordering::Release);
+        self.connected.store(false, Ordering::Release);
         self.sender = None;
         if let Some(token) = self.cancel_token.take() {
             token.cancel();

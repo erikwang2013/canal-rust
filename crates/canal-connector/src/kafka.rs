@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use canal_common::CanalEvent;
-use canal_common::{CanalError, CanalResult, LockExt};
+use canal_common::{CanalError, CanalResult, MutexLockExt};
 use canal_sink::connector::SinkConnector;
 use rdkafka::config::ClientConfig;
 use rdkafka::producer::{FutureProducer, FutureRecord, Producer};
@@ -198,8 +198,7 @@ impl SinkConnector for KafkaConnector {
             return Ok(());
         }
 
-        let messages = self.serialize_events(events);
-
+        // Check connectivity before expensive serialization
         let producer = {
             let guard = self.producer.lock_or_recover();
             match guard.as_ref() {
@@ -207,6 +206,8 @@ impl SinkConnector for KafkaConnector {
                 None => return Err(CanalError::Internal("KafkaConnector: not connected".into())),
             }
         };
+
+        let messages = self.serialize_events(events);
 
         let topic = &self.config.topic;
         let send_futures: Vec<_> = messages

@@ -82,7 +82,11 @@ pub struct MetricsServer {
 
 impl MetricsServer {
     pub fn new(bind_addr: SocketAddr, metrics: Arc<CanalMetrics>) -> Self {
-        Self { bind_addr, metrics, auth_token: None }
+        Self {
+            bind_addr,
+            metrics,
+            auth_token: None,
+        }
     }
 
     pub fn with_auth(mut self, token: String) -> Self {
@@ -113,10 +117,7 @@ impl MetricsServer {
                 let token = auth_token.clone();
                 async move {
                     if !check_metrics_auth(&headers, &token) {
-                        return (
-                            axum::http::StatusCode::UNAUTHORIZED,
-                            "unauthorized",
-                        )
+                        return (axum::http::StatusCode::UNAUTHORIZED, "unauthorized")
                             .into_response();
                     }
                     handle.render().into_response()

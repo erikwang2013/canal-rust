@@ -126,13 +126,16 @@ fn check_auth(headers: &HeaderMap, expected: &Option<String>) -> Result<(), Stat
 /// Constant-time byte comparison to prevent timing side-channel attacks
 /// on authentication tokens.
 fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
-    if a.len() != b.len() {
-        return false;
+    // Constant-time comparison — no early return on length mismatch,
+    // always runs the full XOR fold to avoid timing side-channel
+    let max_len = a.len().max(b.len());
+    let mut acc: u8 = (a.len() ^ b.len()) as u8;
+    for i in 0..max_len {
+        let x = a.get(i).copied().unwrap_or(0);
+        let y = b.get(i).copied().unwrap_or(0);
+        acc |= x ^ y;
     }
-    a.iter()
-        .zip(b.iter())
-        .fold(0, |acc, (x, y)| acc | (x ^ y))
-        == 0
+    acc == 0
 }
 
 async fn health_handler(State(state): State<AdminState>) -> Json<HealthResponse> {

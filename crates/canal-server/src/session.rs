@@ -1,4 +1,4 @@
-use canal_common::{FilterPattern, LockExt, LogPosition};
+use canal_common::{FilterPattern, LogPosition, MutexLockExt};
 use chrono::Utc;
 use dashmap::DashMap;
 use std::sync::{Arc, Mutex};
@@ -105,11 +105,23 @@ mod tests {
 
         let session = mgr.get("client-1").unwrap();
         assert_eq!(
-            session.last_position.lock().unwrap().as_ref().unwrap().position,
+            session
+                .last_position
+                .lock()
+                .unwrap()
+                .as_ref()
+                .unwrap()
+                .position,
             500
         );
         assert_eq!(
-            session.last_ack_position.lock().unwrap().as_ref().unwrap().position,
+            session
+                .last_ack_position
+                .lock()
+                .unwrap()
+                .as_ref()
+                .unwrap()
+                .position,
             500
         );
     }

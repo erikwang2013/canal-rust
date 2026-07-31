@@ -1,10 +1,11 @@
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
-use std::sync::Mutex;
+use std::sync::{Mutex, RwLock};
 
 use async_trait::async_trait;
 use canal_common::lifecycle::CanalLifecycle;
-use canal_common::{binlog_suffix, CanalEvent, CanalResult, Events, LockExt, LogPosition};
+use canal_common::RwLockExt;
+use canal_common::{binlog_suffix, CanalEvent, CanalResult, Events, LogPosition, MutexLockExt};
 use tokio::sync::Notify;
 use tracing::{debug, info, warn};
 
@@ -12,8 +13,8 @@ pub struct MemoryEventStore {
     buffer: Mutex<VecDeque<CanalEvent>>,
     capacity: usize,
     batch_id_seq: AtomicI64,
-    latest_position: Mutex<Option<LogPosition>>,
-    first_position: Mutex<Option<LogPosition>>,
+    latest_position: RwLock<Option<LogPosition>>,
+    first_position: RwLock<Option<LogPosition>>,
     running: AtomicBool,
     notify: Notify,
 }
@@ -27,8 +28,8 @@ impl MemoryEventStore {
             buffer: Mutex::new(VecDeque::with_capacity(capacity)),
             capacity,
             batch_id_seq: AtomicI64::new(0),
-            latest_position: Mutex::new(None),
-            first_position: Mutex::new(None),
+            latest_position: RwLock::new(None),
+            first_position: RwLock::new(None),
             running: AtomicBool::new(false),
             notify: Notify::new(),
         }
@@ -66,7 +67,7 @@ impl MemoryEventStore {
         let last_event = events.last().unwrap();
         let last = LogPosition::new(&last_event.journal_name, last_event.position);
 
-        let mut first_pos = self.first_position.lock_or_recover();
+        let mut first_pos = self.first_position.write_or_recover();
         if let Some(front) = buffer.front() {
             *first_pos = Some(LogPosition::new(&front.journal_name, front.position));
         } else {
@@ -74,7 +75,7 @@ impl MemoryEventStore {
         }
         drop(first_pos);
 
-        *self.latest_position.lock_or_recover() = Some(last);
+        *self.latest_position.write_or_recover() = Some(last);
 
         buffer.extend(events);
         self.notify.notify_waiters();
@@ -95,17 +96,20 @@ impl MemoryEventStore {
 
                 // Binary search: events are ordered by (journal_suffix, position)
                 let target = (start_suffix, start_pos);
-                let start_idx = match slice.binary_search_by(|e| {
-                    (binlog_suffix(&e.journal_name), e.position).cmp(&target)
-                }) {
+                let start_idx = match slice
+                    .binary_search_by(|e| (binlog_suffix(&e.journal_name), e.position).cmp(&target))
+                {
                     Ok(i) => i + 1,
                     Err(i) => i,
                 };
 
                 if start_idx < slice.len() {
                     let batch_id = self.batch_id_seq.fetch_add(1, Ordering::SeqCst);
-                    let events: Vec<CanalEvent> =
-                        slice[start_idx..].iter().take(batch_size).cloned().collect();
+                    let events: Vec<CanalEvent> = slice[start_idx..]
+                        .iter()
+                        .take(batch_size)
+                        .cloned()
+                        .collect();
 
                     if !events.is_empty() {
                         Some(Events::with_events(events, batch_id))
@@ -131,11 +135,11 @@ impl MemoryEventStore {
     }
 
     pub fn latest_position(&self) -> Option<LogPosition> {
-        self.latest_position.lock_or_recover().clone()
+        self.latest_position.read_or_recover().clone()
     }
 
     pub fn first_position(&self) -> Option<LogPosition> {
-        self.first_position.lock_or_recover().clone()
+        self.first_position.read_or_recover().clone()
     }
 }
 

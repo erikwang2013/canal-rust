@@ -9,4 +9,4 @@ pub use types::{
     binlog_suffix, CanalEvent, ColumnValue, DmlType, EventType, Events, FilterPattern, LogPosition,
     PositionRange, RowChange, RowData,
 };
-pub use utils::LockExt;
+pub use utils::{MutexLockExt, RwLockExt};

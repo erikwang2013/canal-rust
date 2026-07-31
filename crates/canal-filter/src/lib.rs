@@ -64,10 +64,7 @@ impl EventFilter {
                     .build()?,
             )
         };
-        Ok(Self {
-            include,
-            exclude,
-        })
+        Ok(Self { include, exclude })
     }
 
     /// Check whether a CanalEvent passes this filter.

@@ -141,7 +141,10 @@ async fn handle_client(
             Ok(Some(bytes)) => bytes,
             Ok(None) => break, // stream ended
             Err(_) => {
-                warn!("Client idle timeout after {}s, disconnecting", CLIENT_IDLE_TIMEOUT_SECS);
+                warn!(
+                    "Client idle timeout after {}s, disconnecting",
+                    CLIENT_IDLE_TIMEOUT_SECS
+                );
                 break;
             }
         };
@@ -246,13 +249,28 @@ async fn handle_auth(
         auth.client_id.clone()
     };
 
+    const MAX_FILTER_PATTERN_LEN: usize = 256;
+
     let filter = if auth.filter.is_empty() {
         FilterPattern::default()
     } else {
-        FilterPattern {
+        if auth.filter.len() > MAX_FILTER_PATTERN_LEN {
+            let msg = format!(
+                "filter pattern too long: {} > {}",
+                auth.filter.len(),
+                MAX_FILTER_PATTERN_LEN
+            );
+            return send_ack_err(transport, &msg).await;
+        }
+        let fp = FilterPattern {
             pattern: auth.filter.clone(),
             black_list: String::new(),
+        };
+        if let Err(e) = fp.validate() {
+            let msg = format!("invalid filter pattern: {}", e);
+            return send_ack_err(transport, &msg).await;
         }
+        fp
     };
 
     sessions.register(&cid, &auth.destination, filter);
@@ -311,26 +329,28 @@ async fn handle_get(
     let get = Get::decode(&packet.body[..])
         .map_err(|e| CanalError::Protocol(format!("failed to decode Get: {}", e)))?;
 
-    let batch_size = if get.fetch_size > 0 {
-        (get.fetch_size as usize).min(10_000)
-    } else {
-        100
-    };
-    if get.fetch_size as usize > 10_000 {
+    let batch_size = usize::try_from(get.fetch_size)
+        .unwrap_or(100)
+        .clamp(1, MAX_FETCH_SIZE);
+    if get.fetch_size as usize > MAX_FETCH_SIZE {
         warn!(
-            "Client requested fetch_size {} exceeding max 10000, clamped",
-            get.fetch_size
+            "Client requested fetch_size {} exceeding max {}, clamped",
+            get.fetch_size, MAX_FETCH_SIZE
         );
     }
+
+    const DEFAULT_START_JOURNAL: &str = "mysql-bin.000001";
+    const DEFAULT_START_POSITION: u64 = 4;
+    const MAX_FETCH_SIZE: usize = 10_000;
 
     let cid = state
         .client_id
         .clone()
-        .expect("client_id must be set after authentication");
+        .ok_or_else(|| CanalError::Protocol("not authenticated — client_id missing".into()))?;
     let start = state
         .current_pos
         .clone()
-        .unwrap_or_else(|| LogPosition::new("mysql-bin.000001", 4));
+        .unwrap_or_else(|| LogPosition::new(DEFAULT_START_JOURNAL, DEFAULT_START_POSITION));
 
     let events: Events = store.get_batch(&start, batch_size).await?;
 
@@ -439,6 +459,11 @@ fn canal_event_to_entry(event: &CanalEvent) -> CanalResult<Entry> {
                 "unknown event type {} — cannot serialize to proto",
                 v
             )))
+        }
+        _ => {
+            return Err(CanalError::Protocol(
+                "unknown event type — cannot serialize to proto".into(),
+            ))
         }
     };
 

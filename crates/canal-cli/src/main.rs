@@ -16,11 +16,13 @@ use tracing_subscriber::{fmt, EnvFilter};
 // -- Configuration --
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct CanalConfig {
     canal: CanalSection,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct CanalSection {
     #[serde(default = "default_server_id")]
     server_id: u64,
@@ -46,7 +48,8 @@ fn default_start_position() -> u64 {
     4
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct MysqlConfig {
     host: String,
     #[serde(default = "default_mysql_port")]
@@ -55,11 +58,23 @@ struct MysqlConfig {
     password: String,
 }
 
+impl std::fmt::Debug for MysqlConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MysqlConfig")
+            .field("host", &self.host)
+            .field("port", &self.port)
+            .field("username", &self.username)
+            .field("password", &"<redacted>")
+            .finish()
+    }
+}
+
 fn default_mysql_port() -> u16 {
     3306
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct StoreSection {
     #[serde(default = "default_buffer_size")]
     buffer_size: usize,
@@ -70,6 +85,7 @@ fn default_buffer_size() -> usize {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct ServerSection {
     #[serde(default = "default_bind")]
     bind: String,
@@ -86,6 +102,7 @@ fn default_bind() -> String {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct LogSection {
     #[serde(default = "default_log_level")]
     level: String,
@@ -138,13 +155,14 @@ async fn main() -> Result<()> {
 }
 
 fn load_config(config_path: &std::path::Path) -> Result<CanalConfig> {
-    let metadata = std::fs::metadata(config_path)
-        .with_context(|| format!("Failed to read config metadata: {}", config_path.display()))?;
-    if metadata.len() > 10 * 1024 * 1024 {
-        anyhow::bail!("Config file exceeds maximum size (10MB)");
-    }
     let content = std::fs::read_to_string(config_path)
         .with_context(|| format!("Failed to read config: {}", config_path.display()))?;
+    if content.len() > 10 * 1024 * 1024 {
+        anyhow::bail!(
+            "Config file exceeds maximum size (10MB): {} bytes",
+            content.len()
+        );
+    }
     serde_yaml::from_str(&content)
         .with_context(|| format!("Failed to parse config: {}", config_path.display()))
 }
@@ -208,25 +226,33 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
         store_buffer_size: config.canal.store.buffer_size,
         connector_names: vec![],
     };
-    let instance = CanalInstance::new(instance_config, vec![]).context("Failed to create instance")?;
+    let instance =
+        CanalInstance::new(instance_config, vec![]).context("Failed to create instance")?;
     let store = instance.store();
     instance_mgr.register(instance);
 
     // Start instances via manager
-    instance_mgr.start_all().await.context("Failed to start instances")?;
+    instance_mgr
+        .start_all()
+        .await
+        .context("Failed to start instances")?;
 
     // Start admin API
     let admin_bind = format!("127.0.0.1:{}", bind_addr.port() + 1);
     let admin_server = AdminServer::new(&admin_bind, instance_mgr.clone());
-    let _admin_task = admin_server.start().await.context("Failed to start admin API")?;
+    let _admin_task = admin_server
+        .start()
+        .await
+        .context("Failed to start admin API")?;
     tracing::info!("Admin API listening on {}", admin_bind);
 
     let server = canal_server::server::CanalServer::new(bind_addr, store.clone());
     let shutdown_token = server.shutdown_token();
 
     // Spawn binlog connector
-    let instance_for_binlog = instance_mgr.get("default")
-        .expect("instance must be registered");
+    let instance_for_binlog = instance_mgr
+        .get("default")
+        .context("Instance 'default' was not found after registration")?;
     let mysql_cfg = config.canal.mysql;
     let server_id = config.canal.server_id;
     let shutdown_for_binlog = shutdown_token.clone();
@@ -385,7 +411,10 @@ async fn run_dump(config_path: PathBuf) -> Result<()> {
 fn setup_logging(logging: &LogSection) {
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
         EnvFilter::try_new(&logging.level).unwrap_or_else(|_| {
-            tracing::warn!("Invalid log level '{}', falling back to 'info'", logging.level);
+            tracing::warn!(
+                "Invalid log level '{}', falling back to 'info'",
+                logging.level
+            );
             EnvFilter::new("info")
         })
     });

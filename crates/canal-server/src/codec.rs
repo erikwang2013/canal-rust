@@ -38,8 +38,9 @@ impl Decoder for CanalCodec {
             return Ok(Some(Vec::new()));
         }
 
-        // Safety limit: max 64MB per packet
-        if len > 64 * 1024 * 1024 {
+        const MAX_PACKET_SIZE: usize = 8 * 1024 * 1024;
+        // Safety limit: max 8MB per packet
+        if len > MAX_PACKET_SIZE {
             return Err(CanalError::Protocol(format!(
                 "packet too large: {} bytes",
                 len
