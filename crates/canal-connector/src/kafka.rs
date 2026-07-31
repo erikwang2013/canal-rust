@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use canal_common::CanalEvent;
-use canal_common::{CanalError, CanalResult};
+use canal_common::{CanalError, CanalResult, LockExt};
 use canal_sink::connector::SinkConnector;
 use rdkafka::config::ClientConfig;
 use rdkafka::producer::{FutureProducer, FutureRecord, Producer};
@@ -49,7 +49,8 @@ impl KafkaConnector {
     }
 
     fn serialize_events(&self, events: &[CanalEvent]) -> Vec<(String, String)> {
-        events
+        let total = events.len();
+        let messages: Vec<_> = events
             .iter()
             .filter_map(|event| {
                 let payload = serde_json::json!({
@@ -93,7 +94,16 @@ impl KafkaConnector {
                     .ok()
                     .map(|json| (event.schema_name.clone(), json))
             })
-            .collect()
+            .collect();
+
+        let dropped = total - messages.len();
+        if dropped > 0 {
+            warn!(
+                "Kafka '{}': {} of {} events dropped due to serialization failure",
+                self.name, dropped, total
+            );
+        }
+        messages
     }
 }
 
@@ -161,7 +171,7 @@ impl SinkConnector for KafkaConnector {
         .map_err(|e| CanalError::Internal(format!("Kafka metadata join error: {}", e)))?
         .map_err(|e| CanalError::Internal(format!("Kafka metadata: {}", e)))?;
 
-        *self.producer.lock().unwrap_or_else(|e| e.into_inner()) = Some(producer);
+        *self.producer.lock_or_recover() = Some(producer);
         info!(
             "Kafka connector '{}' connected to '{}'",
             self.name, self.config.topic
@@ -169,16 +179,16 @@ impl SinkConnector for KafkaConnector {
         Ok(())
     }
 
-    async fn dispatch(&self, events: Vec<CanalEvent>) -> CanalResult<()> {
+    async fn dispatch(&self, events: &[CanalEvent]) -> CanalResult<()> {
         let total = events.len();
         if total == 0 {
             return Ok(());
         }
 
-        let messages = self.serialize_events(&events);
+        let messages = self.serialize_events(events);
 
         let producer = {
-            let guard = self.producer.lock().unwrap_or_else(|e| e.into_inner());
+            let guard = self.producer.lock_or_recover();
             match guard.as_ref() {
                 Some(p) => p.clone(),
                 None => return Err(CanalError::Internal("KafkaConnector: not connected".into())),
@@ -224,7 +234,7 @@ impl SinkConnector for KafkaConnector {
     }
 
     async fn close(&self) -> CanalResult<()> {
-        *self.producer.lock().unwrap_or_else(|e| e.into_inner()) = None;
+        *self.producer.lock_or_recover() = None;
         info!("Kafka connector '{}' closed", self.name);
         Ok(())
     }

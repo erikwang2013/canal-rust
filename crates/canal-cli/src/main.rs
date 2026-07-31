@@ -179,7 +179,7 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
     let server_id = config.canal.server_id;
     let shutdown_for_binlog = shutdown_token.clone();
 
-    let binlog_handle = tokio::spawn(async move {
+    let mut binlog_handle = tokio::spawn(async move {
         let pos = canal_common::LogPosition::new(
             &config.canal.start_journal_name,
             config.canal.start_position,
@@ -245,10 +245,15 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
     // Run server (blocks until shutdown_token is cancelled)
     server.serve().await?;
 
-    binlog_handle.abort();
-    match binlog_handle.await {
-        Ok(()) => tracing::info!("Binlog connector task completed"),
-        Err(e) => tracing::error!("Binlog connector task panicked: {}", e),
+    // Give the binlog task time to flush remaining events gracefully
+    match tokio::time::timeout(Duration::from_secs(5), &mut binlog_handle).await {
+        Ok(Ok(())) => tracing::info!("Binlog connector task completed"),
+        Ok(Err(e)) => tracing::error!("Binlog connector task panicked: {}", e),
+        Err(_) => {
+            tracing::warn!("Binlog connector task did not finish within timeout, aborting");
+            binlog_handle.abort();
+            let _ = binlog_handle.await;
+        }
     }
 
     Ok(())

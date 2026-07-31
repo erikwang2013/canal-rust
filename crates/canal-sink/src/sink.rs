@@ -91,16 +91,13 @@ impl EventSink for DefaultEventSink {
         // put_batch returns the batch_id, avoiding a race on get_batch.
         let batch_id = self.store.put_batch(filtered.clone()).await?;
 
-        // Phase 3: Fan out to external connectors (fire and forget pattern).
-        // Use Arc to share the filtered batch across connectors.
-        let shared: Arc<Vec<CanalEvent>> = Arc::new(filtered);
-
+        // Phase 3: Fan out to external connectors (fire and forget pattern)
         let mut join_handles = Vec::new();
         for connector in &self.connectors {
-            let events = Arc::clone(&shared);
+            let events_owned: Vec<CanalEvent> = filtered.to_vec();
             let conn = Arc::clone(connector);
             join_handles.push(tokio::spawn(async move {
-                match conn.dispatch((*events).clone()).await {
+                match conn.dispatch(&events_owned).await {
                     Ok(()) => (conn.name().to_string(), 0u64),
                     Err(e) => {
                         error!("Connector {} dispatch failed: {}", conn.name(), e);
@@ -121,8 +118,8 @@ impl EventSink for DefaultEventSink {
             }
         }
 
-        // Phase 4: Build the response from the shared batch (no re-read from store)
-        let batch = Events::with_events((*shared).clone(), batch_id);
+        // Phase 4: Build the response (no re-read from store)
+        let batch = Events::with_events(filtered, batch_id);
         info!(
             "Sinked batch_id={} with {} events",
             batch.batch_id,
@@ -163,8 +160,8 @@ mod tests {
         async fn connect(&self) -> CanalResult<()> {
             Ok(())
         }
-        async fn dispatch(&self, events: Vec<CanalEvent>) -> CanalResult<()> {
-            self.dispatched.lock().unwrap().push(events);
+        async fn dispatch(&self, events: &[CanalEvent]) -> CanalResult<()> {
+            self.dispatched.lock().unwrap().push(events.to_vec());
             Ok(())
         }
         async fn close(&self) -> CanalResult<()> {

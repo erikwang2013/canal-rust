@@ -214,10 +214,10 @@ canal-rust/
 | Metric | Value |
 |--------|-------|
 | Crates | 14 |
-| Lines of Rust | ~5,800 |
-| Tests | 100 |
+| Lines of Rust | ~5,900 |
+| Tests | 98 |
 | Proto definitions | 2 |
-| Version | v1.1.3 |
+| Version | v1.1.4 |
 | Clippy warnings | 0 |
 | License | Apache-2.0 |
 

@@ -4,7 +4,7 @@ use std::sync::Mutex;
 
 use async_trait::async_trait;
 use canal_common::lifecycle::CanalLifecycle;
-use canal_common::{CanalEvent, CanalResult, Events, LogPosition};
+use canal_common::{CanalEvent, CanalResult, Events, LockExt, LogPosition};
 use tokio::sync::Notify;
 use tracing::{debug, info};
 
@@ -41,7 +41,7 @@ impl MemoryEventStore {
 
         let batch_id = self.batch_id_seq.fetch_add(1, Ordering::SeqCst);
 
-        let mut buffer = self.buffer.lock().unwrap_or_else(|e| e.into_inner());
+        let mut buffer = self.buffer.lock_or_recover();
 
         while buffer.len() + events.len() > self.capacity && !buffer.is_empty() {
             buffer.pop_front();
@@ -52,26 +52,25 @@ impl MemoryEventStore {
             events.drain(..skip);
         }
 
+        // Compute positions AFTER truncation (B1 fix)
         let first = LogPosition::new(&events[0].journal_name, events[0].position);
-        let last_event = events
-            .last()
-            .expect("events is non-empty after guard above");
-        let last = LogPosition::new(&last_event.journal_name, last_event.position);
+        let last = LogPosition::new(
+            &events
+                .last()
+                .expect("events is non-empty after guard")
+                .journal_name,
+            events.last().unwrap().position,
+        );
 
-        let mut first_pos = self
-            .first_position
-            .lock()
-            .unwrap_or_else(|e| e.into_inner());
+        let mut first_pos = self.first_position.lock_or_recover();
         if let Some(front) = buffer.front() {
             *first_pos = Some(LogPosition::new(&front.journal_name, front.position));
         } else {
             *first_pos = Some(first);
         }
+        drop(first_pos);
 
-        *self
-            .latest_position
-            .lock()
-            .unwrap_or_else(|e| e.into_inner()) = Some(last);
+        *self.latest_position.lock_or_recover() = Some(last);
 
         buffer.extend(events);
         self.notify.notify_waiters();
@@ -80,16 +79,18 @@ impl MemoryEventStore {
     }
 
     pub async fn get_batch(&self, start: &LogPosition, batch_size: usize) -> CanalResult<Events> {
+        // Pre-compute comparison key to avoid per-iteration allocations (P1 fix)
+        let start_suffix = binlog_suffix(&start.journal_name);
+        let start_pos = start.position;
+
         loop {
             let notified = self.notify.notified();
 
-            // Lock scope is explicit — released before the await below
             let result = {
-                let buffer = self.buffer.lock().unwrap_or_else(|e| e.into_inner());
+                let buffer = self.buffer.lock_or_recover();
 
                 let start_idx = buffer.iter().position(|e| {
-                    LogPosition::new(&e.journal_name, e.position)
-                        > LogPosition::new(&start.journal_name, start.position)
+                    (binlog_suffix(&e.journal_name), e.position) > (start_suffix, start_pos)
                 });
 
                 if let Some(idx) = start_idx {
@@ -121,18 +122,21 @@ impl MemoryEventStore {
     }
 
     pub fn latest_position(&self) -> Option<LogPosition> {
-        self.latest_position
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .clone()
+        self.latest_position.lock_or_recover().clone()
     }
 
     pub fn first_position(&self) -> Option<LogPosition> {
-        self.first_position
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .clone()
+        self.first_position.lock_or_recover().clone()
     }
+}
+
+/// Extract the numeric suffix from a binlog filename for ordering.
+fn binlog_suffix(journal_name: &str) -> u64 {
+    journal_name
+        .rsplit('.')
+        .next()
+        .and_then(|s| s.parse::<u64>().ok())
+        .unwrap_or(u64::MAX)
 }
 
 #[async_trait]

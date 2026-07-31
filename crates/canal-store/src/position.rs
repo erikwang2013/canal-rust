@@ -1,49 +1,33 @@
 use canal_common::LogPosition;
-use std::collections::HashMap;
-use std::sync::RwLock;
+use dashmap::DashMap;
 
-/// Tracks per-client binlog positions for ACK management
-#[derive(Debug)]
+/// Tracks per-client binlog positions for ACK management.
+/// Uses DashMap for lock-free reads (P4 fix).
+#[derive(Debug, Default)]
 pub struct PositionTracker {
-    positions: RwLock<HashMap<String, LogPosition>>,
-}
-
-impl Default for PositionTracker {
-    fn default() -> Self {
-        Self::new()
-    }
+    positions: DashMap<String, LogPosition>,
 }
 
 impl PositionTracker {
     pub fn new() -> Self {
         Self {
-            positions: RwLock::new(HashMap::new()),
+            positions: DashMap::new(),
         }
     }
 
     /// Record a client's acknowledged position
     pub fn update(&self, client_id: &str, position: LogPosition) {
-        self.positions
-            .write()
-            .unwrap_or_else(|e| e.into_inner())
-            .insert(client_id.to_string(), position);
+        self.positions.insert(client_id.to_string(), position);
     }
 
     /// Get a client's last acknowledged position
     pub fn get(&self, client_id: &str) -> Option<LogPosition> {
-        self.positions
-            .read()
-            .unwrap_or_else(|e| e.into_inner())
-            .get(client_id)
-            .cloned()
+        self.positions.get(client_id).map(|r| r.clone())
     }
 
     /// Remove a disconnected client's position tracking
     pub fn remove(&self, client_id: &str) {
-        self.positions
-            .write()
-            .unwrap_or_else(|e| e.into_inner())
-            .remove(client_id);
+        self.positions.remove(client_id);
     }
 }
 

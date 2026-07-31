@@ -210,7 +210,7 @@ canal-rust/
 │   └── docker-compose.yml         # 一键启动
 ├── crates/
 │   ├── canal-common/              # 基础类型
-│   │   └── src/ {error, types, lifecycle}.rs
+│   │   └── src/ {error, types, lifecycle, utils}.rs
 │   ├── canal-proto/               # protobuf 代码生成（prost-build）
 │   │   └── src/ {lib, build}.rs
 │   ├── canal-binlog/              # MySQL binlog 解析层
@@ -251,10 +251,10 @@ canal-rust/
 | 指标 | 数值 |
 |------|------|
 | Crates | 14 |
-| Rust 源码行数 | ~5,800 |
-| 单元/集成测试 | 100 |
+| Rust 源码行数 | ~5,900 |
+| 单元/集成测试 | 98 |
 | Protobuf 定义 | 2 |
-| 版本 | v1.1.3 |
+| 版本 | v1.1.4 |
 | Clippy 警告 | 0 |
 | 许可协议 | Apache-2.0 |
 

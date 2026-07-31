@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use canal_common::{
@@ -98,7 +99,7 @@ impl CanalInstance {
     }
 
     pub async fn feed(&self, events: Vec<CanalEvent>) -> CanalResult<()> {
-        if !self.running.load(std::sync::atomic::Ordering::SeqCst) {
+        if !self.running.load(Ordering::SeqCst) {
             return Ok(());
         }
         self.sink.sink(events).await?;
@@ -109,21 +110,19 @@ impl CanalInstance {
 #[async_trait::async_trait]
 impl CanalLifecycle for CanalInstance {
     async fn start(&self) -> CanalResult<()> {
-        use std::sync::atomic::Ordering;
         self.running.store(true, Ordering::SeqCst);
         info!("CanalInstance '{}' started", self.config.destination);
         Ok(())
     }
 
     async fn stop(&self) -> CanalResult<()> {
-        use std::sync::atomic::Ordering;
         self.running.store(false, Ordering::SeqCst);
         info!("CanalInstance '{}' stopped", self.config.destination);
         Ok(())
     }
 
     fn is_running(&self) -> bool {
-        self.running.load(std::sync::atomic::Ordering::SeqCst)
+        self.running.load(Ordering::SeqCst)
     }
 }
 

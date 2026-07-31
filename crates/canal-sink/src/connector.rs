@@ -12,7 +12,7 @@ pub trait SinkConnector: Send + Sync {
     async fn connect(&self) -> CanalResult<()>;
 
     /// Dispatch a batch of filtered events to the downstream system
-    async fn dispatch(&self, events: Vec<CanalEvent>) -> CanalResult<()>;
+    async fn dispatch(&self, events: &[CanalEvent]) -> CanalResult<()>;
 
     /// Close the connector gracefully
     async fn close(&self) -> CanalResult<()>;

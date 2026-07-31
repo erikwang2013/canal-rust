@@ -198,7 +198,7 @@ impl DefaultBinlogConnector {
                     server_id: header.server_id as u64,
                     execute_time: header.timestamp as i64,
                     entry_type: EventType::Ddl,
-                    schema_name: String::new(),
+                    schema_name: q.database_name.clone(),
                     table_name: String::new(),
                     row_change: None,
                     ddl_sql: Some(q.sql_statement.clone()),
@@ -407,12 +407,16 @@ impl BinlogConnector for DefaultBinlogConnector {
 
     /// Take the receiver end of the event channel.
     ///
-    /// Must be called BEFORE connect(). Panics if already connected
-    /// to prevent silent data loss from channel mismatch.
+    /// Must be called BEFORE connect() and BEFORE or INSTEAD OF with_channel().
+    /// Panics if already connected or if a sender already exists.
     fn take_receiver(&mut self) -> mpsc::Receiver<CanalResult<CanalEvent>> {
         assert!(
             !self.connected.load(Ordering::SeqCst),
             "take_receiver must be called before connect()"
+        );
+        assert!(
+            self.sender.is_none(),
+            "take_receiver must be called instead of with_channel(), not after it"
         );
 
         let (tx, rx) = mpsc::channel(4096);

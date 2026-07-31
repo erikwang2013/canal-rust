@@ -194,6 +194,8 @@ async fn handle_auth(
                 info!("Too many auth failures, disconnecting");
                 return Err(CanalError::AuthFailed("too many failures".into()));
             }
+            // Rate-limit auth failures to slow brute-force attacks
+            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
             return Ok(());
         }
     }
