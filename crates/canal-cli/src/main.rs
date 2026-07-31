@@ -5,6 +5,7 @@ use std::time::Duration;
 
 use anyhow::{Context, Result};
 use canal_binlog::BinlogConnector;
+use canal_prometheus::{CanalMetrics, MetricsServer};
 use clap::{Parser, Subcommand};
 use serde::Deserialize;
 use tracing_subscriber::{fmt, EnvFilter};
@@ -69,6 +70,12 @@ fn default_buffer_size() -> usize {
 struct ServerSection {
     #[serde(default = "default_bind")]
     bind: String,
+    #[serde(default = "default_metrics_bind")]
+    metrics_bind: String,
+}
+
+fn default_metrics_bind() -> String {
+    "127.0.0.1:9090".to_string()
 }
 
 fn default_bind() -> String {
@@ -166,6 +173,20 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
     );
     tracing::info!("Listening on {}", bind_addr);
 
+    let metrics = Arc::new(CanalMetrics::new());
+    let metrics_bind: SocketAddr = config.canal.server.metrics_bind.parse().with_context(|| {
+        format!(
+            "Invalid metrics bind address: {}",
+            config.canal.server.metrics_bind
+        )
+    })?;
+    let metrics_server = MetricsServer::new(metrics_bind, metrics.clone());
+    let _metrics_task = metrics_server
+        .start()
+        .await
+        .context("Failed to start metrics server")?;
+    tracing::info!("Metrics server listening on {}", metrics_bind);
+
     let store = Arc::new(canal_store::memory::MemoryEventStore::new(
         config.canal.store.buffer_size,
     ));
@@ -179,6 +200,7 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
     let server_id = config.canal.server_id;
     let shutdown_for_binlog = shutdown_token.clone();
 
+    let metrics_for_binlog = metrics.clone();
     let mut binlog_handle = tokio::spawn(async move {
         let pos = canal_common::LogPosition::new(
             &config.canal.start_journal_name,
@@ -207,6 +229,7 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
                 result = rx.recv() => {
                     match result {
                         Some(Ok(event)) => {
+                            metrics_for_binlog.inc_parsed(1);
                             batch.push(event);
                             if batch.len() >= 256 {
                                 if let Err(e) = store_for_binlog.put_batch(batch.split_off(0)).await {
@@ -214,7 +237,10 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
                                 }
                             }
                         }
-                        Some(Err(e)) => tracing::error!("Binlog event error: {}", e),
+                        Some(Err(e)) => {
+                            metrics_for_binlog.inc_parsed(1);
+                            tracing::error!("Binlog event error: {}", e)
+                        }
                         None => {
                             tracing::warn!("Binlog stream ended, triggering shutdown");
                             break;

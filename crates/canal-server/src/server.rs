@@ -154,7 +154,18 @@ async fn handle_client(
         } else if ptype == PacketType::Heartbeat as i32 {
             handle_heartbeat(&mut transport, &state, &sessions).await?;
         } else {
-            warn!("Unknown packet type: {}", ptype);
+            state.unknown_packet_count += 1;
+            if state.unknown_packet_count >= 10 {
+                warn!(
+                    "Too many unknown packets ({}), disconnecting client",
+                    state.unknown_packet_count
+                );
+                return Err(CanalError::Protocol("too many unknown packets".into()));
+            }
+            warn!(
+                "Unknown packet type: {} (count={})",
+                ptype, state.unknown_packet_count
+            );
         }
     }
 
@@ -172,6 +183,7 @@ struct ClientState {
     last_ack_pos: Option<LogPosition>,
     authenticated: bool,
     auth_error_count: u32,
+    unknown_packet_count: u32,
 }
 
 async fn handle_auth(

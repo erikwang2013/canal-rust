@@ -131,6 +131,7 @@ canal:
     buffer_size: 16384
   server:
     bind: "0.0.0.0:11111"
+    metrics_bind: "127.0.0.1:9090"
   logging:
     level: "info"
     format: "json"
@@ -174,7 +175,7 @@ docker compose -f docker/docker-compose.yml up -d
 
 ```
 canal-rust/
-├── Cargo.toml                     # Cargo workspace, 15 member crates
+├── Cargo.toml                     # Cargo workspace, 14 member crates
 ├── canal.yaml                     # Default configuration
 ├── rust-toolchain.toml
 ├── README.md                      # Chinese README
@@ -217,7 +218,7 @@ canal-rust/
 | Lines of Rust | ~5,900 |
 | Tests | 98 |
 | Proto definitions | 2 |
-| Version | v1.1.4 |
+| Version | v1.1.5 |
 | Clippy warnings | 0 |
 | License | Apache-2.0 |
 

@@ -538,3 +538,11 @@ fn extract_column_values(row: &RowData, column_infos: &[ColumnInfo]) -> Vec<Colu
         })
         .collect()
 }
+
+impl Drop for DefaultBinlogConnector {
+    fn drop(&mut self) {
+        if let Some(token) = self.cancel_token.take() {
+            token.cancel();
+        }
+    }
+}

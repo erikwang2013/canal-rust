@@ -4,7 +4,7 @@ use std::sync::Mutex;
 
 use async_trait::async_trait;
 use canal_common::lifecycle::CanalLifecycle;
-use canal_common::{CanalEvent, CanalResult, Events, LockExt, LogPosition};
+use canal_common::{binlog_suffix, CanalEvent, CanalResult, Events, LockExt, LogPosition};
 use tokio::sync::Notify;
 use tracing::{debug, info};
 
@@ -54,13 +54,8 @@ impl MemoryEventStore {
 
         // Compute positions AFTER truncation (B1 fix)
         let first = LogPosition::new(&events[0].journal_name, events[0].position);
-        let last = LogPosition::new(
-            &events
-                .last()
-                .expect("events is non-empty after guard")
-                .journal_name,
-            events.last().unwrap().position,
-        );
+        let last_event = events.last().unwrap();
+        let last = LogPosition::new(&last_event.journal_name, last_event.position);
 
         let mut first_pos = self.first_position.lock_or_recover();
         if let Some(front) = buffer.front() {
@@ -128,15 +123,6 @@ impl MemoryEventStore {
     pub fn first_position(&self) -> Option<LogPosition> {
         self.first_position.lock_or_recover().clone()
     }
-}
-
-/// Extract the numeric suffix from a binlog filename for ordering.
-fn binlog_suffix(journal_name: &str) -> u64 {
-    journal_name
-        .rsplit('.')
-        .next()
-        .and_then(|s| s.parse::<u64>().ok())
-        .unwrap_or(u64::MAX)
 }
 
 #[async_trait]

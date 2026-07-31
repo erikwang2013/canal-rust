@@ -9,5 +9,6 @@ tracing.workspace = true
 canal-common = { path = "../canal-common" }
 canal-store = { path = "../canal-store" }
 canal-filter = { path = "../canal-filter" }
+canal-prometheus = { path = "../canal-prometheus" }
 [dev-dependencies]
 tokio.workspace = true

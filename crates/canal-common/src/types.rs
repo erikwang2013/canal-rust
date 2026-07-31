@@ -49,7 +49,7 @@ impl Ord for LogPosition {
 
 /// Extract the numeric suffix from a binlog filename for ordering.
 /// Returns u64::MAX for non-numeric suffixes so they sort last.
-fn binlog_suffix(journal_name: &str) -> u64 {
+pub fn binlog_suffix(journal_name: &str) -> u64 {
     journal_name
         .rsplit('.')
         .next()

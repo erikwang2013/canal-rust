@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use canal_common::{CanalEvent, CanalResult, Events};
 use canal_filter::EventFilter;
+use canal_prometheus::CanalMetrics;
 use canal_store::memory::MemoryEventStore;
 use std::sync::Arc;
 use tracing::{debug, error, info, warn};
@@ -38,6 +39,7 @@ pub struct DefaultEventSink {
     store: Arc<MemoryEventStore>,
     filter: EventFilter,
     connectors: Vec<SharedConnector>,
+    metrics: Arc<CanalMetrics>,
 }
 
 impl DefaultEventSink {
@@ -51,6 +53,22 @@ impl DefaultEventSink {
             store,
             filter,
             connectors,
+            metrics: Arc::new(CanalMetrics::new()),
+        }
+    }
+
+    /// Create a sink with custom metrics instance.
+    pub fn with_metrics(
+        store: Arc<MemoryEventStore>,
+        filter: EventFilter,
+        connectors: Vec<SharedConnector>,
+        metrics: Arc<CanalMetrics>,
+    ) -> Self {
+        Self {
+            store,
+            filter,
+            connectors,
+            metrics,
         }
     }
 
@@ -60,6 +78,7 @@ impl DefaultEventSink {
             store,
             filter,
             connectors: vec![],
+            metrics: Arc::new(CanalMetrics::new()),
         }
     }
 
@@ -73,6 +92,7 @@ impl DefaultEventSink {
 impl EventSink for DefaultEventSink {
     async fn sink(&self, events: Vec<CanalEvent>) -> CanalResult<Events> {
         let total = events.len();
+        self.metrics.inc_parsed(total as u64);
 
         // Phase 1: Filter events
         let filtered: Vec<CanalEvent> = events
@@ -81,23 +101,30 @@ impl EventSink for DefaultEventSink {
             .collect();
 
         let filtered_count = filtered.len();
+        let dropped = (total - filtered_count) as u64;
+        if dropped > 0 {
+            self.metrics.inc_filtered(dropped);
+        }
         debug!("Filtered {} of {} events", filtered_count, total);
 
         if filtered.is_empty() {
             return Ok(Events::new(0));
         }
 
+        // Wrap in Arc so we share a single allocation with the store and connectors.
+        let filtered = Arc::new(filtered);
+
         // Phase 2: Store in memory for client subscription.
         // put_batch returns the batch_id, avoiding a race on get_batch.
-        let batch_id = self.store.put_batch(filtered.clone()).await?;
+        let batch_id = self.store.put_batch(Vec::clone(&filtered)).await?;
 
         // Phase 3: Fan out to external connectors (fire and forget pattern)
         let mut join_handles = Vec::new();
         for connector in &self.connectors {
-            let events_owned: Vec<CanalEvent> = filtered.to_vec();
+            let events = Arc::clone(&filtered);
             let conn = Arc::clone(connector);
             join_handles.push(tokio::spawn(async move {
-                match conn.dispatch(&events_owned).await {
+                match conn.dispatch(&events).await {
                     Ok(()) => (conn.name().to_string(), 0u64),
                     Err(e) => {
                         error!("Connector {} dispatch failed: {}", conn.name(), e);
@@ -109,17 +136,22 @@ impl EventSink for DefaultEventSink {
         for handle in join_handles {
             match handle.await {
                 Ok((name, failures)) if failures > 0 => {
+                    self.metrics.inc_dispatch_errors(failures);
                     warn!("Connector {} had {} failures in this batch", name, failures);
                 }
+                Ok((_name, _)) => {
+                    self.metrics.inc_dispatched(1);
+                }
                 Err(e) => {
+                    self.metrics.inc_dispatch_errors(1);
                     error!("Connector task panicked: {}", e);
                 }
-                _ => {}
             }
         }
 
         // Phase 4: Build the response (no re-read from store)
-        let batch = Events::with_events(filtered, batch_id);
+        let events = Arc::try_unwrap(filtered).unwrap_or_else(|arc| (*arc).clone());
+        let batch = Events::with_events(events, batch_id);
         info!(
             "Sinked batch_id={} with {} events",
             batch.batch_id,

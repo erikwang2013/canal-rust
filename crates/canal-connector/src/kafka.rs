@@ -10,7 +10,7 @@ use std::sync::Mutex;
 use std::time::Duration;
 use tracing::{error, info, warn};
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct KafkaConfig {
     pub servers: String,
     pub topic: String,
@@ -29,6 +29,19 @@ impl KafkaConfig {
             sasl_username: None,
             sasl_password: None,
             sasl_mechanism: None,
+        }
+    }
+}
+
+impl Clone for KafkaConfig {
+    fn clone(&self) -> Self {
+        Self {
+            servers: self.servers.clone(),
+            topic: self.topic.clone(),
+            ssl_ca_location: self.ssl_ca_location.clone(),
+            sasl_username: self.sasl_username.clone(),
+            sasl_password: None,
+            sasl_mechanism: self.sasl_mechanism.clone(),
         }
     }
 }

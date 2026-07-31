@@ -92,7 +92,7 @@ canal-common ──────────────────────�
     ├── canal-client ──▶ proto ──────────────────────────── Rust SDK
     ├── canal-meta ──▶ common ───────────────────────────── 表结构缓存
     ├── canal-admin ──▶ instance ────────────────────────── REST API
-    ├── canal-prometheus ──▶ instance ───────────────────── metrics
+    ├── canal-prometheus ────────────────────────────────── metrics
     │
     └── canal-cli ──▶ server + store + binlog + common ──── 命令行入口
 ```
@@ -154,6 +154,7 @@ canal:
     buffer_size: 16384
   server:
     bind: "0.0.0.0:11111"
+    metrics_bind: "127.0.0.1:9090"
   logging:
     level: "info"
     format: "json"
@@ -254,7 +255,7 @@ canal-rust/
 | Rust 源码行数 | ~5,900 |
 | 单元/集成测试 | 98 |
 | Protobuf 定义 | 2 |
-| 版本 | v1.1.4 |
+| 版本 | v1.1.5 |
 | Clippy 警告 | 0 |
 | 许可协议 | Apache-2.0 |
 
