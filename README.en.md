@@ -292,3 +292,24 @@ cargo doc --open                   # Docs
 ## License
 
 Apache License 2.0
+
+---
+
+## Support
+
+If this project helps you, feel free to buy us a coffee ☕
+
+<p align="center">
+  <table align="center">
+    <tr>
+      <td align="center" width="200">
+        <img src="docs/weixinpay.png" alt="WeChat Pay" width="130" height="130" /><br/>
+        <b>WeChat Pay</b>
+      </td>
+      <td align="center" width="200">
+        <img src="docs/alipay.png" alt="Alipay" width="130" height="130" /><br/>
+        <b>Alipay</b>
+      </td>
+    </tr>
+  </table>
+</p>

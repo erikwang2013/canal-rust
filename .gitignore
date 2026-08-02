@@ -11,3 +11,5 @@ Thumbs.db
 ruvector.db
 .superpowers/state/target
 target
+.env
+*.log

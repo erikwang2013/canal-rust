@@ -413,8 +413,8 @@ async fn handle_get(
             .iter()
             .filter(|event| {
                 let table = format!("{}.{}", event.schema_name, event.table_name);
-                let matches = pattern_re.as_ref().map_or(true, |re| re.is_match(&table));
-                let blocked = black_re.as_ref().map_or(false, |re| re.is_match(&table));
+                let matches = pattern_re.as_ref().is_none_or(|re| re.is_match(&table));
+                let blocked = black_re.as_ref().is_some_and(|re| re.is_match(&table));
                 matches && !blocked
             })
             .collect();

@@ -69,7 +69,7 @@ impl MemoryEventStore {
 
         // Validate monotonic ordering: new events must not precede the buffer tail
         debug_assert!(
-            buffer.back().map_or(true, |tail| {
+            buffer.back().is_none_or(|tail| {
                 let tail_key = (binlog_suffix(&tail.journal_name), tail.position);
                 let first_key = (binlog_suffix(&first.journal_name), first.position);
                 tail_key <= first_key
@@ -113,7 +113,7 @@ impl MemoryEventStore {
 
                 if start_idx < slice.len() {
                     let batch_id = self.batch_id_seq.fetch_add(1, Ordering::SeqCst);
-                    let base_end = (start_idx + batch_size).min(slice.len());
+                    let base_end = (start_idx + batch_size.max(1)).min(slice.len());
                     // Extend past the base slice to include all events at the same
                     // (journal, position) as the last included event, so a single
                     // position-group (multi-row binlog event) is never split.

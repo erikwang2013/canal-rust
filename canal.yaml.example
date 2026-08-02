@@ -1,24 +1,40 @@
+# Canal Rust — 配置文件示例
+# 复制为 canal.yaml 后根据实际环境修改
+
 canal:
-  server_id: 1234
+  # MySQL 复制 server_id（集群内需唯一）
+  server_id: 1001
+
+  # 起始 binlog 位点
+  start_journal_name: "mysql-bin.000001"
+  start_position: 4
+
+  # 认证令牌（留空 = 不启用认证）
+  auth_token: ""
+
+  # MySQL 主库连接
   mysql:
     host: "127.0.0.1"
     port: 3306
     username: "canal"
     password: "canal"
-    charset: "utf8mb4"
-  position:
-    journal_name: "mysql-bin.000001"
-    position: 4
+
+  # 事件存储
   store:
-    type: "memory"
-    buffer_size: 16384
-    batch_timeout_ms: 100
+    buffer_size: 16384  # 内存 ring buffer 容量
+
+  # 网络服务
   server:
-    bind: "0.0.0.0:11111"
-    idle_timeout_secs: 3600
+    bind: "127.0.0.1:11111"          # Canal TCP 协议端口
+    metrics_bind: "127.0.0.1:9090"   # Prometheus /metrics 端口
+    idle_timeout_secs: 3600          # 客户端空闲断开时间（秒）
+
+  # 事件过滤
   filter:
-    pattern: ".*\\..*"
-    black_list: ""
+    pattern: ".*\\..*"   # 包含模式（正则，默认匹配全部 schema.table）
+    black_list: ""        # 排除模式（正则，留空 = 不排除）
+
+  # 日志
   logging:
-    level: "info"
-    format: "json"
+    level: "info"      # trace / debug / info / warn / error
+    format: "json"     # json 或 text

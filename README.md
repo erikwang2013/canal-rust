@@ -339,3 +339,24 @@ cargo doc --open                   # 文档
 ## 许可
 
 Apache License 2.0
+
+---
+
+## 欢迎支持
+
+如果这个项目对你有帮助，欢迎扫码支持一杯咖啡 ☕
+
+<p align="center">
+  <table align="center">
+    <tr>
+      <td align="center" width="200">
+        <img src="docs/weixinpay.png" alt="微信支付" width="130" height="130" /><br/>
+        <b>微信支付</b>
+      </td>
+      <td align="center" width="200">
+        <img src="docs/alipay.png" alt="支付宝" width="130" height="130" /><br/>
+        <b>支付宝</b>
+      </td>
+    </tr>
+  </table>
+</p>

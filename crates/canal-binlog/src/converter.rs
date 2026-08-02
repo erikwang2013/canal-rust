@@ -96,7 +96,7 @@ impl EventConverter {
         for (i, col) in after_columns.iter_mut().enumerate() {
             col.updated = before_columns
                 .get(i)
-                .map_or(true, |before| before.value != col.value);
+                .is_none_or(|before| before.value != col.value);
         }
 
         Ok(RowChange {

@@ -120,7 +120,7 @@ impl DefaultEventSink {
             while let Some(req) = rx.recv().await {
                 for conn in &connectors {
                     match conn.dispatch(&req.events).await {
-                        Ok(()) => metrics.inc_dispatched(req.filtered_count as u64),
+                        Ok(()) => metrics.inc_dispatched(req.filtered_count),
                         Err(e) => {
                             error!("Connector {} dispatch failed: {}", conn.name(), e);
                             metrics.inc_dispatch_errors(1);
