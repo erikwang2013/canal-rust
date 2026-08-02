@@ -73,8 +73,6 @@ struct MysqlConfig {
     port: u16,
     username: String,
     password: String,
-    #[serde(default)]
-    charset: Option<String>,
 }
 
 impl std::fmt::Debug for MysqlConfig {
@@ -264,6 +262,7 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
         .start_all()
         .await
         .context("Failed to start instances")?;
+    metrics.set_instances_active(instance_mgr.running_count() as u64);
 
     // Start admin API
     let admin_port = bind_addr.port().saturating_add(1);
@@ -278,7 +277,9 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
         .context("Failed to start admin API")?;
     tracing::info!("Admin API listening on {}", admin_bind);
 
-    let mut server = canal_server::server::CanalServer::new(bind_addr, store.clone());
+    let idle_timeout = config.canal.server.idle_timeout_secs;
+    let mut server = canal_server::server::CanalServer::new(bind_addr, store.clone())
+        .with_idle_timeout(idle_timeout);
     if let Some(ref token) = config.canal.auth_token {
         server = server.with_auth(token.clone());
     }
@@ -300,7 +301,6 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
     let server_id = config.canal.server_id;
     let shutdown_for_binlog = shutdown_token.clone();
 
-    let metrics_for_binlog = metrics.clone();
     let mut binlog_handle = tokio::spawn(async move {
         let pos = canal_common::LogPosition::new(
             &config.canal.start_journal_name,
@@ -335,7 +335,6 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
                 result = rx.recv() => {
                     match result {
                         Some(Ok(event)) => {
-                            metrics_for_binlog.inc_parsed(1);
                             batch.push(event);
                             if batch.len() >= 256 {
                                 if let Err(e) = instance_for_binlog.feed(batch.split_off(0)).await {
@@ -344,7 +343,6 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
                             }
                         }
                         Some(Err(e)) => {
-                            metrics_for_binlog.inc_parsed(1);
                             tracing::error!("Binlog event error: {}", e)
                         }
                         None => {

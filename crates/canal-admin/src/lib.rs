@@ -129,11 +129,11 @@ fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
     // Constant-time comparison — no early return on length mismatch,
     // always runs the full XOR fold to avoid timing side-channel
     let max_len = a.len().max(b.len());
-    let mut acc: u8 = (a.len() ^ b.len()) as u8;
+    let mut acc: u16 = (a.len() ^ b.len()) as u16;
     for i in 0..max_len {
         let x = a.get(i).copied().unwrap_or(0);
         let y = b.get(i).copied().unwrap_or(0);
-        acc |= x ^ y;
+        acc |= (x ^ y) as u16;
     }
     acc == 0
 }

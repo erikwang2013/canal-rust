@@ -113,8 +113,19 @@ impl MemoryEventStore {
 
                 if start_idx < slice.len() {
                     let batch_id = self.batch_id_seq.fetch_add(1, Ordering::SeqCst);
-                    // Extract events outside the lock to minimize contention
-                    let end = (start_idx + batch_size).min(slice.len());
+                    let base_end = (start_idx + batch_size).min(slice.len());
+                    // Extend past the base slice to include all events at the same
+                    // (journal, position) as the last included event, so a single
+                    // position-group (multi-row binlog event) is never split.
+                    let last = &slice[base_end - 1];
+                    let last_key = (binlog_suffix(&last.journal_name), last.position);
+                    let end = slice[base_end..]
+                        .iter()
+                        .take_while(|e| {
+                            (binlog_suffix(&e.journal_name), e.position) == last_key
+                        })
+                        .count()
+                        + base_end;
                     let events: Vec<CanalEvent> = slice[start_idx..end].to_vec();
                     drop(buffer);
 

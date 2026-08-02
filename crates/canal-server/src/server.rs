@@ -23,7 +23,7 @@ use crate::codec::CanalCodec;
 use crate::session::SessionManager;
 
 const MAX_CONNECTIONS: usize = 1024;
-const CLIENT_IDLE_TIMEOUT_SECS: u64 = 600; // 10 minutes
+
 
 /// Canal TCP server.
 pub struct CanalServer {
@@ -33,6 +33,7 @@ pub struct CanalServer {
     shutdown_token: CancellationToken,
     client_tasks: Mutex<JoinSet<()>>,
     auth_token: Option<String>,
+    idle_timeout_secs: u64,
 }
 
 impl CanalServer {
@@ -44,11 +45,17 @@ impl CanalServer {
             shutdown_token: CancellationToken::new(),
             client_tasks: Mutex::new(JoinSet::new()),
             auth_token: None,
+            idle_timeout_secs: 600,
         }
     }
 
     pub fn with_auth(mut self, token: String) -> Self {
         self.auth_token = Some(token);
+        self
+    }
+
+    pub fn with_idle_timeout(mut self, secs: u64) -> Self {
+        self.idle_timeout_secs = secs;
         self
     }
 
@@ -85,11 +92,12 @@ impl CanalServer {
             let store = self.store.clone();
             let sessions = self.sessions.clone();
             let auth_token = self.auth_token.clone();
+            let idle_timeout = self.idle_timeout_secs;
 
             self.client_tasks.lock().await.spawn(async move {
                 let _permit = permit;
                 let transport = Framed::new(socket, CanalCodec::new());
-                if let Err(e) = handle_client(transport, store, sessions, auth_token).await {
+                if let Err(e) = handle_client(transport, store, sessions, auth_token, idle_timeout).await {
                     error!("Client {} error: {}", peer_addr, e);
                 }
                 info!("Client {} disconnected", peer_addr);
@@ -126,12 +134,13 @@ async fn handle_client(
     store: Arc<MemoryEventStore>,
     sessions: Arc<SessionManager>,
     auth_token: Option<String>,
+    idle_timeout_secs: u64,
 ) -> CanalResult<()> {
     let mut state = ClientState::default();
 
     loop {
         let frame_bytes = match tokio::time::timeout(
-            std::time::Duration::from_secs(CLIENT_IDLE_TIMEOUT_SECS),
+            std::time::Duration::from_secs(idle_timeout_secs),
             transport.next(),
         )
         .await
@@ -141,7 +150,7 @@ async fn handle_client(
             Err(_) => {
                 warn!(
                     "Client idle timeout after {}s, disconnecting",
-                    CLIENT_IDLE_TIMEOUT_SECS
+                    idle_timeout_secs
                 );
                 break;
             }

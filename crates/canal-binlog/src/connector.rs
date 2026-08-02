@@ -115,7 +115,8 @@ impl DefaultBinlogConnector {
             server_id: self.server_id as u32,
             blocking: true,
             ssl_mode: self.ssl_mode,
-            binlog: BinlogOptions::from_position(pos.journal_name.clone(), pos.position as u32),
+            // mysql_cdc uses u32 for binlog position (protocol limit)
+    binlog: BinlogOptions::from_position(pos.journal_name.clone(), pos.position as u32),
             ..Default::default()
         }
     }
@@ -449,7 +450,8 @@ impl BinlogConnector for DefaultBinlogConnector {
         self.password.clear();
         self.password.shrink_to_fit();
         let cancel = CancellationToken::new();
-        let cancel_clone = cancel.clone();
+        let cancel_for_spawn = cancel.clone();
+        let cancel_for_timeout = cancel.clone();
         self.cancel_token = Some(cancel);
         let timeout_secs = self.connect_timeout_secs;
 
@@ -465,18 +467,25 @@ impl BinlogConnector for DefaultBinlogConnector {
 
         let journal_name = pos.journal_name.clone();
         tokio::task::spawn_blocking(move || {
-            Self::run_replication(options, tx, cancel_clone, started_tx, &journal_name);
+            Self::run_replication(options, tx, cancel_for_spawn, started_tx, &journal_name);
         });
 
-        let started_result =
-            tokio::time::timeout(std::time::Duration::from_secs(timeout_secs), started_rx)
-                .await
-                .map_err(|_| {
-                    CanalError::BinlogConnection(format!(
-                        "connection timed out after {}s",
-                        timeout_secs
-                    ))
-                })?;
+        let started_result = match tokio::time::timeout(
+            std::time::Duration::from_secs(timeout_secs),
+            started_rx,
+        )
+        .await
+        {
+            Ok(r) => r,
+            Err(_) => {
+                cancel_for_timeout.cancel();
+                self.running.store(false, Ordering::Release);
+                return Err(CanalError::BinlogConnection(format!(
+                    "connection timed out after {}s",
+                    timeout_secs
+                )));
+            }
+        };
 
         match started_result {
             Ok(()) => self.connected.store(true, Ordering::Release),
