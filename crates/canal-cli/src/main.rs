@@ -7,164 +7,10 @@ use anyhow::{Context, Result};
 use canal_admin::AdminServer;
 use canal_binlog::BinlogConnector;
 use canal_common::FilterPattern;
+use canal_cli::{load_config, setup_logging, Cli, Commands};
 use canal_instance::instance::{CanalInstance, InstanceConfig, InstanceManager};
 use canal_prometheus::{CanalMetrics, MetricsServer};
-use clap::{Parser, Subcommand};
-use serde::Deserialize;
-use tracing_subscriber::{fmt, EnvFilter};
-
-// -- Configuration --
-
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct CanalConfig {
-    canal: CanalSection,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct CanalSection {
-    #[serde(default = "default_server_id")]
-    server_id: u64,
-    #[serde(default = "default_start_journal")]
-    start_journal_name: String,
-    #[serde(default = "default_start_position")]
-    start_position: u64,
-    #[serde(default)]
-    auth_token: Option<String>,
-    mysql: MysqlConfig,
-    store: StoreSection,
-    server: ServerSection,
-    #[serde(default)]
-    filter: FilterSection,
-    logging: LogSection,
-}
-
-#[derive(Debug, Deserialize, Default)]
-#[serde(deny_unknown_fields)]
-struct FilterSection {
-    #[serde(default = "default_filter_pattern")]
-    pattern: String,
-    #[serde(default)]
-    black_list: String,
-}
-
-fn default_filter_pattern() -> String {
-    ".*\\..*".to_string()
-}
-
-fn default_server_id() -> u64 {
-    1001
-}
-
-fn default_start_journal() -> String {
-    "mysql-bin.000001".to_string()
-}
-
-fn default_start_position() -> u64 {
-    4
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct MysqlConfig {
-    host: String,
-    #[serde(default = "default_mysql_port")]
-    port: u16,
-    username: String,
-    password: String,
-}
-
-impl std::fmt::Debug for MysqlConfig {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("MysqlConfig")
-            .field("host", &self.host)
-            .field("port", &self.port)
-            .field("username", &self.username)
-            .field("password", &"<redacted>")
-            .finish()
-    }
-}
-
-fn default_mysql_port() -> u16 {
-    3306
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct StoreSection {
-    #[serde(default = "default_buffer_size")]
-    buffer_size: usize,
-}
-
-fn default_buffer_size() -> usize {
-    16384
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct ServerSection {
-    #[serde(default = "default_bind")]
-    bind: String,
-    #[serde(default = "default_metrics_bind")]
-    metrics_bind: String,
-    #[serde(default = "default_idle_timeout")]
-    idle_timeout_secs: u64,
-}
-
-fn default_idle_timeout() -> u64 {
-    3600
-}
-
-fn default_metrics_bind() -> String {
-    "127.0.0.1:9090".to_string()
-}
-
-fn default_bind() -> String {
-    "127.0.0.1:11111".to_string()
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct LogSection {
-    #[serde(default = "default_log_level")]
-    level: String,
-    #[serde(default = "default_log_format")]
-    format: String,
-}
-
-fn default_log_level() -> String {
-    "info".to_string()
-}
-
-fn default_log_format() -> String {
-    "json".to_string()
-}
-
-// -- CLI --
-
-#[derive(Parser)]
-#[command(
-    name = "canal-rust",
-    version = env!("CARGO_PKG_VERSION"),
-    about = "MySQL binlog subscription tool"
-)]
-struct Cli {
-    #[command(subcommand)]
-    command: Commands,
-}
-
-#[derive(Subcommand)]
-enum Commands {
-    Server {
-        #[arg(short, long, default_value = "canal.yaml")]
-        config: PathBuf,
-    },
-    Dump {
-        #[arg(short, long, default_value = "canal.yaml")]
-        config: PathBuf,
-    },
-}
+use clap::Parser;
 
 // -- Main --
 
@@ -175,19 +21,6 @@ async fn main() -> Result<()> {
         Commands::Server { config } => run_server(config).await,
         Commands::Dump { config } => run_dump(config).await,
     }
-}
-
-fn load_config(config_path: &std::path::Path) -> Result<CanalConfig> {
-    let content = std::fs::read_to_string(config_path)
-        .with_context(|| format!("Failed to read config: {}", config_path.display()))?;
-    if content.len() > 10 * 1024 * 1024 {
-        anyhow::bail!(
-            "Config file exceeds maximum size (10MB): {} bytes",
-            content.len()
-        );
-    }
-    serde_yaml::from_str(&content)
-        .with_context(|| format!("Failed to parse config: {}", config_path.display()))
 }
 
 async fn run_server(config_path: PathBuf) -> Result<()> {
@@ -265,10 +98,10 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
     metrics.set_instances_active(instance_mgr.running_count() as u64);
 
     // Start admin API
-    let admin_port = bind_addr.port().saturating_add(1);
-    if admin_port == 0 {
-        anyhow::bail!("Admin port overflow: main port {} is 65535", bind_addr.port());
-    }
+    let admin_port = bind_addr
+        .port()
+        .checked_add(1)
+        .context("Admin port overflow: main port 65535 has no room for admin")?;
     let admin_bind = format!("127.0.0.1:{}", admin_port);
     let admin_server = AdminServer::new(&admin_bind, instance_mgr.clone());
     let _admin_task = admin_server
@@ -447,25 +280,4 @@ async fn run_dump(config_path: PathBuf) -> Result<()> {
 
     eprintln!("\nDone. {} events received.", count);
     Ok(())
-}
-
-fn setup_logging(logging: &LogSection) {
-    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-        EnvFilter::try_new(&logging.level).unwrap_or_else(|_| {
-            tracing::warn!(
-                "Invalid log level '{}', falling back to 'info'",
-                logging.level
-            );
-            EnvFilter::new("info")
-        })
-    });
-
-    match logging.format.as_str() {
-        "json" => {
-            fmt().with_env_filter(filter).json().init();
-        }
-        _ => {
-            fmt().with_env_filter(filter).init();
-        }
-    }
 }

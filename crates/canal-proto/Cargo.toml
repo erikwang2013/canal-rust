@@ -8,3 +8,6 @@ prost-build = "0.13"
 prost.workspace = true
 prost-types.workspace = true
 bytes.workspace = true
+
+[dev-dependencies]
+prost.workspace = true

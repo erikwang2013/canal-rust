@@ -293,6 +293,7 @@ dependencies = [
  "chrono",
  "regex",
  "serde",
+ "serde_json",
  "thiserror 2.0.19",
  "tokio",
  "tracing",
@@ -345,6 +346,7 @@ dependencies = [
  "canal-common",
  "chrono",
  "serde",
+ "serde_json",
  "tracing",
 ]
 

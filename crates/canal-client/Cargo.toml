@@ -8,3 +8,7 @@ tracing.workspace = true
 prost.workspace = true
 canal-common = { path = "../canal-common" }
 canal-proto = { path = "../canal-proto" }
+
+[dev-dependencies]
+canal-common = { path = "../canal-common" }
+canal-proto = { path = "../canal-proto" }

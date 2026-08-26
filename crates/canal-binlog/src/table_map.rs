@@ -104,4 +104,47 @@ mod tests {
         assert_eq!(result.1.as_str(), "tbl");
         assert_eq!(cache.get_columns(1).unwrap().len(), 1);
     }
+
+    fn col(name: &str, col_type: i32) -> ColumnInfo {
+        ColumnInfo {
+            name: name.into(),
+            column_type: col_type,
+            is_key: false,
+            is_nullable: true,
+        }
+    }
+
+    #[test]
+    fn test_put_after_put_with_columns_clears_columns() {
+        // A bare put (name-only TableMap, no metadata) must drop stale columns
+        let mut cache = TableMapCache::new();
+        cache.put_with_columns(1, "db".into(), "t1".into(), vec![col("id", 3)]);
+        cache.put(1, "db".into(), "t1".into());
+        assert_eq!(cache.get(1).unwrap().1.as_str(), "t1");
+        assert!(cache.get_columns(1).is_none(), "columns must be cleared");
+    }
+
+    #[test]
+    fn test_put_with_columns_overwrites() {
+        let mut cache = TableMapCache::new();
+        cache.put_with_columns(1, "db".into(), "t1".into(), vec![col("id", 3)]);
+        cache.put_with_columns(1, "db".into(), "t1".into(), vec![col("a", 1), col("b", 2)]);
+        assert_eq!(cache.get_columns(1).unwrap().len(), 2);
+    }
+
+    #[test]
+    fn test_get_columns_missing() {
+        let cache = TableMapCache::new();
+        assert!(cache.get_columns(42).is_none());
+        let mut cache = cache;
+        cache.put(1, "db".into(), "t".into());
+        assert!(cache.get_columns(1).is_none());
+    }
+
+    #[test]
+    fn test_default_impl_empty() {
+        let cache = TableMapCache::default();
+        assert!(cache.get(1).is_none());
+        assert!(cache.get_columns(1).is_none());
+    }
 }

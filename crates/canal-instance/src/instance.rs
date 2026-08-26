@@ -274,4 +274,99 @@ mod tests {
         let cloned = config.clone();
         assert_eq!(config.destination, cloned.destination);
     }
+
+    #[test]
+    fn test_config_debug_redacts_password() {
+        let mut config = make_config("dbg-test");
+        config.mysql_password = "sup3rsecret".into();
+        let dbg = format!("{:?}", config);
+        assert!(dbg.contains("destination"));
+        assert!(dbg.contains("<redacted>"));
+        assert!(!dbg.contains("sup3rsecret"));
+    }
+
+    #[tokio::test]
+    async fn test_feed_before_start_errors() {
+        let instance = CanalInstance::new(make_config("not-started"), vec![]).unwrap();
+        let err = instance.feed(vec![]).await.unwrap_err();
+        assert!(matches!(err, CanalError::Internal(_)));
+    }
+
+    #[tokio::test]
+    async fn test_feed_after_stop_errors() {
+        let instance = CanalInstance::new(make_config("stopped"), vec![]).unwrap();
+        instance.start().await.unwrap();
+        instance.stop().await.unwrap();
+        assert!(instance.feed(vec![]).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_lifecycle_transitions_idempotent() {
+        let instance = CanalInstance::new(make_config("life"), vec![]).unwrap();
+        assert!(!instance.is_running());
+        instance.start().await.unwrap();
+        assert!(instance.is_running());
+        instance.start().await.unwrap(); // double start is harmless
+        assert!(instance.is_running());
+        instance.stop().await.unwrap();
+        assert!(!instance.is_running());
+        instance.stop().await.unwrap(); // double stop is harmless
+        assert!(!instance.is_running());
+    }
+
+    #[tokio::test]
+    async fn test_feed_empty_events_after_start() {
+        let instance = CanalInstance::new(make_config("empty-feed"), vec![]).unwrap();
+        instance.start().await.unwrap();
+        assert!(instance.feed(vec![]).await.is_ok());
+        assert!(instance.store().latest_position().is_none());
+    }
+
+    #[tokio::test]
+    async fn test_invalid_blacklist_returns_config_error() {
+        let mut config = make_config("bad-blacklist");
+        config.filter.black_list = "[bad".to_string();
+        let result = CanalInstance::new(config, vec![]);
+        assert!(matches!(result, Err(CanalError::Config(_))));
+    }
+
+    #[tokio::test]
+    async fn test_manager_get_and_remove_missing() {
+        let manager = InstanceManager::default();
+        assert!(manager.get("nope").is_none());
+        assert!(manager.remove("nope").is_none());
+        assert!(manager.list().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_manager_start_stop_all_and_running_count() {
+        let manager = InstanceManager::new();
+        manager.register(CanalInstance::new(make_config("a"), vec![]).unwrap());
+        manager.register(CanalInstance::new(make_config("b"), vec![]).unwrap());
+        assert_eq!(manager.running_count(), 0);
+
+        manager.start_all().await.unwrap();
+        assert_eq!(manager.running_count(), 2);
+
+        manager.stop_all().await.unwrap();
+        assert_eq!(manager.running_count(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_manager_register_overwrites_same_destination() {
+        let manager = InstanceManager::new();
+        manager.register(CanalInstance::new(make_config("dup"), vec![]).unwrap());
+        manager.register(CanalInstance::new(make_config("dup"), vec![]).unwrap());
+        assert_eq!(manager.list().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_instance_with_blacklist_filter_builds() {
+        let mut config = make_config("blacklisted");
+        config.filter.black_list = "logs".to_string();
+        let instance = CanalInstance::new(config, vec![]).unwrap();
+        assert_eq!(instance.destination(), "blacklisted");
+        assert!(instance.store().latest_position().is_none());
+        let _sink = instance.sink(); // accessor is available
+    }
 }

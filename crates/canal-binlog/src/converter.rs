@@ -201,4 +201,125 @@ mod tests {
         let result = converter.handle_row_event(1, EventType::Insert, vec![]);
         assert!(result.is_err());
     }
+
+    #[test]
+    fn test_update_unchanged_columns_not_marked() {
+        let mut converter = EventConverter::new();
+        converter.handle_table_map(10, "mydb", "products");
+
+        let change = converter
+            .handle_update_row_event(
+                10,
+                vec![make_column("id", "1"), make_column("price", "10")],
+                vec![make_column("id", "1"), make_column("price", "10")],
+            )
+            .unwrap();
+
+        let after = change.after.unwrap();
+        assert!(
+            after.columns.iter().all(|c| !c.updated),
+            "identical before/after values must not be marked updated"
+        );
+    }
+
+    #[test]
+    fn test_update_extra_after_columns_marked_updated() {
+        // After image has more columns than before: extras are considered updated
+        let mut converter = EventConverter::new();
+        converter.handle_table_map(10, "mydb", "products");
+
+        let change = converter
+            .handle_update_row_event(
+                10,
+                vec![make_column("id", "1")],
+                vec![make_column("id", "1"), make_column("new_col", "x")],
+            )
+            .unwrap();
+
+        let after = change.after.unwrap();
+        assert!(!after.columns[0].updated);
+        assert!(after.columns[1].updated, "extra after-column must be updated");
+    }
+
+    #[test]
+    fn test_update_marks_changed_value() {
+        let mut converter = EventConverter::new();
+        converter.handle_table_map(10, "mydb", "products");
+        let change = converter
+            .handle_update_row_event(
+                10,
+                vec![make_column("name", "old")],
+                vec![make_column("name", "new")],
+            )
+            .unwrap();
+        assert!(change.after.unwrap().columns[0].updated);
+    }
+
+    #[test]
+    fn test_row_event_update_unsupported() {
+        let mut converter = EventConverter::new();
+        converter.handle_table_map(10, "mydb", "products");
+        let err = converter
+            .handle_row_event(10, EventType::Update, vec![make_column("id", "1")])
+            .unwrap_err();
+        assert!(matches!(err, CanalError::Internal(_)));
+    }
+
+    #[test]
+    fn test_update_missing_table_map_errors() {
+        let converter = EventConverter::new();
+        let result = converter.handle_update_row_event(999, vec![], vec![]);
+        assert!(matches!(result, Err(CanalError::NotFound(_))));
+    }
+
+    #[test]
+    fn test_columns_from_table_map_event() {
+        let mut converter = EventConverter::new();
+        let columns = vec![
+            ColumnInfo {
+                name: "id".into(),
+                column_type: 3,
+                is_key: true,
+                is_nullable: false,
+            },
+            ColumnInfo {
+                name: "name".into(),
+                column_type: 253,
+                is_key: false,
+                is_nullable: true,
+            },
+        ];
+        converter.handle_table_map_event(20, "db", "tbl", columns);
+        let cols = converter.get_columns(20).unwrap();
+        assert_eq!(cols.len(), 2);
+        assert!(cols[0].is_key);
+    }
+
+    #[test]
+    fn test_get_columns_none_without_event() {
+        let converter = EventConverter::new();
+        assert!(converter.get_columns(1).is_none());
+    }
+
+    #[test]
+    fn test_insert_event_uses_table_map_names() {
+        let mut converter = EventConverter::new();
+        converter.handle_table_map_event(
+            30,
+            "inventory",
+            "items",
+            vec![ColumnInfo {
+                name: "sku".into(),
+                column_type: 253,
+                is_key: true,
+                is_nullable: false,
+            }],
+        );
+        let change = converter
+            .handle_row_event(30, EventType::Insert, vec![make_column("sku", "A-1")])
+            .unwrap();
+        assert_eq!(change.schema_name, "inventory");
+        assert_eq!(change.table_name, "items");
+        assert_eq!(change.after.unwrap().columns[0].name, "sku");
+    }
 }

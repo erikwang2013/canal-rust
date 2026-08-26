@@ -8,3 +8,6 @@ serde.workspace = true
 chrono.workspace = true
 tracing.workspace = true
 canal-common = { path = "../canal-common" }
+
+[dev-dependencies]
+serde_json.workspace = true

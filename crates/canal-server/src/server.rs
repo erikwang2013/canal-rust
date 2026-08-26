@@ -255,8 +255,6 @@ async fn handle_auth(
             return Ok(());
         }
     }
-    state.authenticated = true;
-
     let cid = if auth.client_id.is_empty() {
         "anonymous".to_string()
     } else {
@@ -265,6 +263,8 @@ async fn handle_auth(
 
     const MAX_FILTER_PATTERN_LEN: usize = 256;
 
+    // Validate the filter BEFORE marking the session authenticated: a rejected
+    // filter must leave the client unauthenticated (auth bypass otherwise).
     let filter = if auth.filter.is_empty() {
         FilterPattern::default()
     } else {
@@ -287,6 +287,7 @@ async fn handle_auth(
         fp
     };
 
+    state.authenticated = true;
     sessions.register(&cid, &auth.destination, filter);
     state.client_id = Some(cid.clone());
 
@@ -524,3 +525,15 @@ async fn send_ack_err(
 #[cfg(test)]
 #[path = "tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests_conversion.rs"]
+mod tests_conversion;
+
+#[cfg(test)]
+#[path = "tests_handlers.rs"]
+mod tests_handlers;
+
+#[cfg(test)]
+#[path = "tests_e2e.rs"]
+mod tests_e2e;

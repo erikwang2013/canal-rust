@@ -277,4 +277,176 @@ mod tests {
         store.stop().await.unwrap();
         assert!(!store.is_running());
     }
+
+    #[tokio::test]
+    async fn test_get_batch_skips_start_position() {
+        // The start cursor is exclusive: events AT the start position are not returned
+        let store = MemoryEventStore::new(1024);
+        store
+            .put_batch(vec![
+                make_event("mysql-bin.000001", 100),
+                make_event("mysql-bin.000001", 200),
+            ])
+            .await
+            .unwrap();
+        let start = LogPosition::new("mysql-bin.000001", 100);
+        let batch = store.get_batch(&start, 10).await.unwrap();
+        assert_eq!(batch.len(), 1);
+        assert_eq!(batch.events[0].position, 200);
+    }
+
+    #[tokio::test]
+    async fn test_get_batch_mid_buffer() {
+        let store = MemoryEventStore::new(1024);
+        store
+            .put_batch(vec![
+                make_event("mysql-bin.000001", 100),
+                make_event("mysql-bin.000001", 200),
+                make_event("mysql-bin.000001", 300),
+            ])
+            .await
+            .unwrap();
+        let start = LogPosition::new("mysql-bin.000001", 200);
+        let batch = store.get_batch(&start, 10).await.unwrap();
+        assert_eq!(batch.len(), 1);
+        assert_eq!(batch.events[0].position, 300);
+    }
+
+    #[tokio::test]
+    async fn test_get_batch_zero_batch_size_returns_one() {
+        let store = MemoryEventStore::new(1024);
+        store
+            .put_batch(vec![
+                make_event("mysql-bin.000001", 100),
+                make_event("mysql-bin.000001", 200),
+            ])
+            .await
+            .unwrap();
+        let start = LogPosition::new("mysql-bin.000001", 50);
+        let batch = store.get_batch(&start, 0).await.unwrap();
+        assert_eq!(batch.len(), 1);
+        assert_eq!(batch.events[0].position, 100);
+    }
+
+    #[tokio::test]
+    async fn test_get_batch_does_not_consume() {
+        // get_batch uses a cursor; repeated calls return the same events
+        let store = MemoryEventStore::new(1024);
+        store
+            .put_batch(vec![
+                make_event("mysql-bin.000001", 100),
+                make_event("mysql-bin.000001", 200),
+            ])
+            .await
+            .unwrap();
+        let start = LogPosition::new("mysql-bin.000001", 50);
+        let b1 = store.get_batch(&start, 10).await.unwrap();
+        let b2 = store.get_batch(&start, 10).await.unwrap();
+        assert_eq!(b1.len(), 2);
+        assert_eq!(b2.len(), 2);
+        assert_eq!(b1.events[0].position, b2.events[0].position);
+    }
+
+    #[tokio::test]
+    async fn test_get_batch_keeps_position_group_together() {
+        // Events at the same (journal, position) — one multi-row binlog event —
+        // must never be split across batches even when batch_size would cut it
+        let store = MemoryEventStore::new(1024);
+        store
+            .put_batch(vec![
+                make_event("mysql-bin.000001", 100),
+                make_event("mysql-bin.000001", 100),
+                make_event("mysql-bin.000001", 200),
+            ])
+            .await
+            .unwrap();
+        let start = LogPosition::new("mysql-bin.000001", 50);
+        let batch = store.get_batch(&start, 1).await.unwrap();
+        assert_eq!(batch.len(), 2, "position group must not be split");
+        assert_eq!(batch.events[0].position, 100);
+        assert_eq!(batch.events[1].position, 100);
+    }
+
+    #[tokio::test]
+    async fn test_first_position_tracks_front() {
+        let store = MemoryEventStore::new(1024);
+        store
+            .put_batch(vec![
+                make_event("mysql-bin.000001", 100),
+                make_event("mysql-bin.000001", 200),
+            ])
+            .await
+            .unwrap();
+        assert_eq!(store.first_position().unwrap().position, 100);
+    }
+
+    #[tokio::test]
+    async fn test_first_position_after_eviction() {
+        let store = MemoryEventStore::new(2);
+        store
+            .put_batch(vec![
+                make_event("mysql-bin.000001", 100),
+                make_event("mysql-bin.000001", 200),
+            ])
+            .await
+            .unwrap();
+        store
+            .put_batch(vec![make_event("mysql-bin.000001", 300)])
+            .await
+            .unwrap();
+        assert_eq!(store.first_position().unwrap().position, 200);
+        assert_eq!(store.latest_position().unwrap().position, 300);
+    }
+
+    #[tokio::test]
+    async fn test_put_batch_id_increments() {
+        let store = MemoryEventStore::new(1024);
+        let id1 = store
+            .put_batch(vec![make_event("mysql-bin.000001", 100)])
+            .await
+            .unwrap();
+        let id2 = store
+            .put_batch(vec![make_event("mysql-bin.000001", 200)])
+            .await
+            .unwrap();
+        assert_eq!(id1, 0);
+        assert!(id2 > id1);
+    }
+
+    #[tokio::test]
+    async fn test_cross_journal_batch_read() {
+        let store = MemoryEventStore::new(1024);
+        store
+            .put_batch(vec![make_event("mysql-bin.000001", 100)])
+            .await
+            .unwrap();
+        store
+            .put_batch(vec![make_event("mysql-bin.000002", 50)])
+            .await
+            .unwrap();
+        // From journal 1's start: both journals are returned (suffix order)
+        let start = LogPosition::new("mysql-bin.000001", 0);
+        let batch = store.get_batch(&start, 10).await.unwrap();
+        assert_eq!(batch.len(), 2);
+        // From journal 2's start: only journal 2 events remain
+        let start2 = LogPosition::new("mysql-bin.000002", 0);
+        let batch2 = store.get_batch(&start2, 10).await.unwrap();
+        assert_eq!(batch2.len(), 1);
+        assert_eq!(batch2.events[0].journal_name, "mysql-bin.000002");
+    }
+
+    #[tokio::test]
+    async fn test_empty_batch_timeout_returns_empty_events() {
+        // No events past the start cursor and no further puts:
+        // get_batch must return an empty Events with batch_id 0 after the timeout
+        let store = MemoryEventStore::new(1024);
+        store
+            .put_batch(vec![make_event("mysql-bin.000001", 100)])
+            .await
+            .unwrap();
+        let start = LogPosition::new("mysql-bin.000001", 500);
+        let batch = store.get_batch(&start, 10).await.unwrap();
+        assert!(batch.is_empty());
+        assert_eq!(batch.batch_id, 0);
+    }
 }

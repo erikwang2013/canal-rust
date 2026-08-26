@@ -259,7 +259,7 @@ impl Drop for CanalEventStream {
 // ── Wire helpers ────────────────────────────────────────────
 
 /// Send a protobuf Packet with 4-byte BE length prefix.
-async fn send_packet(stream: &mut TcpStream, packet: &Packet) -> CanalResult<()> {
+pub async fn send_packet(stream: &mut TcpStream, packet: &Packet) -> CanalResult<()> {
     let body = packet.encode_to_vec();
     let len = body.len() as u32;
     let mut buf = Vec::with_capacity(4 + body.len());
@@ -273,7 +273,7 @@ async fn send_packet(stream: &mut TcpStream, packet: &Packet) -> CanalResult<()>
 }
 
 /// Read a length-prefixed protobuf Packet.
-async fn read_packet(stream: &mut TcpStream) -> CanalResult<Packet> {
+pub async fn read_packet(stream: &mut TcpStream) -> CanalResult<Packet> {
     let mut header = [0u8; 4];
     stream
         .read_exact(&mut header)
@@ -305,7 +305,7 @@ async fn read_packet(stream: &mut TcpStream) -> CanalResult<Packet> {
 
 /// Convert a protobuf Entry (from Messages) into a CanalEvent.
 /// Decodes header, row_change, and ddl_sql from the protobuf message.
-fn entry_bytes_to_event(data: &[u8]) -> CanalResult<CanalEvent> {
+pub fn entry_bytes_to_event(data: &[u8]) -> CanalResult<CanalEvent> {
     let entry = canal_proto::Entry::decode(data).map_err(|e| {
         canal_common::CanalError::Protocol(format!(
             "Failed to decode Entry from {} bytes: {}",

@@ -157,4 +157,83 @@ mod tests {
 
         assert!(after > before);
     }
+
+    #[test]
+    fn test_invalid_filter_regex_compiles_to_none() {
+        let mgr = SessionManager::new();
+        let filter = FilterPattern {
+            pattern: "[invalid".into(),
+            black_list: String::new(),
+        };
+        mgr.register("c", "dest", filter);
+        let session = mgr.get("c").unwrap();
+        assert!(session.compiled_pattern.is_none());
+        assert!(session.compiled_black_list.is_none());
+    }
+
+    #[test]
+    fn test_invalid_blacklist_regex_compiles_to_none() {
+        let mgr = SessionManager::new();
+        let filter = FilterPattern {
+            pattern: ".*\\..*".into(),
+            black_list: "[bad".into(),
+        };
+        mgr.register("c", "dest", filter);
+        let session = mgr.get("c").unwrap();
+        assert!(session.compiled_pattern.is_some());
+        assert!(session.compiled_black_list.is_none());
+    }
+
+    #[test]
+    fn test_updates_for_unknown_client_are_noop() {
+        let mgr = SessionManager::new();
+        let pos = LogPosition::new("mysql-bin.000001", 100);
+        mgr.update_position("ghost", pos.clone());
+        mgr.update_ack("ghost", pos);
+        mgr.heartbeat("ghost");
+        assert!(mgr.get("ghost").is_none());
+    }
+
+    #[test]
+    fn test_register_overwrites_existing_session() {
+        let mgr = SessionManager::new();
+        mgr.register("c", "dest-a", FilterPattern::default());
+        mgr.register("c", "dest-b", FilterPattern::default());
+        let session = mgr.get("c").unwrap();
+        assert_eq!(session.destination, "dest-b");
+        assert_eq!(mgr.get("c").unwrap().client_id, "c");
+    }
+
+    #[test]
+    fn test_session_debug_hides_internal_state() {
+        let filter = FilterPattern {
+            pattern: "db\\.t".into(),
+            black_list: String::new(),
+        };
+        let session = ClientSession::new("c1", "dest", filter);
+        let dbg = format!("{:?}", session);
+        assert!(dbg.contains("client_id"));
+        assert!(dbg.contains("filter"));
+        assert!(!dbg.contains("last_position"));
+    }
+
+    #[test]
+    fn test_session_manager_default() {
+        let mgr = SessionManager::default();
+        mgr.register("c", "d", FilterPattern::default());
+        assert!(mgr.get("c").is_some());
+    }
+
+    #[test]
+    fn test_session_position_storage() {
+        let session = ClientSession::new("c1", "dest", FilterPattern::default());
+        assert!(session.last_position.lock().unwrap().is_none());
+        assert!(session.last_ack_position.lock().unwrap().is_none());
+        let pos = LogPosition::new("bin.001", 42);
+        *session.last_position.lock().unwrap() = Some(pos.clone());
+        assert_eq!(
+            session.last_position.lock().unwrap().as_ref().unwrap(),
+            &pos
+        );
+    }
 }

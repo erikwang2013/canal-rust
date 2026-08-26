@@ -177,4 +177,121 @@ mod tests {
         cache.put("a.b", make_table_meta());
         assert!(cache.contains("a.b"));
     }
+
+    #[test]
+    fn test_get_missing_returns_none() {
+        let cache = TableMetaCache::new();
+        assert!(cache.get("no.such.table").is_none());
+    }
+
+    #[test]
+    fn test_remove_nonexistent_is_noop() {
+        let cache = TableMetaCache::new();
+        cache.remove("no.such.table"); // must not panic
+        assert_eq!(cache.len(), 0);
+    }
+
+    #[test]
+    fn test_is_empty_and_len() {
+        let cache = TableMetaCache::new();
+        assert!(cache.is_empty());
+        assert_eq!(cache.len(), 0);
+        cache.put("a.b", make_table_meta());
+        cache.put("a.c", make_table_meta());
+        assert!(!cache.is_empty());
+        assert_eq!(cache.len(), 2);
+    }
+
+    #[test]
+    fn test_put_overwrites_existing() {
+        let cache = TableMetaCache::new();
+        cache.put("a.b", make_table_meta());
+        let mut v2 = make_table_meta();
+        v2.table_name = "users_v2".into();
+        cache.put("a.b", v2);
+        assert_eq!(cache.len(), 1, "overwrite must not grow the cache");
+        assert_eq!(cache.get("a.b").unwrap().table_name, "users_v2");
+    }
+
+    #[test]
+    fn test_get_returns_clone() {
+        let cache = TableMetaCache::new();
+        cache.put("a.b", make_table_meta());
+        let mut meta = cache.get("a.b").unwrap();
+        meta.table_name = "mutated".into();
+        // Cache must be unaffected by mutation of the returned clone
+        assert_eq!(cache.get("a.b").unwrap().table_name, "users");
+    }
+
+    #[test]
+    fn test_get_column_missing() {
+        let meta = make_table_meta();
+        assert!(meta.get_column("no_such_column").is_none());
+        assert!(meta.get_column("ID").is_none(), "lookup is case-sensitive");
+    }
+
+    #[test]
+    fn test_multiple_primary_keys() {
+        let mut meta = make_table_meta();
+        meta.columns = vec![
+            make_column("a", true, 0),
+            make_column("b", true, 1),
+            make_column("c", false, 2),
+        ];
+        let keys = meta.primary_keys();
+        assert_eq!(keys.len(), 2);
+        assert_eq!(keys[0].name, "a");
+        assert_eq!(keys[1].name, "b");
+    }
+
+    #[test]
+    fn test_zero_primary_keys() {
+        let mut meta = make_table_meta();
+        meta.columns.iter_mut().for_each(|c| c.is_key = false);
+        assert!(meta.primary_keys().is_empty());
+    }
+
+    #[test]
+    fn test_column_count_empty_table() {
+        let meta = TableMeta {
+            schema_name: "db".into(),
+            table_name: "empty".into(),
+            columns: vec![],
+            updated_at: chrono::Utc::now(),
+        };
+        assert_eq!(meta.column_count(), 0);
+        assert!(meta.primary_keys().is_empty());
+    }
+
+    #[test]
+    fn test_default_impl_empty() {
+        let cache = TableMetaCache::default();
+        assert!(cache.is_empty());
+    }
+
+    #[test]
+    fn test_serde_roundtrip_table_meta() {
+        let meta = make_table_meta();
+        let json = serde_json::to_string(&meta).unwrap();
+        let back: TableMeta = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.schema_name, meta.schema_name);
+        assert_eq!(back.table_name, meta.table_name);
+        assert_eq!(back.column_count(), meta.column_count());
+        assert_eq!(back.columns[0].name, meta.columns[0].name);
+        assert_eq!(back.columns[1].is_key, meta.columns[1].is_key);
+        assert_eq!(back.columns[2].position, meta.columns[2].position);
+        assert_eq!(back.updated_at, meta.updated_at);
+    }
+
+    #[test]
+    fn test_serde_roundtrip_column_meta() {
+        let col = make_column("id", true, 0);
+        let json = serde_json::to_string(&col).unwrap();
+        let back: ColumnMeta = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.name, col.name);
+        assert_eq!(back.column_type, col.column_type);
+        assert_eq!(back.is_key, col.is_key);
+        assert_eq!(back.is_nullable, col.is_nullable);
+        assert_eq!(back.position, col.position);
+    }
 }

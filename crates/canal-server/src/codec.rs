@@ -148,4 +148,76 @@ mod tests {
         assert_eq!(buf[3], 0x2C);
         assert_eq!(buf.len(), 304);
     }
+
+    #[test]
+    fn test_decode_zero_length_frame() {
+        // keepalive packets: length 0 must decode to an empty frame
+        let mut codec = CanalCodec;
+        let mut buf = BytesMut::from(&[0, 0, 0, 0][..]);
+        let result = codec.decode(&mut buf).unwrap();
+        assert_eq!(result, Some(Vec::new()));
+        assert_eq!(buf.len(), 0);
+    }
+
+    #[test]
+    fn test_decode_rejects_oversize_packet() {
+        let mut codec = CanalCodec;
+        // header claims 0x00800001 = 8MB + 1, above the 8MB safety limit
+        let mut buf = BytesMut::from(&[0x00, 0x80, 0x00, 0x01][..]);
+        let err = codec.decode(&mut buf).unwrap_err();
+        assert!(matches!(err, CanalError::Protocol(_)));
+        assert_eq!(buf.len(), 4); // header preserved on error
+    }
+
+    #[test]
+    fn test_decode_max_size_header_waits_for_payload() {
+        let mut codec = CanalCodec;
+        // exactly 8MB is allowed: must wait for payload, not error
+        let mut buf = BytesMut::new();
+        buf.put_u32(8 * 1024 * 1024);
+        let result = codec.decode(&mut buf).unwrap();
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_decode_exact_boundary_payload() {
+        let mut codec = CanalCodec;
+        // exactly 4 + len bytes available: decodes in a single call
+        let mut buf = BytesMut::from(&[0, 0, 0, 2, 1, 2][..]);
+        let result = codec.decode(&mut buf).unwrap();
+        assert_eq!(result, Some(vec![1, 2]));
+        assert_eq!(buf.len(), 0);
+    }
+
+    #[test]
+    fn test_encode_empty_payload_roundtrip() {
+        let mut codec = CanalCodec;
+        let mut buf = BytesMut::new();
+        codec.encode(Vec::new(), &mut buf).unwrap();
+        assert_eq!(buf.len(), 4);
+        let decoded = codec.decode(&mut buf).unwrap();
+        assert_eq!(decoded, Some(Vec::new()));
+    }
+
+    #[test]
+    fn test_encode_large_payload_roundtrip() {
+        let mut codec = CanalCodec;
+        let mut buf = BytesMut::new();
+        let payload = vec![7u8; 64 * 1024]; // 64KB payload
+        codec.encode(payload.clone(), &mut buf).unwrap();
+        let decoded = codec.decode(&mut buf).unwrap();
+        assert_eq!(decoded, Some(payload));
+    }
+
+    #[test]
+    fn test_decode_multiple_packets_with_zero_length_frame() {
+        let mut codec = CanalCodec;
+        // [len=1, 42] [len=0 keepalive] [len=1, 99]
+        let mut buf = BytesMut::from(&[0, 0, 0, 1, 42, 0, 0, 0, 0, 0, 0, 0, 1, 99][..]);
+
+        assert_eq!(codec.decode(&mut buf).unwrap(), Some(vec![42]));
+        assert_eq!(codec.decode(&mut buf).unwrap(), Some(Vec::new()));
+        assert_eq!(codec.decode(&mut buf).unwrap(), Some(vec![99]));
+        assert_eq!(buf.len(), 0);
+    }
 }

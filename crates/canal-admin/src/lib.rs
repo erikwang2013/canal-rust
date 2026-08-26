@@ -107,6 +107,12 @@ fn check_auth(headers: &HeaderMap, expected: &Option<String>) -> Result<(), Stat
     match expected {
         None => Ok(()),
         Some(token) => {
+            // An empty configured token would otherwise match a missing/empty
+            // Authorization header via the raw-token path below, silently
+            // disabling auth. Reject it up front.
+            if token.is_empty() {
+                return Err(StatusCode::UNAUTHORIZED);
+            }
             let auth = headers
                 .get("Authorization")
                 .and_then(|v| v.to_str().ok())
@@ -219,7 +225,36 @@ async fn stop_instance(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::http::HeaderValue;
+    use canal_common::{FilterPattern, LogPosition};
+    use canal_instance::instance::{CanalInstance, InstanceConfig};
 
+    fn make_config(destination: &str) -> InstanceConfig {
+        InstanceConfig {
+            destination: destination.to_string(),
+            mysql_host: "localhost".into(),
+            mysql_port: 3306,
+            mysql_username: "root".into(),
+            mysql_password: "pass".into(),
+            mysql_server_id: 1001,
+            start_position: LogPosition::new("mysql-bin.000001", 4),
+            filter: FilterPattern::default(),
+            store_buffer_size: 1024,
+            connector_names: vec![],
+        }
+    }
+
+    fn register_instance(mgr: &Arc<InstanceManager>, destination: &str) {
+        let instance = CanalInstance::new(make_config(destination), vec![]).unwrap();
+        mgr.register(instance);
+    }
+    fn state_with(mgr: Arc<InstanceManager>, token: Option<String>) -> AdminState {
+        AdminState {
+            instance_manager: mgr,
+            started_at: Instant::now(),
+            admin_token: token,
+        }
+    }
     #[test]
     fn test_check_auth_no_token_required() {
         let headers = HeaderMap::new();
@@ -303,4 +338,163 @@ mod tests {
         assert!(debug_str.contains("has_auth"));
         assert!(!debug_str.contains("secret"));
     }
+
+    // ── constant_time_eq edge cases ──────────────────────────
+
+    #[test]
+    fn test_constant_time_eq_cases() {
+        assert!(constant_time_eq(b"abc", b"abc"));
+        assert!(constant_time_eq(b"", b""));
+        assert!(constant_time_eq("密钥".as_bytes(), "密钥".as_bytes()));
+        assert!(constant_time_eq(&[0u8, 255, 1], &[0u8, 255, 1]));
+        assert!(!constant_time_eq(b"abc", b"abd"));
+        assert!(!constant_time_eq(b"abc", b"abcd"));
+        assert!(!constant_time_eq(b"abc", b""));
+        assert!(!constant_time_eq(b"", b"a"));
+        assert!(!constant_time_eq(b"a", b"b"));
+        assert!(!constant_time_eq("密钥".as_bytes(), "密码".as_bytes()));
+    }
+
+    // ── check_auth edge cases ────────────────────────────────
+
+    #[test]
+    fn test_check_auth_invalid_and_case_sensitive_headers() {
+        let mut h1 = HeaderMap::new();
+        h1.insert("Authorization", HeaderValue::from_bytes(b"\xff\xfe").unwrap());
+        assert_eq!(
+            check_auth(&h1, &Some("secret".into())),
+            Err(StatusCode::UNAUTHORIZED)
+        );
+        let mut h2 = HeaderMap::new();
+        h2.insert("Authorization", "bearer secret".parse().unwrap());
+        assert_eq!(
+            check_auth(&h2, &Some("secret".into())),
+            Err(StatusCode::UNAUTHORIZED)
+        );
+    }
+
+    #[test]
+    fn test_check_auth_empty_token_and_prefix_rejected() {
+        assert_eq!(
+            check_auth(&HeaderMap::new(), &Some(String::new())),
+            Err(StatusCode::UNAUTHORIZED)
+        );
+        let mut headers = HeaderMap::new();
+        headers.insert("Authorization", "Bearer sec".parse().unwrap());
+        assert_eq!(
+            check_auth(&headers, &Some("secret".into())),
+            Err(StatusCode::UNAUTHORIZED)
+        );
+    }
+
+    // ── handlers (direct invocation, no real port) ───────────
+
+    #[tokio::test]
+    async fn test_health_handler_fields() {
+        let mgr = Arc::new(InstanceManager::new());
+        let state = state_with(mgr, None);
+        let resp = health_handler(State(state)).await;
+        assert_eq!(resp.status, "UP");
+        assert_eq!(resp.version, env!("CARGO_PKG_VERSION"));
+        assert_eq!(resp.uptime_seconds, 0);
+    }
+
+    #[tokio::test]
+    async fn test_list_instances_empty() {
+        let mgr = Arc::new(InstanceManager::new());
+        let state = state_with(mgr, None);
+        let resp = list_instances(State(state), HeaderMap::new()).await.unwrap().0;
+        assert!(resp.instances.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_list_instances_reports_running_state() {
+        let mgr = Arc::new(InstanceManager::new());
+        register_instance(&mgr, "one");
+        register_instance(&mgr, "two");
+        mgr.get("one").unwrap().start().await.unwrap();
+        let state = state_with(mgr, None);
+        let resp = list_instances(State(state), HeaderMap::new()).await.unwrap().0;
+        assert_eq!(resp.instances.len(), 2);
+        let by_name = |n: &str| resp.instances.iter().find(|i| i.name == n).unwrap();
+        assert!(by_name("one").running);
+        assert_eq!(by_name("one").destination, "one");
+        assert!(!by_name("two").running);
+    }
+
+    #[tokio::test]
+    async fn test_handlers_require_auth_when_configured() {
+        let mgr = Arc::new(InstanceManager::new());
+        register_instance(&mgr, "one");
+        let state = state_with(mgr, Some("token".into()));
+        assert_eq!(
+            list_instances(State(state.clone()), HeaderMap::new()).await.unwrap_err(),
+            StatusCode::UNAUTHORIZED
+        );
+        assert_eq!(
+            start_instance(State(state.clone()), HeaderMap::new(), Path("one".into()))
+                .await
+                .unwrap_err(),
+            StatusCode::UNAUTHORIZED
+        );
+        let mut headers = HeaderMap::new();
+        headers.insert("Authorization", "Bearer token".parse().unwrap());
+        let resp = list_instances(State(state), headers).await.unwrap().0;
+        assert_eq!(resp.instances.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_start_instance_unknown_destination() {
+        let mgr = Arc::new(InstanceManager::new());
+        let state = state_with(mgr, None);
+        let resp = start_instance(State(state), HeaderMap::new(), Path("ghost".into()))
+            .await
+            .unwrap()
+            .0;
+        assert_eq!(resp.status, "not_found");
+        assert!(resp.message.contains("ghost"));
+    }
+
+    #[tokio::test]
+    async fn test_start_instance_success_and_idempotent() {
+        let mgr = Arc::new(InstanceManager::new());
+        register_instance(&mgr, "db1");
+        let state = state_with(mgr.clone(), None);
+        let resp = start_instance(State(state), HeaderMap::new(), Path("db1".into()))
+            .await
+            .unwrap()
+            .0;
+        assert_eq!(resp.status, "ok");
+        assert!(resp.message.contains("started"));
+        assert!(mgr.get("db1").unwrap().is_running());
+        // Starting an already-running instance is a no-op success.
+        let state = state_with(mgr.clone(), None);
+        let resp = start_instance(State(state), HeaderMap::new(), Path("db1".into()))
+            .await
+            .unwrap()
+            .0;
+        assert_eq!(resp.status, "ok");
+        assert!(mgr.get("db1").unwrap().is_running());
+    }
+
+    #[tokio::test]
+    async fn test_stop_instance_success_and_not_found() {
+        let mgr = Arc::new(InstanceManager::new());
+        register_instance(&mgr, "db1");
+        mgr.get("db1").unwrap().start().await.unwrap();
+        let state = state_with(mgr.clone(), None);
+        let resp = stop_instance(State(state), HeaderMap::new(), Path("db1".into()))
+            .await
+            .unwrap()
+            .0;
+        assert_eq!(resp.status, "ok");
+        assert!(!mgr.get("db1").unwrap().is_running());
+        let state = state_with(mgr, None);
+        let resp = stop_instance(State(state), HeaderMap::new(), Path("nope".into()))
+            .await
+            .unwrap()
+            .0;
+        assert_eq!(resp.status, "not_found");
+    }
+
 }

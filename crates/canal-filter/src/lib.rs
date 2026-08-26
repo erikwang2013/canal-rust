@@ -163,4 +163,68 @@ mod tests {
     fn test_invalid_regex_returns_error() {
         assert!(EventFilter::new("[").is_err());
     }
+
+    #[test]
+    fn test_pattern_too_long_returns_error() {
+        let long = "x".repeat(MAX_FILTER_LEN + 1);
+        let err = EventFilter::new(&long).unwrap_err();
+        assert!(err.to_string().contains("pattern too long"));
+    }
+
+    #[test]
+    fn test_blacklist_too_long_returns_error() {
+        let long = "x".repeat(MAX_FILTER_LEN + 1);
+        let err = EventFilter::with_blacklist(".*\\..*", &long).unwrap_err();
+        assert!(err.to_string().contains("blacklist too long"));
+    }
+
+    #[test]
+    fn test_pattern_at_max_length_is_ok() {
+        let max = "x".repeat(MAX_FILTER_LEN);
+        assert!(EventFilter::new(&max).is_ok());
+    }
+
+    #[test]
+    fn test_empty_blacklist_yields_none() {
+        let filter = EventFilter::with_blacklist(".*\\..*", "").unwrap();
+        assert!(filter.exclude.is_none());
+    }
+
+    #[test]
+    fn test_matching_is_case_sensitive() {
+        let filter = EventFilter::new("Users").unwrap();
+        assert!(!filter.matches(&make_event("test_db", "users")));
+        assert!(filter.matches(&make_event("test_db", "Users")));
+    }
+
+    #[test]
+    fn test_blacklist_matches_substring() {
+        // Regex is_match: the blacklist matches any substring of "schema.table"
+        let filter = EventFilter::with_blacklist(".*\\..*", "log").unwrap();
+        assert!(!filter.matches(&make_event("test_db", "logs")));
+        assert!(filter.matches(&make_event("test_db", "users")));
+    }
+
+    #[test]
+    fn test_blacklist_wins_over_include() {
+        // Even if the include pattern matches, the blacklist takes precedence
+        let filter = EventFilter::with_blacklist("test_db\\..*", "test_db\\.users").unwrap();
+        assert!(!filter.matches(&make_event("test_db", "users")));
+        assert!(filter.matches(&make_event("test_db", "orders")));
+    }
+
+    #[test]
+    fn test_empty_schema_table_matches_all_pattern() {
+        // ".*\\..*" matches the "." formed by empty schema and empty table
+        let filter = EventFilter::new(".*\\..*").unwrap();
+        assert!(filter.matches(&make_event("", "")));
+    }
+
+    #[test]
+    fn test_filter_is_clone_and_debug() {
+        let filter = EventFilter::new("test_db\\..*").unwrap();
+        let cloned = filter.clone();
+        assert!(cloned.matches(&make_event("test_db", "users")));
+        let _ = format!("{:?}", filter);
+    }
 }
