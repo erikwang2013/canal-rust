@@ -134,7 +134,10 @@ mod tests {
     fn test_mysql_value_to_string_numerics() {
         assert_eq!(mysql_value_to_string(&MySqlValue::TinyInt(255)), "255");
         assert_eq!(mysql_value_to_string(&MySqlValue::SmallInt(65535)), "65535");
-        assert_eq!(mysql_value_to_string(&MySqlValue::MediumInt(16_777_215)), "16777215");
+        assert_eq!(
+            mysql_value_to_string(&MySqlValue::MediumInt(16_777_215)),
+            "16777215"
+        );
         assert_eq!(mysql_value_to_string(&MySqlValue::Int(42)), "42");
         assert_eq!(
             mysql_value_to_string(&MySqlValue::BigInt(u64::MAX)),
@@ -142,8 +145,14 @@ mod tests {
         );
         assert_eq!(mysql_value_to_string(&MySqlValue::Float(1.5)), "1.5");
         assert_eq!(mysql_value_to_string(&MySqlValue::Double(-2.25)), "-2.25");
-        assert_eq!(mysql_value_to_string(&MySqlValue::Decimal("123.45".into())), "123.45");
-        assert_eq!(mysql_value_to_string(&MySqlValue::String("hello".into())), "hello");
+        assert_eq!(
+            mysql_value_to_string(&MySqlValue::Decimal("123.45".into())),
+            "123.45"
+        );
+        assert_eq!(
+            mysql_value_to_string(&MySqlValue::String("hello".into())),
+            "hello"
+        );
         assert_eq!(mysql_value_to_string(&MySqlValue::Enum(3)), "3");
         assert_eq!(mysql_value_to_string(&MySqlValue::Set(5)), "5");
         assert_eq!(mysql_value_to_string(&MySqlValue::Year(2024)), "2024");
@@ -152,9 +161,15 @@ mod tests {
     #[test]
     fn test_mysql_value_to_string_blob() {
         // Valid UTF-8 blobs are decoded as text
-        assert_eq!(mysql_value_to_string(&MySqlValue::Blob(b"plain text".to_vec())), "plain text");
+        assert_eq!(
+            mysql_value_to_string(&MySqlValue::Blob(b"plain text".to_vec())),
+            "plain text"
+        );
         // Invalid UTF-8 blobs fall back to lowercase hex
-        assert_eq!(mysql_value_to_string(&MySqlValue::Blob(vec![0xff, 0x00, 0xab])), "ff00ab");
+        assert_eq!(
+            mysql_value_to_string(&MySqlValue::Blob(vec![0xff, 0x00, 0xab])),
+            "ff00ab"
+        );
         // Empty blob
         assert_eq!(mysql_value_to_string(&MySqlValue::Blob(vec![])), "");
     }
@@ -175,15 +190,28 @@ mod tests {
     #[test]
     fn test_mysql_value_to_string_temporal() {
         assert_eq!(
-            mysql_value_to_string(&MySqlValue::Date(Date { year: 2024, month: 1, day: 31 })),
+            mysql_value_to_string(&MySqlValue::Date(Date {
+                year: 2024,
+                month: 1,
+                day: 31
+            })),
             "2024-01-31"
         );
         assert_eq!(
-            mysql_value_to_string(&MySqlValue::Date(Date { year: 7, month: 3, day: 2 })),
+            mysql_value_to_string(&MySqlValue::Date(Date {
+                year: 7,
+                month: 3,
+                day: 2
+            })),
             "0007-03-02"
         );
         assert_eq!(
-            mysql_value_to_string(&MySqlValue::Time(Time { hour: 10, minute: 30, second: 59, millis: 0 })),
+            mysql_value_to_string(&MySqlValue::Time(Time {
+                hour: 10,
+                minute: 30,
+                second: 59,
+                millis: 0
+            })),
             "10:30:59"
         );
         assert_eq!(
@@ -240,7 +268,10 @@ mod tests {
         assert_eq!(infos[0].name, "id");
         assert_eq!(infos[1].name, "name");
         assert!(infos[0].is_key, "simple_primary_keys idx 0 must be key");
-        assert!(infos[1].is_key, "primary_keys_with_prefix idx 1 must be key");
+        assert!(
+            infos[1].is_key,
+            "primary_keys_with_prefix idx 1 must be key"
+        );
         assert!(!infos[2].is_key);
         assert!(!infos[2].is_nullable);
     }

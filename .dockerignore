@@ -1,0 +1,20 @@
+# Build artifacts — the whole point of this file. Build context is the repo
+# root (see docker/docker-compose.yml `context: ..`), and target/ is ~24 GB.
+target/
+
+# VCS
+.git/
+
+# Agent / editor tooling and local state (not needed to compile)
+.claude/
+.claude-flow/
+.swarm/
+.mcp.json
+ruvector.db
+*.log
+.env
+
+# Documentation and CI config are not part of the image build
+docs/
+.github/
+*.md

@@ -15,6 +15,8 @@ pub struct MemoryEventStore {
     batch_id_seq: AtomicI64,
     latest_position: RwLock<Option<LogPosition>>,
     first_position: RwLock<Option<LogPosition>>,
+    /// Highest position dropped by eviction; None until the first drop.
+    evicted_watermark: RwLock<Option<LogPosition>>,
     running: AtomicBool,
     notify: Notify,
 }
@@ -30,6 +32,7 @@ impl MemoryEventStore {
             batch_id_seq: AtomicI64::new(0),
             latest_position: RwLock::new(None),
             first_position: RwLock::new(None),
+            evicted_watermark: RwLock::new(None),
             running: AtomicBool::new(false),
             notify: Notify::new(),
         }
@@ -44,22 +47,43 @@ impl MemoryEventStore {
 
         let mut buffer = self.buffer.lock_or_recover();
 
+        // Highest position dropped by this put_batch, if any (eviction watermark)
+        let mut evicted: Option<LogPosition> = None;
+
         // Batch-evict overflow: drain n oldest events at once
         let total = buffer.len() + events.len();
         if total > self.capacity {
             let drain_count = (total - self.capacity).min(buffer.len());
+            if drain_count > 0 {
+                let last_dropped = &buffer[drain_count - 1];
+                evicted = Some(LogPosition::new(
+                    &last_dropped.journal_name,
+                    last_dropped.position,
+                ));
+            }
             buffer.drain(..drain_count);
         }
         // If a single batch exceeds capacity, keep only the tail-most events
         if events.len() > self.capacity {
-            let skip = events.len() - self.capacity;
+            let original_len = events.len();
+            let skip = original_len - self.capacity;
             warn!(
                 "Oversized batch: {} of {} events dropped (capacity={})",
-                skip,
-                skip + events.len(),
-                self.capacity
+                skip, original_len, self.capacity
             );
+            let last_dropped = &events[skip - 1];
+            let dropped = LogPosition::new(&last_dropped.journal_name, last_dropped.position);
+            if evicted.as_ref().is_none_or(|cur| dropped > *cur) {
+                evicted = Some(dropped);
+            }
             events = events.split_off(skip);
+        }
+
+        if let Some(pos) = evicted {
+            let mut watermark = self.evicted_watermark.write_or_recover();
+            if watermark.as_ref().is_none_or(|cur| pos > *cur) {
+                *watermark = Some(pos);
+            }
         }
 
         // Compute positions AFTER truncation (B1 fix)
@@ -104,12 +128,22 @@ impl MemoryEventStore {
                 let mut buffer = self.buffer.lock_or_recover();
                 let slice = buffer.make_contiguous();
 
-                // partition_point: find first element > target (exclusive start cursor).
-                // Correctly handles duplicate positions from multi-row binlog events.
-                let target = (start_suffix, start_pos);
-                let start_idx = slice.partition_point(
-                    |e| (binlog_suffix(&e.journal_name), e.position) <= target,
-                );
+                let start_idx = if let Some(ts) = start.timestamp {
+                    // Timestamp cursor (ClientAuth.start_timestamp): select by
+                    // execute_time and ignore the position, which is unset on
+                    // such a request — an empty journal_name yields suffix
+                    // u64::MAX and would exclude every event.
+                    slice
+                        .iter()
+                        .position(|e| e.execute_time >= ts)
+                        .unwrap_or(slice.len())
+                } else {
+                    // partition_point: find first element > target (exclusive start cursor).
+                    // Correctly handles duplicate positions from multi-row binlog events.
+                    let target = (start_suffix, start_pos);
+                    slice
+                        .partition_point(|e| (binlog_suffix(&e.journal_name), e.position) <= target)
+                };
 
                 if start_idx < slice.len() {
                     let batch_id = self.batch_id_seq.fetch_add(1, Ordering::SeqCst);
@@ -121,9 +155,7 @@ impl MemoryEventStore {
                     let last_key = (binlog_suffix(&last.journal_name), last.position);
                     let end = slice[base_end..]
                         .iter()
-                        .take_while(|e| {
-                            (binlog_suffix(&e.journal_name), e.position) == last_key
-                        })
+                        .take_while(|e| (binlog_suffix(&e.journal_name), e.position) == last_key)
                         .count()
                         + base_end;
                     let events: Vec<CanalEvent> = slice[start_idx..end].to_vec();
@@ -158,6 +190,14 @@ impl MemoryEventStore {
 
     pub fn first_position(&self) -> Option<LogPosition> {
         self.first_position.read_or_recover().clone()
+    }
+
+    /// Highest position ever dropped by eviction, or None if nothing was dropped.
+    ///
+    /// A reader whose cursor is below this watermark has permanently lost events
+    /// and must be told instead of being served a gap.
+    pub fn evicted_watermark(&self) -> Option<LogPosition> {
+        self.evicted_watermark.read_or_recover().clone()
     }
 }
 
@@ -396,6 +436,68 @@ mod tests {
             .unwrap();
         assert_eq!(store.first_position().unwrap().position, 200);
         assert_eq!(store.latest_position().unwrap().position, 300);
+    }
+
+    #[tokio::test]
+    async fn test_get_batch_with_timestamp_cursor_selects_by_execute_time() {
+        // ClientAuth.start_timestamp sends an empty journal_name; the cursor
+        // must select by execute_time, not by position (binlog_suffix("") is
+        // u64::MAX and would otherwise match nothing at all).
+        let store = MemoryEventStore::new(1024);
+        let mut early = make_event("mysql-bin.000001", 100);
+        early.execute_time = 1000;
+        let mut late = make_event("mysql-bin.000001", 200);
+        late.execute_time = 2000;
+        store.put_batch(vec![early, late]).await.unwrap();
+
+        let start = LogPosition {
+            journal_name: String::new(),
+            position: 0,
+            timestamp: Some(1500),
+            server_id: None,
+            gtid: None,
+        };
+        let batch = store.get_batch(&start, 10).await.unwrap();
+        assert_eq!(
+            batch.len(),
+            1,
+            "timestamp cursor must not starve the client"
+        );
+        assert_eq!(batch.events[0].position, 200);
+    }
+
+    #[tokio::test]
+    async fn test_evicted_watermark_none_until_eviction() {
+        let store = MemoryEventStore::new(2);
+        store
+            .put_batch(vec![
+                make_event("mysql-bin.000001", 100),
+                make_event("mysql-bin.000001", 200),
+            ])
+            .await
+            .unwrap();
+        assert!(store.evicted_watermark().is_none());
+
+        store
+            .put_batch(vec![make_event("mysql-bin.000001", 300)])
+            .await
+            .unwrap();
+        assert_eq!(store.evicted_watermark().unwrap().position, 100);
+    }
+
+    #[tokio::test]
+    async fn test_evicted_watermark_covers_oversized_batch_drop() {
+        let store = MemoryEventStore::new(2);
+        store
+            .put_batch(vec![
+                make_event("mysql-bin.000001", 100),
+                make_event("mysql-bin.000001", 200),
+                make_event("mysql-bin.000001", 300),
+            ])
+            .await
+            .unwrap();
+        // Only the head (position 100) was dropped by the oversized-batch path
+        assert_eq!(store.evicted_watermark().unwrap().position, 100);
     }
 
     #[tokio::test]

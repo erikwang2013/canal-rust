@@ -24,7 +24,6 @@ use crate::session::SessionManager;
 
 const MAX_CONNECTIONS: usize = 1024;
 
-
 /// Canal TCP server.
 pub struct CanalServer {
     store: Arc<MemoryEventStore>,
@@ -49,8 +48,15 @@ impl CanalServer {
         }
     }
 
+    /// Enable token authentication. An empty (or whitespace-only) token is
+    /// ignored: it would accept an empty password while looking like auth is on.
     pub fn with_auth(mut self, token: String) -> Self {
-        self.auth_token = Some(token);
+        if token.trim().is_empty() {
+            warn!("Ignoring empty auth token — authentication stays disabled");
+            self.auth_token = None;
+        } else {
+            self.auth_token = Some(token);
+        }
         self
     }
 
@@ -94,14 +100,24 @@ impl CanalServer {
             let auth_token = self.auth_token.clone();
             let idle_timeout = self.idle_timeout_secs;
 
-            self.client_tasks.lock().await.spawn(async move {
+            let mut tasks = self.client_tasks.lock().await;
+            tasks.spawn(async move {
                 let _permit = permit;
                 let transport = Framed::new(socket, CanalCodec::new());
-                if let Err(e) = handle_client(transport, store, sessions, auth_token, idle_timeout).await {
+                if let Err(e) =
+                    handle_client(transport, store, sessions, auth_token, idle_timeout).await
+                {
                     error!("Client {} error: {}", peer_addr, e);
                 }
                 info!("Client {} disconnected", peer_addr);
             });
+            // Reap finished tasks: tokio keeps a completed task's output until
+            // it is joined, so the set would otherwise grow per connection served.
+            while let Some(result) = tasks.try_join_next() {
+                if let Err(e) = result {
+                    error!("Client task panicked: {}", e);
+                }
+            }
         }
 
         // Await all client tasks to finish gracefully, with a timeout
@@ -232,6 +248,14 @@ async fn handle_auth(
     let auth = ClientAuth::decode(&packet.body[..])
         .map_err(|e| CanalError::Protocol(format!("failed to decode ClientAuth: {}", e)))?;
 
+    // One identity per connection: a second ClientAuthentication would register
+    // an extra session entry that is never unregistered on disconnect, and a
+    // later client reusing that client_id would inherit its ack cursor.
+    if state.authenticated {
+        send_ack_err(transport, "already authenticated").await?;
+        return Ok(());
+    }
+
     if let Some(ref token) = auth_token {
         let pass_bytes = &auth.password;
         let token_bytes = token.as_bytes();
@@ -333,7 +357,11 @@ async fn handle_sub(
     if sub.filter.len() > MAX_FILTER_PATTERN_LEN {
         return send_ack_err(
             transport,
-            &format!("filter pattern too long: {} > {}", sub.filter.len(), MAX_FILTER_PATTERN_LEN),
+            &format!(
+                "filter pattern too long: {} > {}",
+                sub.filter.len(),
+                MAX_FILTER_PATTERN_LEN
+            ),
         )
         .await;
     }
@@ -386,12 +414,39 @@ async fn handle_get(
         .client_id
         .clone()
         .ok_or_else(|| CanalError::Protocol("not authenticated — client_id missing".into()))?;
-    let start = state.current_pos.clone().unwrap_or_else(|| {
-        sessions
-            .get(&cid)
-            .and_then(|s| s.last_ack_position.lock_or_recover().clone())
-            .unwrap_or_else(|| LogPosition::new(DEFAULT_START_JOURNAL, DEFAULT_START_POSITION))
-    });
+    let session_ack = sessions
+        .get(&cid)
+        .and_then(|s| s.last_ack_position.lock_or_recover().clone());
+    // A client that carries its own cursor. A fresh client (no current_pos, no
+    // stored ack) starts at DEFAULT_START_* and has lost nothing even when that
+    // position is below the watermark.
+    let has_own_cursor = state.current_pos.is_some() || session_ack.is_some();
+    let start = state
+        .current_pos
+        .clone()
+        .or(session_ack)
+        .unwrap_or_else(|| LogPosition::new(DEFAULT_START_JOURNAL, DEFAULT_START_POSITION));
+
+    // Events between the client's cursor and the eviction watermark are gone:
+    // report that instead of silently serving a batch that skips them.
+    if has_own_cursor && start.timestamp.is_none() {
+        if let Some(watermark) = store.evicted_watermark() {
+            if start < watermark {
+                warn!(
+                    "Client {} cursor {} is below the eviction watermark {} — events were dropped",
+                    cid, start, watermark
+                );
+                return send_ack_err(
+                    transport,
+                    &format!(
+                        "cursor {} is below the eviction watermark {} — events were dropped, reset the subscription",
+                        start, watermark
+                    ),
+                )
+                .await;
+            }
+        }
+    }
 
     let events: Events = store.get_batch(&start, batch_size).await?;
 
@@ -400,14 +455,13 @@ async fn handle_get(
         state.current_pos = Some(events.position_range.end.clone());
         state.last_get_batch_id = events.batch_id;
         state.last_get_end_pos = Some(events.position_range.end.clone());
-        if let Some(ref pos) = state.current_pos {
-            sessions.update_position(&cid, pos.clone());
-        }
 
         // Apply per-client session filter (use cached compiled regex)
         let session = sessions.get(&cid);
         let pattern_re = session.as_ref().and_then(|s| s.compiled_pattern.as_ref());
-        let black_re = session.as_ref().and_then(|s| s.compiled_black_list.as_ref());
+        let black_re = session
+            .as_ref()
+            .and_then(|s| s.compiled_black_list.as_ref());
 
         let to_send: Vec<_> = events
             .events
@@ -421,15 +475,19 @@ async fn handle_get(
             .collect();
 
         if to_send.is_empty() {
-            transport.send(
-                Packet {
-                    r#type: PacketType::Messages as i32,
-                    body: msgs.encode_to_vec(),
-                    ..Default::default()
-                }
-                .encode_to_vec(),
-            )
-            .await?;
+            // Keep the store's batch id: the client acks the id it was sent, and
+            // handle_client_ack ignores acks for any other id.
+            msgs.batch_id = events.batch_id;
+            transport
+                .send(
+                    Packet {
+                        r#type: PacketType::Messages as i32,
+                        body: msgs.encode_to_vec(),
+                        ..Default::default()
+                    }
+                    .encode_to_vec(),
+                )
+                .await?;
             return Ok(());
         }
 
@@ -454,19 +512,19 @@ async fn handle_get(
 
 fn handle_client_ack(packet: &Packet, state: &mut ClientState, sessions: &SessionManager) {
     if let Ok(client_ack) = ClientAck::decode(&packet.body[..]) {
-        if let (Some(ref cid), Some(ref pos)) =
-            (&state.client_id, &state.last_get_end_pos)
-        {
-            state.last_ack_pos = Some(pos.clone());
-            sessions.update_ack(cid, pos.clone());
-            if client_ack.batch_id != 0
-                && client_ack.batch_id != state.last_get_batch_id
-            {
+        if let (Some(ref cid), Some(ref pos)) = (&state.client_id, &state.last_get_end_pos) {
+            // Only the batch the client was last sent may be acked: a stale or
+            // unknown batch_id would advance the durable cursor past events the
+            // client never confirmed.
+            if client_ack.batch_id != state.last_get_batch_id {
                 warn!(
-                    "Client {} acked batch {} but last sent was {}",
+                    "Client {} acked batch {} but last sent was {} — ack ignored",
                     cid, client_ack.batch_id, state.last_get_batch_id,
                 );
+                return;
             }
+            state.last_ack_pos = Some(pos.clone());
+            sessions.update_ack(cid, pos.clone());
         }
     }
 }

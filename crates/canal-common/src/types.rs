@@ -109,8 +109,8 @@ impl EventType {
             3 => EventType::Delete,
             4 => EventType::Ddl,
             5 => EventType::Query,
-            7 => EventType::Ddl,       // server sends Ddl/Query/Rotate as Query=7
-            13 => EventType::Xid,       // server sends Xid as Xacommit=13
+            7 => EventType::Ddl,  // server sends Ddl/Query/Rotate as Query=7
+            13 => EventType::Xid, // server sends Xid as Xacommit=13
             15 => EventType::Heartbeat, // server sends Heartbeat as Mheartbeat=15
             _ => EventType::Unknown(v),
         }

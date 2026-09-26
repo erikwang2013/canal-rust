@@ -133,7 +133,12 @@ async fn test_sink_connector_failure_does_not_fail_sink() {
 async fn test_sink_with_metrics_constructor() {
     let store = Arc::new(MemoryEventStore::new(1024));
     let filter = EventFilter::new(".*\\..*").unwrap();
-    let sink = DefaultEventSink::with_metrics(store.clone(), filter, vec![], Arc::new(CanalMetrics::new()));
+    let sink = DefaultEventSink::with_metrics(
+        store.clone(),
+        filter,
+        vec![],
+        Arc::new(CanalMetrics::new()),
+    );
 
     let batch = sink.sink(vec![make_event("db", "tbl", 100)]).await.unwrap();
     assert!(batch.batch_id >= 0);

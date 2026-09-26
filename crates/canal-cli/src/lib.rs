@@ -22,7 +22,7 @@ pub struct CanalSection {
     pub start_journal_name: String,
     #[serde(default = "default_start_position")]
     pub start_position: u64,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_auth_token")]
     pub auth_token: Option<String>,
     pub mysql: MysqlConfig,
     pub store: StoreSection,
@@ -52,6 +52,21 @@ impl Default for FilterSection {
 
 pub fn default_filter_pattern() -> String {
     ".*\\..*".to_string()
+}
+
+/// Deserialize `auth_token`, treating an empty (or whitespace-only) string as
+/// "not set".
+///
+/// `canal.yaml.example` documents `auth_token: ""` as "留空 = 不启用认证", but a
+/// bare `Option<String>` deserializes that to `Some("")` — which would enable
+/// authentication with an empty secret. Normalizing here, at the trust
+/// boundary, keeps the parsed config honest for every caller.
+fn deserialize_auth_token<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let token = Option::<String>::deserialize(deserializer)?;
+    Ok(token.filter(|t| !t.trim().is_empty()))
 }
 
 pub fn default_server_id() -> u64 {
@@ -109,6 +124,10 @@ pub struct ServerSection {
     pub bind: String,
     #[serde(default = "default_metrics_bind")]
     pub metrics_bind: String,
+    /// Explicit Admin API bind address. When absent, the Admin API stays on
+    /// loopback at the Canal port + 1 (see `run_server` in main.rs).
+    #[serde(default)]
+    pub admin_bind: Option<String>,
     #[serde(default = "default_idle_timeout")]
     pub idle_timeout_secs: u64,
 }
@@ -144,11 +163,30 @@ pub fn default_log_format() -> String {
 
 // -- CLI --
 
+/// Project mascot: 小运 the Canal Crab — keeper of the lock on the data canal.
+/// It stands on the lock wall with one claw on the paddle wheel and the other
+/// carrying a change event downstream. `docs/assets/canal-pet.svg` is the
+/// vector original; this is the terminal-sized reduction.
+pub const CANAL_CRAB: &str = r#"     \    \              /    /
+      \    \____________/    /
+    ___\_                  _/___
+   /     o                o     \
+  |               __              |
+   \          \________/         /
+    '.__________________________.'
+   __/   /     |      |     \   \__
+  |==================================|
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"#;
+
+/// Name of the mascot, for greetings in logs and help text.
+pub const PET_NAME: &str = "小运 (Canal Crab)";
+
 #[derive(Parser)]
 #[command(
     name = "canal-rust",
     version = env!("CARGO_PKG_VERSION"),
-    about = "MySQL binlog subscription tool"
+    about = "MySQL binlog subscription tool",
+    before_help = CANAL_CRAB
 )]
 pub struct Cli {
     #[command(subcommand)]
@@ -180,6 +218,37 @@ pub fn load_config(config_path: &Path) -> Result<CanalConfig> {
     }
     serde_yaml::from_str(&content)
         .with_context(|| format!("Failed to parse config: {}", config_path.display()))
+}
+
+/// Resolve the Admin API bind address.
+///
+/// An explicit `server.admin_bind` is used verbatim (that is what makes the
+/// Admin API reachable from outside the container in Docker); when it is absent
+/// the Admin API stays on loopback at the Canal port + 1, as before.
+pub fn resolve_admin_bind(
+    configured: Option<&str>,
+    canal_bind: std::net::SocketAddr,
+) -> Result<String> {
+    let admin_bind = match configured {
+        Some(explicit) => explicit.to_string(),
+        None => {
+            let admin_port = canal_bind
+                .port()
+                .checked_add(1)
+                .context("Admin port overflow: main port 65535 has no room for admin")?;
+            format!("127.0.0.1:{}", admin_port)
+        }
+    };
+    let addr: std::net::SocketAddr = admin_bind
+        .parse()
+        .with_context(|| format!("Invalid admin bind address: {}", admin_bind))?;
+    if addr.ip().is_unspecified() {
+        tracing::warn!(
+            "Admin API binding to {} -- ensure firewall protection",
+            admin_bind
+        );
+    }
+    Ok(admin_bind)
 }
 
 pub fn setup_logging(logging: &LogSection) {

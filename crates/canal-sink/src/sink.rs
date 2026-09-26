@@ -321,7 +321,9 @@ mod tests {
 
         // Send 3 batches in order
         for i in 1..=3 {
-            sink.sink(vec![make_event("db", "tbl", i * 100)]).await.unwrap();
+            sink.sink(vec![make_event("db", "tbl", i * 100)])
+                .await
+                .unwrap();
         }
 
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;

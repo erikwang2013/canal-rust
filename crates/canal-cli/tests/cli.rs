@@ -4,9 +4,10 @@
 //! require a live MySQL server; `setup_logging` is not covered because
 //! installing a global tracing subscriber can only happen once per process.
 
+use std::net::SocketAddr;
 use std::path::PathBuf;
 
-use canal_cli::{load_config, Cli, Commands, MysqlConfig};
+use canal_cli::{load_config, resolve_admin_bind, Cli, Commands, MysqlConfig};
 use clap::Parser;
 
 const FULL_CONFIG: &str = r#"
@@ -25,6 +26,7 @@ canal:
   server:
     bind: 0.0.0.0:11111
     metrics_bind: 0.0.0.0:9090
+    admin_bind: 0.0.0.0:11112
     idle_timeout_secs: 7200
   filter:
     pattern: 'testdb\..*'
@@ -72,6 +74,7 @@ fn parse_full_config() {
     assert_eq!(c.store.buffer_size, 4096);
     assert_eq!(c.server.bind, "0.0.0.0:11111");
     assert_eq!(c.server.metrics_bind, "0.0.0.0:9090");
+    assert_eq!(c.server.admin_bind.as_deref(), Some("0.0.0.0:11112"));
     assert_eq!(c.server.idle_timeout_secs, 7200);
     assert_eq!(c.filter.pattern, "testdb\\..*");
     assert_eq!(c.filter.black_list, "testdb\\.secret");
@@ -91,6 +94,7 @@ fn parse_minimal_config_applies_defaults() {
     assert_eq!(c.store.buffer_size, 16384);
     assert_eq!(c.server.bind, "127.0.0.1:11111");
     assert_eq!(c.server.metrics_bind, "127.0.0.1:9090");
+    assert_eq!(c.server.admin_bind, None);
     assert_eq!(c.server.idle_timeout_secs, 3600);
     assert_eq!(c.filter.pattern, ".*\\..*");
     assert!(c.filter.black_list.is_empty());
@@ -148,12 +152,71 @@ fn parse_rejects_wrong_value_type() {
 }
 
 #[test]
-fn parse_accepts_empty_auth_token_value() {
+fn parse_treats_empty_auth_token_as_disabled() {
+    // canal.yaml.example documents `auth_token: ""` as "留空 = 不启用认证":
+    // an empty (or whitespace-only) token must parse as "no auth", never as
+    // `Some("")` — which would turn on auth with an empty secret.
+    for empty in ["''", "'   '"] {
+        let config: canal_cli::CanalConfig = serde_yaml::from_str(&format!(
+            "canal:\n  auth_token: {empty}\n  mysql:\n    host: h\n    username: u\n    password: p\n  store: {{}}\n  server: {{}}\n  logging: {{}}\n",
+        ))
+        .unwrap();
+        assert_eq!(config.canal.auth_token, None, "token was {empty}");
+    }
+}
+
+#[test]
+fn parse_accepts_non_empty_auth_token() {
     let config: canal_cli::CanalConfig = serde_yaml::from_str(
-        "canal:\n  auth_token: ''\n  mysql:\n    host: h\n    username: u\n    password: p\n  store: {}\n  server: {}\n  logging: {}\n",
+        "canal:\n  auth_token: ' s3cret '\n  mysql:\n    host: h\n    username: u\n    password: p\n  store: {}\n  server: {}\n  logging: {}\n",
     )
     .unwrap();
-    assert_eq!(config.canal.auth_token, Some(String::new()));
+    assert_eq!(config.canal.auth_token.as_deref(), Some(" s3cret "));
+}
+
+// ── admin bind resolution ────────────────────────────────────
+
+#[test]
+fn admin_bind_defaults_to_loopback_next_to_canal_port() {
+    let bind: SocketAddr = "127.0.0.1:11111".parse().unwrap();
+    assert_eq!(resolve_admin_bind(None, bind).unwrap(), "127.0.0.1:11112");
+    // The derived address is always loopback, whatever the main bind is.
+    let public: SocketAddr = "0.0.0.0:11111".parse().unwrap();
+    assert_eq!(resolve_admin_bind(None, public).unwrap(), "127.0.0.1:11112");
+}
+
+#[test]
+fn admin_bind_explicit_value_is_used_verbatim() {
+    let bind: SocketAddr = "127.0.0.1:11111".parse().unwrap();
+    assert_eq!(
+        resolve_admin_bind(Some("0.0.0.0:11112"), bind).unwrap(),
+        "0.0.0.0:11112"
+    );
+    assert_eq!(
+        resolve_admin_bind(Some("[::1]:8081"), bind).unwrap(),
+        "[::1]:8081"
+    );
+}
+
+#[test]
+fn admin_bind_malformed_value_fails_clearly() {
+    let bind: SocketAddr = "127.0.0.1:11111".parse().unwrap();
+    let err = resolve_admin_bind(Some("not-an-address"), bind).unwrap_err();
+    assert!(
+        err.to_string().contains("Invalid admin bind address"),
+        "got: {err}"
+    );
+    assert!(err.to_string().contains("not-an-address"), "got: {err}");
+}
+
+#[test]
+fn admin_bind_overflow_on_max_port() {
+    let bind: SocketAddr = "127.0.0.1:65535".parse().unwrap();
+    let err = resolve_admin_bind(None, bind).unwrap_err();
+    assert!(
+        err.to_string().contains("Admin port overflow"),
+        "got: {err}"
+    );
 }
 
 // ── mysql config debug redaction ─────────────────────────────
@@ -191,7 +254,10 @@ fn load_config_from_file() {
 #[test]
 fn load_config_missing_file() {
     let err = load_config(&PathBuf::from("/nonexistent/canal-cli-test.yaml")).unwrap_err();
-    assert!(err.to_string().contains("Failed to read config"), "got: {err}");
+    assert!(
+        err.to_string().contains("Failed to read config"),
+        "got: {err}"
+    );
 }
 
 #[test]
@@ -203,7 +269,10 @@ fn load_config_rejects_oversized_file() {
     // One byte over the 10MB limit.
     std::fs::write(&path, vec![b'x'; 10 * 1024 * 1024 + 1]).unwrap();
     let err = load_config(&path).unwrap_err();
-    assert!(err.to_string().contains("exceeds maximum size"), "got: {err}");
+    assert!(
+        err.to_string().contains("exceeds maximum size"),
+        "got: {err}"
+    );
     std::fs::remove_file(&path).ok();
 }
 
@@ -211,7 +280,10 @@ fn load_config_rejects_oversized_file() {
 fn load_config_invalid_content() {
     let path = temp_config_path("invalid", "not: [valid: yaml");
     let err = load_config(&path).unwrap_err();
-    assert!(err.to_string().contains("Failed to parse config"), "got: {err}");
+    assert!(
+        err.to_string().contains("Failed to parse config"),
+        "got: {err}"
+    );
     std::fs::remove_file(&path).ok();
 }
 
@@ -266,4 +338,12 @@ fn cli_rejects_unknown_flag() {
         Err(e) => assert!(e.to_string().contains("unexpected"), "got: {e}"),
         Ok(_) => panic!("expected parse error"),
     }
+}
+
+#[test]
+fn cli_help_carries_the_mascot() {
+    use clap::CommandFactory;
+    let help = Cli::command().render_help().to_string();
+    assert!(help.contains(canal_cli::CANAL_CRAB), "help lost the crab");
+    assert!(help.contains("server"), "help lost the subcommands");
 }

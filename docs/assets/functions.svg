@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 700" width="1240" height="700" role="img">
+  <rect width="1240" height="700" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="1240" height="4" rx="0" fill="#E8552B" stroke="none" stroke-width="1.5"/>
+  <text x="40" y="52" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="27" font-weight="700" fill="#0F172A" text-anchor="start">Canal Rust · 功能设计</text>
+  <text x="40" y="80" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="13" font-weight="400" fill="#64748B" text-anchor="start">14 项能力，对应 14 个 crate —— 从 binlog 接入到消费确认的完整链路</text>
+  <text x="1200" y="52" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#B0301B" text-anchor="end">小运 / Canal Crab</text>
+  <rect x="40" y="118" width="275" height="462" rx="16" fill="#FFFFFF" stroke="#F5C4A2" stroke-width="1.6"/>
+  <rect x="40" y="118" width="275" height="44" rx="16" fill="#FFF3EA" stroke="#F5C4A2" stroke-width="1.6"/>
+  <rect x="40" y="148" width="275" height="14" rx="12" fill="#FFF3EA" stroke="none" stroke-width="1.5"/>
+  <rect x="40" y="118" width="275" height="4" rx="2" fill="#C2410C" stroke="none" stroke-width="1.5"/>
+  <text x="177.5" y="148" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="14" font-weight="700" fill="#C2410C" text-anchor="middle">数据接入</text>
+  <rect x="52" y="209.0" width="251" height="96" rx="12" fill="#FFF3EA" stroke="#FFFFFF" stroke-width="1.4"/>
+  <rect x="52" y="209.0" width="4" height="96" rx="2" fill="#C2410C" stroke="none" stroke-width="1.5"/>
+  <circle cx="92" cy="243.0" r="17" fill="#C2410C"/>
+  <text x="92" y="247.0" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">BIN</text>
+  <text x="120" y="248.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#0F172A" text-anchor="start">binlog 实时解析</text>
+  <text x="120" y="269.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">mysql_cdc 连接 MySQL 主库</text>
+  <text x="120" y="287.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">支持 MySQL 5.1~8.0 / MariaDB</text>
+  <rect x="52" y="323.0" width="251" height="96" rx="12" fill="#FFF3EA" stroke="#FFFFFF" stroke-width="1.4"/>
+  <rect x="52" y="323.0" width="4" height="96" rx="2" fill="#C2410C" stroke="none" stroke-width="1.5"/>
+  <circle cx="92" cy="357.0" r="17" fill="#C2410C"/>
+  <text x="92" y="361.0" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">POS</text>
+  <text x="120" y="362.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#0F172A" text-anchor="start">位点管理</text>
+  <text x="120" y="383.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">position 与 GTID 双模式</text>
+  <text x="120" y="401.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">journal_name + offset 断点续传</text>
+  <rect x="52" y="437.0" width="251" height="96" rx="12" fill="#FFF3EA" stroke="#FFFFFF" stroke-width="1.4"/>
+  <rect x="52" y="437.0" width="4" height="96" rx="2" fill="#C2410C" stroke="none" stroke-width="1.5"/>
+  <circle cx="92" cy="471.0" r="17" fill="#C2410C"/>
+  <text x="92" y="475.0" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">DDL</text>
+  <text x="120" y="476.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#0F172A" text-anchor="start">DDL 追踪</text>
+  <text x="120" y="497.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">表结构变更实时捕获</text>
+  <text x="120" y="515.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">TableMap 映射 + schema 缓存</text>
+  <rect x="335" y="118" width="275" height="462" rx="16" fill="#FFFFFF" stroke="#D0C2F4" stroke-width="1.6"/>
+  <rect x="335" y="118" width="275" height="44" rx="16" fill="#F4F0FD" stroke="#D0C2F4" stroke-width="1.6"/>
+  <rect x="335" y="148" width="275" height="14" rx="12" fill="#F4F0FD" stroke="none" stroke-width="1.5"/>
+  <rect x="335" y="118" width="275" height="4" rx="2" fill="#6D3FC4" stroke="none" stroke-width="1.5"/>
+  <text x="472.5" y="148" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="14" font-weight="700" fill="#6D3FC4" text-anchor="middle">数据处理</text>
+  <rect x="347" y="209.0" width="251" height="96" rx="12" fill="#F4F0FD" stroke="#FFFFFF" stroke-width="1.4"/>
+  <rect x="347" y="209.0" width="4" height="96" rx="2" fill="#6D3FC4" stroke="none" stroke-width="1.5"/>
+  <circle cx="387" cy="243.0" r="17" fill="#6D3FC4"/>
+  <text x="387" y="247.0" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">RE</text>
+  <text x="415" y="248.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#0F172A" text-anchor="start">表 / 库过滤</text>
+  <text x="415" y="269.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">正则 include / exclude</text>
+  <text x="415" y="287.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">黑白名单双层过滤</text>
+  <rect x="347" y="323.0" width="251" height="96" rx="12" fill="#F4F0FD" stroke="#FFFFFF" stroke-width="1.4"/>
+  <rect x="347" y="323.0" width="4" height="96" rx="2" fill="#6D3FC4" stroke="none" stroke-width="1.5"/>
+  <circle cx="387" cy="357.0" r="17" fill="#6D3FC4"/>
+  <text x="387" y="361.0" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">CVT</text>
+  <text x="415" y="362.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#0F172A" text-anchor="start">事件转换</text>
+  <text x="415" y="383.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">binlog 事件 → Canal Entry</text>
+  <text x="415" y="401.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">RowChange / Column 序列化</text>
+  <rect x="347" y="437.0" width="251" height="96" rx="12" fill="#F4F0FD" stroke="#FFFFFF" stroke-width="1.4"/>
+  <rect x="347" y="437.0" width="4" height="96" rx="2" fill="#6D3FC4" stroke="none" stroke-width="1.5"/>
+  <circle cx="387" cy="471.0" r="17" fill="#6D3FC4"/>
+  <text x="387" y="475.0" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">MUL</text>
+  <text x="415" y="476.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#0F172A" text-anchor="start">多实例隔离</text>
+  <text x="415" y="497.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">单进程多 destination</text>
+  <text x="415" y="515.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">各自独立 binlog / store / filter</text>
+  <rect x="630" y="118" width="275" height="462" rx="16" fill="#FFFFFF" stroke="#A3DED4" stroke-width="1.6"/>
+  <rect x="630" y="118" width="275" height="44" rx="16" fill="#E9F8F5" stroke="#A3DED4" stroke-width="1.6"/>
+  <rect x="630" y="148" width="275" height="14" rx="12" fill="#E9F8F5" stroke="none" stroke-width="1.5"/>
+  <rect x="630" y="118" width="275" height="4" rx="2" fill="#0F766E" stroke="none" stroke-width="1.5"/>
+  <text x="767.5" y="148" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="14" font-weight="700" fill="#0F766E" text-anchor="middle">数据输出</text>
+  <rect x="642" y="152.0" width="251" height="96" rx="12" fill="#E9F8F5" stroke="#FFFFFF" stroke-width="1.4"/>
+  <rect x="642" y="152.0" width="4" height="96" rx="2" fill="#0F766E" stroke="none" stroke-width="1.5"/>
+  <circle cx="682" cy="186.0" r="17" fill="#0F766E"/>
+  <text x="682" y="190.0" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">BUF</text>
+  <text x="710" y="191.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#0F172A" text-anchor="start">事件存储</text>
+  <text x="710" y="212.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">内存 ring buffer 环形缓冲</text>
+  <text x="710" y="230.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">容量溢出批量淘汰最旧事件</text>
+  <rect x="642" y="266.0" width="251" height="96" rx="12" fill="#E9F8F5" stroke="#FFFFFF" stroke-width="1.4"/>
+  <rect x="642" y="266.0" width="4" height="96" rx="2" fill="#0F766E" stroke="none" stroke-width="1.5"/>
+  <circle cx="682" cy="300.0" r="17" fill="#0F766E"/>
+  <text x="682" y="304.0" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">ACK</text>
+  <text x="710" y="305.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#0F172A" text-anchor="start">消费确认</text>
+  <text x="710" y="326.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">客户端 Ack 推进位点</text>
+  <text x="710" y="344.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">Rollback 回退重放</text>
+  <rect x="642" y="380.0" width="251" height="96" rx="12" fill="#E9F8F5" stroke="#FFFFFF" stroke-width="1.4"/>
+  <rect x="642" y="380.0" width="4" height="96" rx="2" fill="#0F766E" stroke="none" stroke-width="1.5"/>
+  <circle cx="682" cy="414.0" r="17" fill="#0F766E"/>
+  <text x="682" y="418.0" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">TCP</text>
+  <text x="710" y="419.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#0F172A" text-anchor="start">协议服务</text>
+  <text x="710" y="440.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">Canal wire protocol + protobuf</text>
+  <text x="710" y="458.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">长轮询 Get · 心跳 · 空闲超时</text>
+  <rect x="642" y="494.0" width="251" height="96" rx="12" fill="#E9F8F5" stroke="#FFFFFF" stroke-width="1.4"/>
+  <rect x="642" y="494.0" width="4" height="96" rx="2" fill="#0F766E" stroke="none" stroke-width="1.5"/>
+  <circle cx="682" cy="528.0" r="17" fill="#0F766E"/>
+  <text x="682" y="532.0" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">MQ</text>
+  <text x="710" y="533.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#0F172A" text-anchor="start">Kafka 连接器</text>
+  <text x="710" y="554.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">JSON flat message 输出</text>
+  <text x="710" y="572.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">与 store 并行的第二条通路</text>
+  <rect x="925" y="118" width="275" height="462" rx="16" fill="#FFFFFF" stroke="#EFD69B" stroke-width="1.6"/>
+  <rect x="925" y="118" width="275" height="44" rx="16" fill="#FFF8E8" stroke="#EFD69B" stroke-width="1.6"/>
+  <rect x="925" y="148" width="275" height="14" rx="12" fill="#FFF8E8" stroke="none" stroke-width="1.5"/>
+  <rect x="925" y="118" width="275" height="4" rx="2" fill="#B45309" stroke="none" stroke-width="1.5"/>
+  <text x="1062.5" y="148" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="14" font-weight="700" fill="#B45309" text-anchor="middle">运维支撑</text>
+  <rect x="937" y="152.0" width="251" height="96" rx="12" fill="#FFF8E8" stroke="#FFFFFF" stroke-width="1.4"/>
+  <rect x="937" y="152.0" width="4" height="96" rx="2" fill="#B45309" stroke="none" stroke-width="1.5"/>
+  <circle cx="977" cy="186.0" r="17" fill="#B45309"/>
+  <text x="977" y="190.0" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">API</text>
+  <text x="1005" y="191.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#0F172A" text-anchor="start">Admin REST API</text>
+  <text x="1005" y="212.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">axum 实现，实例启停 / 状态</text>
+  <text x="1005" y="230.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">/health · /api/instances</text>
+  <rect x="937" y="266.0" width="251" height="96" rx="12" fill="#FFF8E8" stroke="#FFFFFF" stroke-width="1.4"/>
+  <rect x="937" y="266.0" width="4" height="96" rx="2" fill="#B45309" stroke="none" stroke-width="1.5"/>
+  <circle cx="977" cy="300.0" r="17" fill="#B45309"/>
+  <text x="977" y="304.0" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">MET</text>
+  <text x="1005" y="305.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#0F172A" text-anchor="start">Prometheus 指标</text>
+  <text x="1005" y="326.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">counter / gauge 全链路埋点</text>
+  <text x="1005" y="344.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">/metrics 端点直接抓取</text>
+  <rect x="937" y="380.0" width="251" height="96" rx="12" fill="#FFF8E8" stroke="#FFFFFF" stroke-width="1.4"/>
+  <rect x="937" y="380.0" width="4" height="96" rx="2" fill="#B45309" stroke="none" stroke-width="1.5"/>
+  <circle cx="977" cy="414.0" r="17" fill="#B45309"/>
+  <text x="977" y="418.0" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">SDK</text>
+  <text x="1005" y="419.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#0F172A" text-anchor="start">Rust 客户端 SDK</text>
+  <text x="1005" y="440.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">canal-client 订阅事件流</text>
+  <text x="1005" y="458.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">与 Java/Go/Python 客户端同协议</text>
+  <rect x="937" y="494.0" width="251" height="96" rx="12" fill="#FFF8E8" stroke="#FFFFFF" stroke-width="1.4"/>
+  <rect x="937" y="494.0" width="4" height="96" rx="2" fill="#B45309" stroke="none" stroke-width="1.5"/>
+  <circle cx="977" cy="528.0" r="17" fill="#B45309"/>
+  <text x="977" y="532.0" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">OPS</text>
+  <text x="1005" y="533.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#0F172A" text-anchor="start">部署与入口</text>
+  <text x="1005" y="554.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">Docker 多阶段构建 + compose</text>
+  <text x="1005" y="572.0" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="400" fill="#475569" text-anchor="start">canal-cli：server / dump 子命令</text>
+  <line x1="318" y1="140" x2="325" y2="140" stroke="#7C8AA0" stroke-width="2" stroke-linecap="round"/>
+  <polygon points="333,140 324,134.5 324,145.5" fill="#7C8AA0" stroke="none" stroke-width="1"/>
+  <line x1="613" y1="140" x2="620" y2="140" stroke="#7C8AA0" stroke-width="2" stroke-linecap="round"/>
+  <polygon points="628,140 619,134.5 619,145.5" fill="#7C8AA0" stroke="none" stroke-width="1"/>
+  <line x1="908" y1="140" x2="915" y2="140" stroke="#7C8AA0" stroke-width="2" stroke-linecap="round"/>
+  <polygon points="923,140 914,134.5 914,145.5" fill="#7C8AA0" stroke="none" stroke-width="1"/>
+  <line x1="40" y1="622" x2="1200" y2="622" stroke="#E2E8F0" stroke-width="1.2" stroke-linecap="round"/>
+  <text x="40" y="650" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="11.5" font-weight="400" fill="#64748B" text-anchor="start">读法：数据自左向右流转 —— 接入 → 处理 → 输出；运维支撑贯穿全链路。</text>
+  <text x="1200" y="650" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="11" font-weight="400" fill="#64748B" text-anchor="end">docs/assets/architecture.svg 提供分层视角</text>
+  <text x="40" y="674" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="11.5" font-weight="400" fill="#64748B" text-anchor="start">每项能力都有对应单元测试；14 个 crate 全部通过 cargo clippy --all-targets。</text>
+</svg>

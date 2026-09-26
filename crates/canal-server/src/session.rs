@@ -9,7 +9,6 @@ pub struct ClientSession {
     pub client_id: String,
     pub destination: String,
     pub filter: FilterPattern,
-    pub last_position: Mutex<Option<LogPosition>>,
     pub last_ack_position: Mutex<Option<LogPosition>>,
     pub connected_at: chrono::DateTime<Utc>,
     pub last_heartbeat: Mutex<chrono::DateTime<Utc>>,
@@ -41,7 +40,6 @@ impl ClientSession {
             client_id: client_id.to_string(),
             destination: destination.to_string(),
             filter,
-            last_position: Mutex::new(None),
             last_ack_position: Mutex::new(None),
             connected_at: now,
             last_heartbeat: Mutex::new(now),
@@ -76,12 +74,6 @@ impl SessionManager {
 
     pub fn get(&self, client_id: &str) -> Option<Arc<ClientSession>> {
         self.sessions.get(client_id).map(|r| Arc::clone(&*r))
-    }
-
-    pub fn update_position(&self, client_id: &str, pos: LogPosition) {
-        if let Some(s) = self.sessions.get(client_id) {
-            *s.last_position.lock_or_recover() = Some(pos);
-        }
     }
 
     pub fn update_ack(&self, client_id: &str, pos: LogPosition) {
@@ -119,20 +111,9 @@ mod tests {
         mgr.register("client-1", "example", FilterPattern::default());
 
         let pos = LogPosition::new("mysql-bin.000001", 500);
-        mgr.update_position("client-1", pos.clone());
         mgr.update_ack("client-1", pos);
 
         let session = mgr.get("client-1").unwrap();
-        assert_eq!(
-            session
-                .last_position
-                .lock()
-                .unwrap()
-                .as_ref()
-                .unwrap()
-                .position,
-            500
-        );
         assert_eq!(
             session
                 .last_ack_position
@@ -188,7 +169,6 @@ mod tests {
     fn test_updates_for_unknown_client_are_noop() {
         let mgr = SessionManager::new();
         let pos = LogPosition::new("mysql-bin.000001", 100);
-        mgr.update_position("ghost", pos.clone());
         mgr.update_ack("ghost", pos);
         mgr.heartbeat("ghost");
         assert!(mgr.get("ghost").is_none());
@@ -214,7 +194,7 @@ mod tests {
         let dbg = format!("{:?}", session);
         assert!(dbg.contains("client_id"));
         assert!(dbg.contains("filter"));
-        assert!(!dbg.contains("last_position"));
+        assert!(!dbg.contains("last_ack_position"));
     }
 
     #[test]
@@ -227,12 +207,11 @@ mod tests {
     #[test]
     fn test_session_position_storage() {
         let session = ClientSession::new("c1", "dest", FilterPattern::default());
-        assert!(session.last_position.lock().unwrap().is_none());
         assert!(session.last_ack_position.lock().unwrap().is_none());
         let pos = LogPosition::new("bin.001", 42);
-        *session.last_position.lock().unwrap() = Some(pos.clone());
+        *session.last_ack_position.lock().unwrap() = Some(pos.clone());
         assert_eq!(
-            session.last_position.lock().unwrap().as_ref().unwrap(),
+            session.last_ack_position.lock().unwrap().as_ref().unwrap(),
             &pos
         );
     }

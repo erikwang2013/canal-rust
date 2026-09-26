@@ -238,7 +238,10 @@ mod tests {
 
         let after = change.after.unwrap();
         assert!(!after.columns[0].updated);
-        assert!(after.columns[1].updated, "extra after-column must be updated");
+        assert!(
+            after.columns[1].updated,
+            "extra after-column must be updated"
+        );
     }
 
     #[test]

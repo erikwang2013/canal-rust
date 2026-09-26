@@ -2,6 +2,7 @@
 name = "canal-proto"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 [build-dependencies]
 prost-build = "0.13"
 [dependencies]

@@ -128,7 +128,10 @@ async fn connect_and_subscribe_full_flow() {
     // Ids start at 1001 and only increase (process-global counter).
     assert!(client.client_id() >= 1001);
 
-    let mut stream = client.subscribe(Some(LogPosition::new("mysql-bin.000001", 4))).await.unwrap();
+    let mut stream = client
+        .subscribe(Some(LogPosition::new("mysql-bin.000001", 4)))
+        .await
+        .unwrap();
     let result = tokio::time::timeout(std::time::Duration::from_secs(5), stream.next_event())
         .await
         .expect("timed out waiting for event")
@@ -150,7 +153,9 @@ async fn connect_auth_failure() {
     tokio::spawn(async move {
         let (mut stream, _) = listener.accept().await.unwrap();
         let _ = read_packet(&mut stream).await;
-        send_packet(&mut stream, &ack_packet("invalid credentials")).await.unwrap();
+        send_packet(&mut stream, &ack_packet("invalid credentials"))
+            .await
+            .unwrap();
         let _ = read_packet(&mut stream).await;
     });
     let mut client = CanalClient::new("127.0.0.1", addr.port());

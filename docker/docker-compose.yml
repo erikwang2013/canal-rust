@@ -1,4 +1,3 @@
-version: "3.8"
 services:
   canal-rust:
     build:
@@ -6,8 +5,13 @@ services:
       dockerfile: docker/Dockerfile
     ports:
       - "11111:11111"   # Canal client protocol
-      - "8080:8080"     # Admin API
+      - "11112:11112"   # Admin REST API
       - "9090:9090"     # Prometheus metrics
+    extra_hosts:
+      # Lets the container reach a MySQL running on the host (docker/canal.yaml
+      # points at host.docker.internal). Docker 20.10+.
+      - "host.docker.internal:host-gateway"
     volumes:
-      - ../canal.yaml:/etc/canal/canal.yaml:ro
+      # Edit docker/canal.yaml and restart to reconfigure without a rebuild.
+      - ./canal.yaml:/etc/canal/canal.yaml:ro
     restart: unless-stopped

@@ -2,6 +2,7 @@
 name = "canal-cli"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 [[bin]]
 name = "canal-rust"
 path = "src/main.rs"

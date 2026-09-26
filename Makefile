@@ -1,4 +1,4 @@
-.PHONY: build test clippy fmt doc clean run
+.PHONY: build test clippy fmt fmt-check doc doc-check clean run check
 
 build:
 	cargo build --release
@@ -18,10 +18,14 @@ fmt-check:
 doc:
 	cargo doc --no-deps --open
 
+doc-check:
+	cargo doc --no-deps --document-private-items
+
 clean:
 	cargo clean
 
 run:
 	cargo run --release -- server --config canal.yaml
 
-check: fmt-check clippy test build
+# Mirrors .github/workflows/ci.yml `check` job, step for step.
+check: fmt-check clippy doc-check test build

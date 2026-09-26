@@ -2,11 +2,21 @@
 
 [中文](README.md)
 
+<p align="center">
+  <img src="docs/assets/canal-pet.svg" width="620"
+       alt="小运 — the Canal Rust mascot: a rust-red crab standing on the lock wall of the data canal, one claw on the paddle wheel, the other carrying a glowing change event, with downstream data packets drifting in the water below" />
+</p>
+
+<p align="center"><b>小运 · Canal Crab</b> — the crab keeping the lock on the data canal<br/>
+<sub>one claw on the paddle wheel, the other carrying change events downstream</sub></p>
+
 MySQL binlog incremental subscription & consumption, rewritten in Rust from [Alibaba Canal](https://github.com/alibaba/canal).
 
 ## Overview
 
 Canal Rust emulates a MySQL slave, sends dump requests to MySQL master, receives and parses binary log events, then delivers them to downstream consumers via the Canal protobuf protocol.
+
+14 crates cover one complete path: **ingest → parse → filter → store → egress → ack**, while keeping the wire protocol byte-compatible with Java Canal.
 
 **Key Features:**
 
@@ -20,31 +30,40 @@ Canal Rust emulates a MySQL slave, sends dump requests to MySQL master, receives
 - **Admin API** — RESTful API for instance start/stop and status queries
 - **Docker** — Multi-stage build + docker-compose
 
-## Architecture
+## Project Mascot
+
+**小运 (Canal Crab)** — a rust-red crab, and the **lock keeper** of this data canal.
+
+The design turns the project's job into a character. MySQL keeps producing changes upstream, consumers downstream can fall behind, and something in the middle has to **control the flow**. So 小运 stands on the lock wall: one claw on the paddle wheel (how much data gets through), the other carrying a glowing change event, with released data packets drifting in the water below and a binlog scroll still floating in from upstream.
+
+| In the picture | In the project |
+|---|---|
+| Rust-red shell | Rust |
+| The paddle wheel | `canal-store`'s ring buffer and its capacity/eviction control |
+| The event in the right claw | one event fanned out by `canal-sink` |
+| Packets drifting below the lock | `canal-server` delivering over TCP, `canal-connector` delivering to Kafka |
+| The binlog scroll upstream | raw events `canal-binlog` pulled from MySQL |
+| The canal underfoot | the pipeline itself |
+
+- Vector original: [`docs/assets/canal-pet.svg`](docs/assets/canal-pet.svg)
+- It also lives in the code: `canal --help` prints the ASCII version (`canal_cli::CANAL_CRAB`), and `canal server` reports for duty once in the startup log.
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                     Canal Rust                           │
-│                                                         │
-│  ┌──────────┐   ┌──────────┐   ┌──────────┐            │
-│  │  MySQL    │──▶│canal-    │──▶│canal-    │──── TCP ──▶│ Clients
-│  │  Master   │   │ binlog   │   │ store    │            │ (Java/Go/
-│  └──────────┘   │          │   │(ringbuf) │            │  Python/..)
-│                 └────┬─────┘   └────┬─────┘            │
-│                      │              │                   │
-│                 ┌────▼─────┐   ┌────▼─────┐            │
-│                 │canal-    │   │canal-    │            │
-│                 │ filter   │   │  sink    │──▶ Kafka   │
-│                 │(regex)   │   │(pipeline)│            │
-│                 └──────────┘   └──────────┘            │
-│                                                         │
-│  ┌──────────┐   ┌──────────┐   ┌──────────┐            │
-│  │canal-    │   │canal-    │   │canal-    │            │
-│  │ instance │   │ admin    │   │prometheus│            │
-│  │(manager) │   │(REST API)│   │(metrics) │            │
-│  └──────────┘   └──────────┘   └──────────┘            │
-└─────────────────────────────────────────────────────────┘
+     \    \              /    /
+      \    \____________/    /
+    ___\_                  _/___
+   /     o                o     \
+  |               __              |
+   \          \________/         /
+    '.__________________________.'
+   __/   /     |      |     \   \__
+  |==================================|
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ```
+
+## Architecture
+
+![Canal Rust architecture](docs/assets/architecture.svg)
 
 **Data Flow:**
 
@@ -58,6 +77,35 @@ MySQL Master
 │(TableMap)    │    └──────────────┘    │ └─ connector─▶ Kafka
 └──────────────┘                        └──────────────┘
 ```
+
+**Layer responsibilities:**
+
+| Layer | Crate | Responsibility |
+|-------|-------|----------------|
+| Ingest | `canal-binlog` | Connect to MySQL, pull binlog, convert to a unified event model |
+| Process | `canal-filter` · `canal-sink` | Regex schema/table filtering, fan events out to every sink |
+| Egress | `canal-store` · `canal-server` · `canal-connector` | Ring-buffer storage, TCP protocol service, Kafka delivery |
+| Orchestration | `canal-instance` | Manage multiple destinations, each owning a full pipeline |
+| Operations | `canal-admin` · `canal-prometheus` · `canal-cli` | Start/stop API, metrics, command-line entry point |
+| Foundation | `canal-common` · `canal-proto` · `canal-meta` | Types / lifecycle traits, protobuf codegen, schema cache |
+
+## Functional Design
+
+![Canal Rust functional design](docs/assets/functions.svg)
+
+The 14 capabilities map one-to-one onto the 14 crates, grouped into **Ingest**, **Process**, **Egress** and **Operations**. Ingest and Process decide *what you can capture*; Egress and Operations decide *how far it travels and how clearly you can see it*.
+
+## Lifecycle
+
+![Canal Rust lifecycle](docs/assets/lifecycle.svg)
+
+Three independent tracks — a fault in any one of them never blocks a graceful shutdown of the others:
+
+| Track | Owner | States |
+|-------|-------|--------|
+| **Instance** | `canal-instance` | Created → Starting → Running (`feed()` loop) → Stopping → Stopped |
+| **Session** | `canal-server` | accept → Handshake → ClientAuth → Sub → Get → Ack/Rollback → Close |
+| **Process** | `canal-cli` | load config → init → register instances → bind port → binlog loop → SIGINT → graceful shutdown |
 
 ## Design
 
@@ -95,7 +143,7 @@ MySQL Master
 
 ### Prerequisites
 
-- Rust 1.80+
+- Rust 1.85+ (`clap` and other dependencies now use edition 2024, which requires rustc ≥ 1.85)
 - MySQL 5.7+ / 8.0 (binlog enabled, ROW format)
 - (Optional) Kafka for message queue output
 
@@ -110,13 +158,23 @@ cargo build --release
 ### Configure MySQL
 
 ```sql
-CREATE USER 'canal'@'%' IDENTIFIED BY 'canal';
+CREATE USER 'canal'@'%' IDENTIFIED WITH mysql_native_password BY 'canal';
 GRANT SELECT, REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO 'canal'@'%';
 FLUSH PRIVILEGES;
 
 SHOW VARIABLES LIKE 'log_bin';
 SHOW MASTER STATUS;
 ```
+
+> **⚠️ The connection is unencrypted.** Upstream `mysql_cdc 0.2.1` implements no TLS at
+> all — it calls `unimplemented!()` on any `SslMode` other than `Disabled`, so this project
+> can only reach MySQL in plaintext: credentials and binlog data are both unencrypted. Use
+> it on a trusted private network only, and tunnel over SSH across untrusted segments.
+>
+> **Auth plugin limitation:** `mysql_cdc` supports only `mysql_native_password` and
+> `caching_sha2_password`. An account using `sha256_password` fails with
+> `sha256_password auth plugin is not supported.` — which is why the `CREATE USER` above
+> names `mysql_native_password` explicitly.
 
 ### Configure canal.yaml
 
@@ -175,50 +233,76 @@ docker compose -f docker/docker-compose.yml up -d
 
 ```
 canal-rust/
-├── Cargo.toml                     # Cargo workspace, 14 member crates
-├── canal.yaml                     # Default configuration
-├── rust-toolchain.toml
-├── README.md                      # Chinese README
-├── README.en.md                   # This file (English)
-├── proto/                         # Upstream Canal .proto files
-│   ├── CanalProtocol.proto        # Main protocol
-│   └── EntryProtocol.proto        # Event definitions
-├── docker/                        # Docker deployment
-│   ├── Dockerfile                 # Multi-stage build
-│   └── docker-compose.yml         # One-command startup
-├── crates/
-│   ├── canal-common/              # Core types
-│   ├── canal-proto/               # Protobuf code generation
-│   ├── canal-binlog/              # MySQL binlog parser
-│   ├── canal-store/               # Event store (ring buffer)
-│   ├── canal-filter/              # Regex table/schema filter
-│   ├── canal-sink/                # Event dispatch pipeline
-│   ├── canal-connector/           # Kafka connector
-│   ├── canal-instance/            # Multi-instance manager
-│   ├── canal-server/              # TCP server (wire protocol)
-│   ├── canal-client/              # Rust client SDK
-│   ├── canal-meta/                # Table schema cache
-│   ├── canal-admin/               # REST Admin API
-│   ├── canal-prometheus/          # Prometheus metrics endpoint
-│   └── canal-cli/                 # CLI entry point
-├── docs/superpowers/
-│   ├── specs/
-│   │   └── 2026-07-30-canal-rust-rewrite-design.md
-│   └── plans/
-│       └── 2026-07-30-canal-rust-phase1.md
-└── tests/
-    └── integration/
+├── Cargo.toml                      # Cargo workspace, 14 member crates
+├── canal.yaml                      # Default configuration
+├── canal.yaml.example              # Annotated configuration template
+├── rust-toolchain.toml             # Pinned toolchain (stable + rustfmt + clippy)
+├── Makefile                        # build / test / clippy / fmt / check shortcuts
+├── README.md                       # Chinese README
+├── README.en.md                    # This file (English)
+├── proto/                          # Upstream Canal .proto files
+│   ├── CanalProtocol.proto         # Main protocol (Packet, Handshake, Messages)
+│   └── EntryProtocol.proto         # Event definitions (Entry, RowChange, Column)
+├── docker/                         # Docker deployment
+│   ├── Dockerfile                  # Multi-stage build
+│   └── docker-compose.yml          # One-command startup
+├── crates/                         # 14 member crates
+│   ├── canal-common/               # Core types
+│   │   └── src/ {error, types, lifecycle, utils}.rs
+│   ├── canal-proto/                # Protobuf code generation (prost-build)
+│   │   ├── build.rs
+│   │   └── src/ {lib, com.alibaba.otter.canal.protocol}.rs
+│   ├── canal-binlog/               # MySQL binlog parser
+│   │   └── src/ {connector, converter, table_map, column_serde}.rs
+│   ├── canal-store/                # Event store (ring buffer + position)
+│   │   └── src/memory.rs
+│   ├── canal-filter/               # Regex table/schema filter
+│   │   └── src/lib.rs
+│   ├── canal-sink/                 # Event dispatch pipeline (store + connector fan-out)
+│   │   └── src/ {sink, connector}.rs
+│   ├── canal-connector/            # Kafka connector
+│   │   └── src/ {kafka, kafka_tests_extra}.rs
+│   ├── canal-instance/             # Multi-instance manager
+│   │   └── src/instance.rs
+│   ├── canal-server/               # TCP server (wire protocol)
+│   │   └── src/ {codec, session, server, conversion}.rs
+│   ├── canal-client/               # Rust client SDK
+│   │   └── src/lib.rs
+│   ├── canal-meta/                 # DDL tracking + table schema cache
+│   │   └── src/lib.rs
+│   ├── canal-admin/                # REST Admin API (Axum)
+│   │   └── src/lib.rs
+│   ├── canal-prometheus/           # Prometheus metrics endpoint
+│   │   └── src/metrics_server.rs
+│   └── canal-cli/                  # CLI entry point (server / dump)
+│       └── src/ {main, lib}.rs     # lib.rs holds CLI defs, config loading, mascot
+├── docs/
+│   ├── assets/                     # Images
+│   │   ├── canal-pet.svg           # 小运 · project mascot
+│   │   ├── architecture.svg        # Architecture diagram
+│   │   ├── functions.svg           # Functional design diagram
+│   │   └── lifecycle.svg           # Lifecycle diagram
+│   ├── superpowers/
+│   │   ├── specs/2026-07-30-canal-rust-rewrite-design.md
+│   │   └── plans/2026-07-30-canal-rust-phase1.md
+│   └── review-report-*.md          # Historical review / test reports
 ```
+
+> There is no top-level `tests/` directory: tests live next to the code they cover, inside the same crate.
+
+- Unit tests: `crates/*/src/tests*.rs`, `#[cfg(test)] mod tests`
+- Integration tests: `crates/*/tests/*.rs` (e.g. `canal-server/src/tests_e2e.rs`, `canal-client/tests/e2e.rs`)
 
 ## Stats
 
 | Metric | Value |
 |--------|-------|
 | Crates | 14 |
-| Lines of Rust | ~5,900 |
-| Tests | 98 |
+| Lines of Rust (source) | ~8,400 |
+| Lines of Rust (tests) | ~3,900 |
+| Unit / integration tests | 383 (all passing) |
 | Proto definitions | 2 |
-| Version | v1.1.6 |
+| Version | v2.1.0 |
 | Clippy warnings | 0 |
 | License | Apache-2.0 |
 
@@ -273,12 +357,29 @@ curl http://localhost:9090/metrics
 # canal_instances_active 2
 ```
 
+### Scenario 4: Managing instances via the Admin API
+
+Bind rule for the Admin API: by default it is **main port + 1, bound to loopback only** (`bind: 127.0.0.1:11111` → `127.0.0.1:11112`). To make it reachable from outside — from another host, or from the host into a container — you must set `server.admin_bind` explicitly:
+
+```yaml
+canal:
+  server:
+    bind: "0.0.0.0:11111"
+    admin_bind: "0.0.0.0:11112"   # omitted => 127.0.0.1:{main port + 1}
+```
+
+```bash
+curl http://localhost:11112/health
+curl http://localhost:11112/api/instances
+curl -X POST http://localhost:11112/api/instances/default/stop
+```
+
 ## Development
 
 ```bash
 cargo build --release              # Build
 cargo test --all                   # Run tests
-cargo clippy --all -- -D warnings  # Lint
+cargo clippy --all-targets -- -D warnings  # Lint (matches CI)
 cargo fmt --check --all            # Format check
 cargo doc --open                   # Docs
 ```

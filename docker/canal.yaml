@@ -1,0 +1,36 @@
+# Docker 专用配置。
+#
+# 与仓库根目录的 canal.yaml 的区别只有一个但很关键：容器内必须监听 0.0.0.0，
+# 否则服务只绑定在容器自己的 loopback 上，宿主机的端口映射永远连不上。
+# 根目录那份绑定 127.0.0.1，适用于本机直接 `cargo run` 的场景。
+canal:
+  server_id: 1001
+  start_journal_name: "mysql-bin.000001"
+  start_position: 4
+  # 留空 = 不启用认证。生产环境请改成强随机串，并同步更新客户端。
+  auth_token: ""
+
+  mysql:
+    # 指向宿主机上的 MySQL（compose 已配置 host-gateway）。
+    # 若 MySQL 也在 compose 网络里，改成对应的服务名即可。
+    host: "host.docker.internal"
+    port: 3306
+    username: "canal"
+    password: "canal"
+
+  store:
+    buffer_size: 16384
+
+  server:
+    bind: "0.0.0.0:11111"          # Canal 客户端协议
+    metrics_bind: "0.0.0.0:9090"   # Prometheus /metrics
+    admin_bind: "0.0.0.0:11112"    # Admin REST API，显式放开容器外访问
+    idle_timeout_secs: 3600
+
+  filter:
+    pattern: ".*\\..*"
+    black_list: ""
+
+  logging:
+    level: "info"
+    format: "json"

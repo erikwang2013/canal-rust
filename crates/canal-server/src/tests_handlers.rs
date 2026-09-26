@@ -11,7 +11,10 @@ pub(crate) type TestTransport = Framed<DuplexStream, CanalCodec>;
 
 pub(crate) fn transport() -> (TestTransport, TestTransport) {
     let (a, b) = tokio::io::duplex(16384);
-    (Framed::new(a, CanalCodec::new()), Framed::new(b, CanalCodec::new()))
+    (
+        Framed::new(a, CanalCodec::new()),
+        Framed::new(b, CanalCodec::new()),
+    )
 }
 
 fn frame(ptype: PacketType, body: Vec<u8>) -> Vec<u8> {
@@ -140,9 +143,15 @@ async fn test_handle_auth_with_matching_token() {
     let sessions = SessionManager::new();
 
     let packet = Packet::decode(&auth_frame("bob", ".*\\..*", b"secret")[..]).unwrap();
-    handle_auth(&mut tx, &packet, &mut state, &Some("secret".into()), &sessions)
-        .await
-        .unwrap();
+    handle_auth(
+        &mut tx,
+        &packet,
+        &mut state,
+        &Some("secret".into()),
+        &sessions,
+    )
+    .await
+    .unwrap();
     assert!(state.authenticated);
 
     let ack = read_ack(&mut rx).await;
@@ -156,9 +165,15 @@ async fn test_handle_auth_wrong_password_rejected() {
     let sessions = SessionManager::new();
 
     let packet = Packet::decode(&auth_frame("mallory", ".*\\..*", b"wrong")[..]).unwrap();
-    handle_auth(&mut tx, &packet, &mut state, &Some("secret".into()), &sessions)
-        .await
-        .unwrap();
+    handle_auth(
+        &mut tx,
+        &packet,
+        &mut state,
+        &Some("secret".into()),
+        &sessions,
+    )
+    .await
+    .unwrap();
     assert!(!state.authenticated);
     assert_eq!(state.auth_error_count, 1);
     assert!(sessions.get("mallory").is_none());
@@ -176,14 +191,26 @@ async fn test_handle_auth_three_failures_disconnect() {
 
     let packet = Packet::decode(&auth_frame("mallory", ".*\\..*", b"wrong")[..]).unwrap();
     for _ in 0..2 {
-        handle_auth(&mut tx, &packet, &mut state, &Some("secret".into()), &sessions)
-            .await
-            .unwrap();
+        handle_auth(
+            &mut tx,
+            &packet,
+            &mut state,
+            &Some("secret".into()),
+            &sessions,
+        )
+        .await
+        .unwrap();
         read_ack(&mut rx).await;
     }
-    let err = handle_auth(&mut tx, &packet, &mut state, &Some("secret".into()), &sessions)
-        .await
-        .unwrap_err();
+    let err = handle_auth(
+        &mut tx,
+        &packet,
+        &mut state,
+        &Some("secret".into()),
+        &sessions,
+    )
+    .await
+    .unwrap_err();
     assert!(matches!(err, CanalError::AuthFailed(_)));
 }
 
@@ -280,6 +307,80 @@ async fn test_handle_auth_start_timestamp_sets_position() {
     );
     assert_eq!(state.current_pos.as_ref().unwrap().position, 0);
     read_ack(&mut rx).await;
+}
+
+#[tokio::test]
+async fn test_handle_auth_start_timestamp_then_get_returns_matching_events() {
+    // Regression (F2): a non-zero start_timestamp used to set an empty
+    // journal_name, whose binlog_suffix is u64::MAX — every event sorted at or
+    // before that cursor, so the client was served empty batches forever.
+    let (mut tx, mut rx) = transport();
+    let store = Arc::new(MemoryEventStore::new(1024));
+    let mut early = make_stored_event("db", "t", 100);
+    early.execute_time = 1_000;
+    let mut late = make_stored_event("db", "t", 200);
+    late.execute_time = 2_000;
+    store.put_batch(vec![early, late]).await.unwrap();
+
+    let mut state = ClientState::default();
+    let sessions = SessionManager::new();
+    let auth = canal_proto::ClientAuth {
+        client_id: "ts".into(),
+        start_timestamp: 1_500,
+        ..Default::default()
+    };
+    let packet = Packet {
+        r#type: PacketType::Clientauthentication as i32,
+        body: auth.encode_to_vec(),
+        ..Default::default()
+    };
+    handle_auth(&mut tx, &packet, &mut state, &None, &sessions)
+        .await
+        .unwrap();
+    read_ack(&mut rx).await;
+
+    let packet = Packet::decode(&get_frame("ts", 100)[..]).unwrap();
+    handle_get(&mut tx, &packet, &mut state, &store, &sessions)
+        .await
+        .unwrap();
+
+    let resp = read_packet(&mut rx).await;
+    assert_eq!(resp.r#type, PacketType::Messages as i32);
+    let msgs = canal_proto::Messages::decode(&resp.body[..]).unwrap();
+    assert_eq!(msgs.messages.len(), 1, "timestamp cursor must not starve");
+    let entry = Entry::decode(&msgs.messages[0][..]).unwrap();
+    assert_eq!(entry.header.unwrap().logfile_offset, 200);
+
+    // After the first batch the cursor is positional, not timed
+    let pos = state.current_pos.as_ref().unwrap();
+    assert_eq!(pos.timestamp, None);
+    assert_eq!(pos.position, 200);
+}
+
+#[tokio::test]
+async fn test_handle_auth_second_auth_on_same_connection_rejected() {
+    // Regression (F6): a second ClientAuthentication registered another session
+    // entry that was never unregistered, leaking sessions with a live cursor.
+    let (mut tx, mut rx) = transport();
+    let mut state = ClientState::default();
+    let sessions = SessionManager::new();
+
+    let packet = Packet::decode(&auth_frame("alice", ".*\\..*", &[])[..]).unwrap();
+    handle_auth(&mut tx, &packet, &mut state, &None, &sessions)
+        .await
+        .unwrap();
+    read_ack(&mut rx).await;
+
+    let packet = Packet::decode(&auth_frame("bob", ".*\\..*", &[])[..]).unwrap();
+    handle_auth(&mut tx, &packet, &mut state, &None, &sessions)
+        .await
+        .unwrap();
+
+    let ack = read_ack(&mut rx).await;
+    assert!(ack.error_message.contains("already authenticated"));
+    assert_eq!(state.client_id.as_deref(), Some("alice"));
+    assert!(sessions.get("bob").is_none());
+    assert!(sessions.get("alice").is_some());
 }
 
 // ---------------------------------------------------------------- subscription
@@ -406,12 +507,9 @@ async fn test_handle_get_returns_events_as_messages() {
     assert_eq!(hdr.logfile_name, "mysql-bin.000001");
     assert_eq!(hdr.logfile_offset, 100);
 
-    // session position advanced to the batch end
-    let session = sessions.get("c1").unwrap();
-    let last_pos = session.last_position.lock().unwrap().clone().unwrap();
-    assert_eq!(last_pos.position, 100);
     // state tracks the end position for subsequent acks
     assert_eq!(state.last_get_end_pos.as_ref().unwrap().position, 100);
+    assert!(state.current_pos.is_some());
 }
 
 #[tokio::test]
@@ -481,3 +579,66 @@ async fn test_handle_get_negative_fetch_size_clamped() {
     assert_eq!(msgs.messages.len(), 2);
 }
 
+/// Store with capacity 2 holding positions 200 and 300 — position 100 was evicted.
+async fn store_with_evicted_position_100() -> Arc<MemoryEventStore> {
+    let store = Arc::new(MemoryEventStore::new(2));
+    store
+        .put_batch(vec![
+            make_stored_event("db", "t", 100),
+            make_stored_event("db", "t", 200),
+        ])
+        .await
+        .unwrap();
+    store
+        .put_batch(vec![make_stored_event("db", "t", 300)])
+        .await
+        .unwrap();
+    assert_eq!(store.evicted_watermark().unwrap().position, 100);
+    store
+}
+
+#[tokio::test]
+async fn test_handle_get_cursor_below_watermark_reports_dropped_events() {
+    // Regression (F7): a client whose cursor fell behind eviction used to get a
+    // normal-looking contiguous batch that silently skipped the dropped events.
+    let (mut tx, mut rx) = transport();
+    let store = store_with_evicted_position_100().await;
+
+    let (mut state, sessions) = auth_state(&mut tx, &mut rx, "c1", ".*\\..*").await;
+    state.current_pos = Some(LogPosition::new("mysql-bin.000001", 50));
+
+    let packet = Packet::decode(&get_frame("c1", 100)[..]).unwrap();
+    handle_get(&mut tx, &packet, &mut state, &store, &sessions)
+        .await
+        .unwrap();
+
+    let ack = read_ack(&mut rx).await;
+    assert!(
+        ack.error_message.contains("eviction watermark"),
+        "expected a dropped-events error, got {:?}",
+        ack.error_message
+    );
+    // the cursor is not advanced past the gap
+    assert_eq!(state.current_pos.as_ref().unwrap().position, 50);
+}
+
+#[tokio::test]
+async fn test_handle_get_fresh_client_below_watermark_is_served() {
+    // A fresh client starts at the default cursor, which is also below the
+    // watermark, but nothing was ever promised to it — it must not be errored.
+    let (mut tx, mut rx) = transport();
+    let store = store_with_evicted_position_100().await;
+
+    let (mut state, sessions) = auth_state(&mut tx, &mut rx, "c1", ".*\\..*").await;
+    assert!(state.current_pos.is_none());
+
+    let packet = Packet::decode(&get_frame("c1", 100)[..]).unwrap();
+    handle_get(&mut tx, &packet, &mut state, &store, &sessions)
+        .await
+        .unwrap();
+
+    let resp = read_packet(&mut rx).await;
+    assert_eq!(resp.r#type, PacketType::Messages as i32);
+    let msgs = canal_proto::Messages::decode(&resp.body[..]).unwrap();
+    assert_eq!(msgs.messages.len(), 2, "surviving events must be delivered");
+}

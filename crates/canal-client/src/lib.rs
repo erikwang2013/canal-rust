@@ -218,10 +218,7 @@ impl CanalClient {
             }
         });
 
-        Ok(CanalEventStream {
-            rx,
-            bg_task,
-        })
+        Ok(CanalEventStream { rx, bg_task })
     }
 
     pub fn client_id(&self) -> u64 {

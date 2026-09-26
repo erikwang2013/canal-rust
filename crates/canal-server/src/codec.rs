@@ -47,9 +47,12 @@ impl Decoder for CanalCodec {
             )));
         }
 
-        // Wait for full payload
+        // Wait for full payload. The speculative reservation is capped: `len` may
+        // claim up to MAX_PACKET_SIZE and BytesMut::reserve is infallible (it
+        // aborts the process on allocation failure), so 4 bytes of input must not
+        // reserve 8MB. The buffer still grows as the bytes actually arrive.
         if src.len() < 4 + len {
-            src.reserve(4 + len - src.len());
+            src.reserve((4 + len - src.len()).min(64 * 1024));
             return Ok(None);
         }
 
@@ -177,6 +180,37 @@ mod tests {
         buf.put_u32(8 * 1024 * 1024);
         let result = codec.decode(&mut buf).unwrap();
         assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_decode_incomplete_large_frame_does_not_preallocate_full_size() {
+        // 4 bytes of input claiming an 8MB payload must not reserve 8MB up front
+        // (BytesMut::reserve is infallible and aborts on allocation failure).
+        let mut codec = CanalCodec;
+        let mut buf = BytesMut::new();
+        buf.put_u32(8 * 1024 * 1024);
+        let result = codec.decode(&mut buf).unwrap();
+        assert_eq!(result, None);
+        assert!(
+            buf.capacity() < 1024 * 1024,
+            "speculative reservation must stay capped, got {} bytes",
+            buf.capacity()
+        );
+    }
+
+    #[test]
+    fn test_decode_large_frame_split_across_reads() {
+        let mut codec = CanalCodec;
+        let mut buf = BytesMut::new();
+        buf.put_u32(100_000);
+        buf.put_slice(&[1u8; 50_000]);
+        assert_eq!(codec.decode(&mut buf).unwrap(), None);
+
+        buf.put_slice(&[2u8; 50_000]);
+        let frame = codec.decode(&mut buf).unwrap().unwrap();
+        assert_eq!(frame.len(), 100_000);
+        assert_eq!(frame[0], 1);
+        assert_eq!(frame[99_999], 2);
     }
 
     #[test]

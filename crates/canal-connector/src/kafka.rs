@@ -390,7 +390,6 @@ mod tests {
         let messages = connector.serialize_events(&[]);
         assert_eq!(messages.len(), 0);
     }
-
 }
 
 #[cfg(test)]

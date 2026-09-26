@@ -360,7 +360,10 @@ mod tests {
     #[test]
     fn test_check_auth_invalid_and_case_sensitive_headers() {
         let mut h1 = HeaderMap::new();
-        h1.insert("Authorization", HeaderValue::from_bytes(b"\xff\xfe").unwrap());
+        h1.insert(
+            "Authorization",
+            HeaderValue::from_bytes(b"\xff\xfe").unwrap(),
+        );
         assert_eq!(
             check_auth(&h1, &Some("secret".into())),
             Err(StatusCode::UNAUTHORIZED)
@@ -403,7 +406,10 @@ mod tests {
     async fn test_list_instances_empty() {
         let mgr = Arc::new(InstanceManager::new());
         let state = state_with(mgr, None);
-        let resp = list_instances(State(state), HeaderMap::new()).await.unwrap().0;
+        let resp = list_instances(State(state), HeaderMap::new())
+            .await
+            .unwrap()
+            .0;
         assert!(resp.instances.is_empty());
     }
 
@@ -414,7 +420,10 @@ mod tests {
         register_instance(&mgr, "two");
         mgr.get("one").unwrap().start().await.unwrap();
         let state = state_with(mgr, None);
-        let resp = list_instances(State(state), HeaderMap::new()).await.unwrap().0;
+        let resp = list_instances(State(state), HeaderMap::new())
+            .await
+            .unwrap()
+            .0;
         assert_eq!(resp.instances.len(), 2);
         let by_name = |n: &str| resp.instances.iter().find(|i| i.name == n).unwrap();
         assert!(by_name("one").running);
@@ -428,7 +437,9 @@ mod tests {
         register_instance(&mgr, "one");
         let state = state_with(mgr, Some("token".into()));
         assert_eq!(
-            list_instances(State(state.clone()), HeaderMap::new()).await.unwrap_err(),
+            list_instances(State(state.clone()), HeaderMap::new())
+                .await
+                .unwrap_err(),
             StatusCode::UNAUTHORIZED
         );
         assert_eq!(
@@ -496,5 +507,4 @@ mod tests {
             .0;
         assert_eq!(resp.status, "not_found");
     }
-
 }

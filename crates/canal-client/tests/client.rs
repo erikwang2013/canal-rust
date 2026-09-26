@@ -282,7 +282,11 @@ fn decode_garbage_bytes_is_error() {
 #[test]
 fn decode_event_type_mapping() {
     // proto values the server uses: 7=Query(→Ddl), 13=Xacommit(→Xid), 15=Mheartbeat(→Heartbeat)
-    for (proto, expected) in [(7, EventType::Ddl), (13, EventType::Xid), (15, EventType::Heartbeat)] {
+    for (proto, expected) in [
+        (7, EventType::Ddl),
+        (13, EventType::Xid),
+        (15, EventType::Heartbeat),
+    ] {
         let entry = Entry {
             header: Some(test_header(proto)),
             store_value: vec![],
@@ -378,4 +382,3 @@ async fn read_packet_eof_is_io_error() {
     let err = read_packet(&mut b).await.unwrap_err();
     assert!(matches!(err, CanalError::Io(_)));
 }
-

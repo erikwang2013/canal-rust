@@ -2,6 +2,7 @@
 name = "canal-filter"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 [dependencies]
 regex.workspace = true
 tracing.workspace = true

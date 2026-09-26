@@ -37,9 +37,7 @@ fn test_with_channel_returns_receiver() {
     let received = std::pin::pin!(async {
         tokio::time::timeout(std::time::Duration::from_millis(50), rx.recv()).await
     });
-    let result = tokio::runtime::Runtime::new()
-        .unwrap()
-        .block_on(received);
+    let result = tokio::runtime::Runtime::new().unwrap().block_on(received);
     assert!(result.is_err(), "no events expected before connect()");
 }
 
@@ -51,7 +49,10 @@ fn test_connect_twice_guard_via_take_receiver() {
         let mut conn = conn;
         conn.take_receiver();
     }));
-    assert!(result.is_err(), "take_receiver after with_channel must panic");
+    assert!(
+        result.is_err(),
+        "take_receiver after with_channel must panic"
+    );
 }
 
 #[test]
@@ -66,7 +67,9 @@ fn test_take_receiver_ok() {
 #[test]
 fn test_disconnect_without_connect_is_ok() {
     let mut conn = make_connector();
-    let result = tokio::runtime::Runtime::new().unwrap().block_on(conn.disconnect());
+    let result = tokio::runtime::Runtime::new()
+        .unwrap()
+        .block_on(conn.disconnect());
     assert!(result.is_ok());
     assert!(conn.current_position().is_none());
 }
@@ -84,9 +87,9 @@ fn test_connect_without_channel_errors() {
     // No sender configured -> connect fails fast with Internal error,
     // before any network activity
     let mut conn = make_connector();
-    let result = tokio::runtime::Runtime::new().unwrap().block_on(
-        conn.connect(&canal_common::LogPosition::new("mysql-bin.000001", 4)),
-    );
+    let result = tokio::runtime::Runtime::new()
+        .unwrap()
+        .block_on(conn.connect(&canal_common::LogPosition::new("mysql-bin.000001", 4)));
     assert!(matches!(result, Err(canal_common::CanalError::Internal(_))));
     assert!(conn.current_position().is_none());
 }

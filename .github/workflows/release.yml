@@ -17,7 +17,27 @@ jobs:
           fetch-depth: 0
       - name: Get version from Cargo.toml
         id: version
-        run: echo "version=$(grep -m1 '^version' Cargo.toml | sed 's/version = //;s/"//g')" >> "$GITHUB_OUTPUT"
+        run: |
+          # Read `version` from [workspace.package] ONLY. A bare `grep -m1 '^version'`
+          # would also match any future top-level `version = ` line above it and the
+          # release tag would silently drift off the real workspace version.
+          version=$(awk '
+            /^\[workspace\.package\]/ { in_section = 1; next }
+            /^\[/                     { in_section = 0 }
+            in_section && /^version[[:space:]]*=/ {
+              sub(/^version[[:space:]]*=[[:space:]]*/, "")
+              gsub(/["[:space:]]/, "")
+              print; exit
+            }' Cargo.toml)
+
+          # Releases are named v<X>.<Y>.<Z> — refuse to tag anything else.
+          if ! printf '%s' "$version" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::[workspace.package] version is '${version}', expected X.Y.Z"
+            exit 1
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Release tag will be v${version}"
       - name: Check existing release
         id: check
         env:

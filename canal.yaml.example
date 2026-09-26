@@ -27,6 +27,9 @@ canal:
   server:
     bind: "127.0.0.1:11111"          # Canal TCP 协议端口
     metrics_bind: "127.0.0.1:9090"   # Prometheus /metrics 端口
+    # Admin API 监听地址（不设置 = 127.0.0.1:{Canal 端口+1}，仅本机可访问）
+    # 容器或远程需要访问管理接口时取消注释并显式指定，否则管理接口不可达
+    # admin_bind: "0.0.0.0:11112"
     idle_timeout_secs: 3600          # 客户端空闲断开时间（秒）
 
   # 事件过滤

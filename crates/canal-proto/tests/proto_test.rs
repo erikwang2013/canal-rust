@@ -19,7 +19,9 @@ fn test_packet_roundtrip_all_fields() {
         body: vec![1, 2, 3, 4],
         magic_number_present: Some(packet::MagicNumberPresent::MagicNumber(17)),
         version_present: Some(packet::VersionPresent::Version(1)),
-        compression_present: Some(packet::CompressionPresent::Compression(Compression::Zlib as i32)),
+        compression_present: Some(packet::CompressionPresent::Compression(
+            Compression::Zlib as i32,
+        )),
     };
     roundtrip(&packet);
 }
@@ -60,7 +62,9 @@ fn test_handshake_roundtrip() {
     };
     roundtrip(&hs);
     // Default: no encoding present
-    assert!(Handshake::default().communication_encoding_present.is_none());
+    assert!(Handshake::default()
+        .communication_encoding_present
+        .is_none());
 }
 
 #[test]
@@ -191,10 +195,14 @@ fn test_entry_roundtrip_with_header() {
             gtid: "uuid:1-10".into(),
             version_present: Some(header::VersionPresent::Version(1)),
             source_type_present: Some(header::SourceTypePresent::SourceType(Type::Mysql as i32)),
-            event_type_present: Some(header::EventTypePresent::EventType(EventType::Insert as i32)),
+            event_type_present: Some(header::EventTypePresent::EventType(
+                EventType::Insert as i32,
+            )),
         }),
         store_value: vec![0xab, 0xcd],
-        entry_type_present: Some(entry::EntryTypePresent::EntryType(EntryType::Rowdata as i32)),
+        entry_type_present: Some(entry::EntryTypePresent::EntryType(
+            EntryType::Rowdata as i32,
+        )),
     };
     let decoded = roundtrip(&entry);
     assert_eq!(
@@ -263,7 +271,9 @@ fn test_row_change_roundtrip() {
         }],
         props: vec![],
         ddl_schema_name: "test_db".into(),
-        event_type_present: Some(row_change::EventTypePresent::EventType(EventType::Update as i32)),
+        event_type_present: Some(row_change::EventTypePresent::EventType(
+            EventType::Update as i32,
+        )),
         is_ddl_present: Some(row_change::IsDdlPresent::IsDdl(true)),
     };
     roundtrip(&rc);
@@ -386,7 +396,12 @@ fn test_event_type_enum_helpers_and_wire_values() {
 
 #[test]
 fn test_type_enum_helpers() {
-    for v in [Type::Typecompatibleproto2, Type::Oracle, Type::Mysql, Type::Pgsql] {
+    for v in [
+        Type::Typecompatibleproto2,
+        Type::Oracle,
+        Type::Mysql,
+        Type::Pgsql,
+    ] {
         assert_eq!(Type::from_str_name(v.as_str_name()), Some(v));
     }
     assert_eq!(Type::from_str_name("BOGUS"), None);

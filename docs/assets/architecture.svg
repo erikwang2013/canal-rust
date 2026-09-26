@@ -1,0 +1,138 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 812" width="1240" height="812" role="img">
+  <rect width="1240" height="812" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="1240" height="4" rx="0" fill="#E8552B" stroke="none" stroke-width="1.5"/>
+  <text x="40" y="52" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="27" font-weight="700" fill="#0F172A" text-anchor="start">Canal Rust · 架构设计</text>
+  <text x="40" y="80" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="13" font-weight="400" fill="#64748B" text-anchor="start">MySQL binlog 增量订阅 &amp; 消费 · 14 个 crate 的 Rust workspace · v2.1.0</text>
+  <text x="1200" y="52" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#B0301B" text-anchor="end">小运 / Canal Crab</text>
+  <text x="1200" y="72" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="11" font-weight="400" fill="#64748B" text-anchor="end">项目宠物 · 守着数据运河的螃蟹</text>
+  <rect x="40" y="112" width="140" height="172" rx="14" fill="#EEF2F7" stroke="#C6D2E0" stroke-width="1.6"/>
+  <rect x="40" y="112" width="140" height="4" rx="2" fill="#334155" stroke="none" stroke-width="1.5"/>
+  <text x="110.0" y="142" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="13" font-weight="700" fill="#334155" text-anchor="middle">MySQL Master</text>
+  <text x="110.0" y="168" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="middle">binlog (ROW 格式)</text>
+  <text x="110.0" y="188" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="middle">5.1 ~ 8.0 / MariaDB</text>
+  <rect x="210" y="112" width="140" height="172" rx="14" fill="#FFF3EA" stroke="#F5C4A2" stroke-width="1.6"/>
+  <rect x="210" y="112" width="140" height="4" rx="2" fill="#C2410C" stroke="none" stroke-width="1.5"/>
+  <text x="280.0" y="142" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="13" font-weight="700" fill="#C2410C" text-anchor="middle">canal-binlog</text>
+  <rect x="220" y="164" width="120" height="25" rx="7" fill="#FFFFFF" stroke="#F5C4A2" stroke-width="1.2"/>
+  <text x="280.0" y="181" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="10" font-weight="500" fill="#C2410C" text-anchor="middle">connector.rs</text>
+  <rect x="220" y="194" width="120" height="25" rx="7" fill="#FFFFFF" stroke="#F5C4A2" stroke-width="1.2"/>
+  <text x="280.0" y="211" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="10" font-weight="500" fill="#C2410C" text-anchor="middle">converter.rs</text>
+  <rect x="220" y="224" width="120" height="25" rx="7" fill="#FFFFFF" stroke="#F5C4A2" stroke-width="1.2"/>
+  <text x="280.0" y="241" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="10" font-weight="500" fill="#C2410C" text-anchor="middle">table_map.rs</text>
+  <rect x="220" y="254" width="120" height="25" rx="7" fill="#FFFFFF" stroke="#F5C4A2" stroke-width="1.2"/>
+  <text x="280.0" y="271" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="10" font-weight="500" fill="#C2410C" text-anchor="middle">column_serde.rs</text>
+  <rect x="380" y="112" width="140" height="172" rx="14" fill="#F4F0FD" stroke="#D0C2F4" stroke-width="1.6"/>
+  <rect x="380" y="112" width="140" height="4" rx="2" fill="#6D3FC4" stroke="none" stroke-width="1.5"/>
+  <text x="450.0" y="142" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="13" font-weight="700" fill="#6D3FC4" text-anchor="middle">canal-filter</text>
+  <text x="450.0" y="168" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="middle">EventFilter</text>
+  <text x="450.0" y="188" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="middle">正则 include / exclude</text>
+  <text x="450.0" y="208" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="middle">库表黑白名单</text>
+  <rect x="550" y="112" width="140" height="172" rx="14" fill="#F4F0FD" stroke="#D0C2F4" stroke-width="1.6"/>
+  <rect x="550" y="112" width="140" height="4" rx="2" fill="#6D3FC4" stroke="none" stroke-width="1.5"/>
+  <text x="620.0" y="142" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="13" font-weight="700" fill="#6D3FC4" text-anchor="middle">canal-sink</text>
+  <text x="620.0" y="168" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="middle">EventSink</text>
+  <text x="620.0" y="188" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="middle">事件扇出 fan-out</text>
+  <text x="620.0" y="208" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="middle">store + connectors</text>
+  <rect x="720" y="112" width="140" height="172" rx="14" fill="#E9F8F5" stroke="#A3DED4" stroke-width="1.6"/>
+  <rect x="720" y="112" width="140" height="4" rx="2" fill="#0F766E" stroke="none" stroke-width="1.5"/>
+  <text x="790.0" y="142" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="13" font-weight="700" fill="#0F766E" text-anchor="middle">canal-store</text>
+  <text x="790.0" y="168" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="middle">MemoryEventStore</text>
+  <text x="790.0" y="188" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="middle">ring buffer 环形缓冲</text>
+  <text x="790.0" y="208" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="middle">容量淘汰 · 客户端 Ack</text>
+  <rect x="890" y="112" width="140" height="172" rx="14" fill="#EAF2FE" stroke="#B0CFF7" stroke-width="1.6"/>
+  <rect x="890" y="112" width="140" height="4" rx="2" fill="#1D4ED8" stroke="none" stroke-width="1.5"/>
+  <text x="960.0" y="142" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="13" font-weight="700" fill="#1D4ED8" text-anchor="middle">canal-server</text>
+  <text x="960.0" y="168" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="middle">CanalServer</text>
+  <text x="960.0" y="188" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="middle">codec · session</text>
+  <text x="960.0" y="208" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="middle">握手 / 订阅 / Get / Ack</text>
+  <rect x="1060" y="112" width="140" height="172" rx="14" fill="#FBFBFD" stroke="#C6D2E0" stroke-width="1.6" stroke-dasharray="7 6"/>
+  <rect x="1060" y="112" width="140" height="4" rx="2" fill="#475569" stroke="none" stroke-width="1.5"/>
+  <text x="1130.0" y="142" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="13" font-weight="700" fill="#475569" text-anchor="middle">Clients</text>
+  <text x="1130.0" y="168" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="middle">Java · Go · Python</text>
+  <text x="1130.0" y="188" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="middle">C# · Node.js</text>
+  <text x="1130.0" y="208" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="middle">Rust SDK</text>
+  <line x1="184" y1="198.0" x2="198" y2="198.0" stroke="#7C8AA0" stroke-width="1.9" stroke-linecap="round"/>
+  <polygon points="206,198.0 197,192.5 197,203.5" fill="#7C8AA0" stroke="none" stroke-width="1"/>
+  <text x="196.0" y="189.0" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="9" font-weight="600" fill="#94A3B8" text-anchor="middle">dump</text>
+  <line x1="354" y1="198.0" x2="368" y2="198.0" stroke="#7C8AA0" stroke-width="1.9" stroke-linecap="round"/>
+  <polygon points="376,198.0 367,192.5 367,203.5" fill="#7C8AA0" stroke="none" stroke-width="1"/>
+  <text x="366.0" y="189.0" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="9" font-weight="600" fill="#94A3B8" text-anchor="middle">parse</text>
+  <line x1="524" y1="198.0" x2="538" y2="198.0" stroke="#7C8AA0" stroke-width="1.9" stroke-linecap="round"/>
+  <polygon points="546,198.0 537,192.5 537,203.5" fill="#7C8AA0" stroke="none" stroke-width="1"/>
+  <text x="536.0" y="189.0" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="9" font-weight="600" fill="#94A3B8" text-anchor="middle">filter</text>
+  <line x1="694" y1="198.0" x2="708" y2="198.0" stroke="#7C8AA0" stroke-width="1.9" stroke-linecap="round"/>
+  <polygon points="716,198.0 707,192.5 707,203.5" fill="#7C8AA0" stroke="none" stroke-width="1"/>
+  <text x="706.0" y="189.0" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="9" font-weight="600" fill="#94A3B8" text-anchor="middle">fan-out</text>
+  <line x1="864" y1="198.0" x2="878" y2="198.0" stroke="#7C8AA0" stroke-width="1.9" stroke-linecap="round"/>
+  <polygon points="886,198.0 877,192.5 877,203.5" fill="#7C8AA0" stroke="none" stroke-width="1"/>
+  <text x="876.0" y="189.0" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="9" font-weight="600" fill="#94A3B8" text-anchor="middle">read</text>
+  <line x1="1034" y1="198.0" x2="1048" y2="198.0" stroke="#7C8AA0" stroke-width="1.9" stroke-linecap="round"/>
+  <polygon points="1056,198.0 1047,192.5 1047,203.5" fill="#7C8AA0" stroke="none" stroke-width="1"/>
+  <text x="1046.0" y="189.0" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="9" font-weight="600" fill="#94A3B8" text-anchor="middle">wire</text>
+  <line x1="620" y1="288" x2="620" y2="324" stroke="#BE185D" stroke-width="1.9" stroke-linecap="round"/>
+  <polygon points="620,332 614.5,323 625.5,323" fill="#BE185D" stroke="none" stroke-width="1"/>
+  <text x="628" y="310" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="10" font-weight="600" fill="#BE185D" text-anchor="start">canal-connector</text>
+  <rect x="500" y="336" width="260" height="92" rx="14" fill="#FDF0F6" stroke="#F0B9D2" stroke-width="1.6"/>
+  <rect x="500" y="336" width="260" height="4" rx="2" fill="#BE185D" stroke="none" stroke-width="1.5"/>
+  <text x="630.0" y="366" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="13" font-weight="700" fill="#BE185D" text-anchor="middle">canal-connector · Kafka</text>
+  <text x="630.0" y="390" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="10.5" font-weight="400" fill="#475569" text-anchor="middle">JSON flat message</text>
+  <text x="630.0" y="410" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="middle">独立于 store 的第二条输出通路</text>
+  <line x1="764" y1="382.0" x2="808" y2="382.0" stroke="#BE185D" stroke-width="1.9" stroke-linecap="round"/>
+  <polygon points="816,382.0 807,376.5 807,387.5" fill="#BE185D" stroke="none" stroke-width="1"/>
+  <rect x="820" y="347" width="200" height="70" rx="14" fill="#FBFBFD" stroke="#C6D2E0" stroke-width="1.6" stroke-dasharray="7 6"/>
+  <text x="920" y="377" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="600" fill="#475569" text-anchor="middle">下游消费者</text>
+  <text x="920" y="397" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="10.5" font-weight="400" fill="#475569" text-anchor="middle">Kafka Topics</text>
+  <text x="40" y="464" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#B45309" text-anchor="start" letter-spacing="1">运维与管理面</text>
+  <rect x="40" y="476" width="720" height="104" rx="14" fill="#FFF8E8" stroke="#EFD69B" stroke-width="1.6"/>
+  <rect x="40" y="476" width="720" height="4" rx="2" fill="#B45309" stroke="none" stroke-width="1.5"/>
+  <text x="60" y="508" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="13" font-weight="700" fill="#B45309" text-anchor="start">canal-instance</text>
+  <text x="170" y="508" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="11" font-weight="400" fill="#475569" text-anchor="start">多实例管理 — 单进程内运行多个 destination</text>
+  <text x="60" y="534" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="10.5" font-weight="400" fill="#475569" text-anchor="start">InstanceManager   register / get / list / start_all / stop_all / running_count</text>
+  <text x="60" y="556" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="10.5" font-weight="400" fill="#475569" text-anchor="start">CanalInstance     feed() → filter → sink；每个实例持有独立的 binlog / store / filter / sink</text>
+  <rect x="790" y="476" width="190" height="104" rx="14" fill="#FFF8E8" stroke="#EFD69B" stroke-width="1.6"/>
+  <text x="885" y="508" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="12.5" font-weight="700" fill="#B45309" text-anchor="middle">canal-admin</text>
+  <text x="885" y="532" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="middle">REST API (axum)</text>
+  <text x="885" y="552" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="10" font-weight="400" fill="#475569" text-anchor="middle">/health · /api/instances</text>
+  <text x="885" y="570" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="middle">启停 / 状态查询</text>
+  <rect x="1000" y="476" width="200" height="104" rx="14" fill="#FFF8E8" stroke="#EFD69B" stroke-width="1.6"/>
+  <text x="1100" y="508" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="12.5" font-weight="700" fill="#B45309" text-anchor="middle">canal-prometheus</text>
+  <text x="1100" y="532" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="middle">/metrics 端点</text>
+  <text x="1100" y="552" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="10" font-weight="400" fill="#475569" text-anchor="middle">events_parsed_total</text>
+  <text x="1100" y="570" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="10" font-weight="400" fill="#475569" text-anchor="middle">instances_active · gauge</text>
+  <text x="40" y="606" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#475569" text-anchor="start" letter-spacing="1">基础与支撑 crate</text>
+  <rect x="40" y="618" width="290" height="92" rx="14" fill="#F4F5F7" stroke="#D3D8E0" stroke-width="1.6"/>
+  <rect x="40" y="618" width="290" height="4" rx="2" fill="#475569" stroke="none" stroke-width="1.5"/>
+  <text x="58" y="654" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="13" font-weight="700" fill="#475569" text-anchor="start">canal-common</text>
+  <text x="58" y="678" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="start">error · types</text>
+  <text x="58" y="696" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="start">lifecycle · utils</text>
+  <rect x="350" y="618" width="270" height="92" rx="14" fill="#F4F5F7" stroke="#D3D8E0" stroke-width="1.6"/>
+  <rect x="350" y="618" width="270" height="4" rx="2" fill="#475569" stroke="none" stroke-width="1.5"/>
+  <text x="368" y="654" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="13" font-weight="700" fill="#475569" text-anchor="start">canal-proto</text>
+  <text x="368" y="678" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="start">prost-build 代码生成</text>
+  <text x="368" y="696" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="start">Packet / Entry / Messages</text>
+  <rect x="640" y="618" width="250" height="92" rx="14" fill="#F4F5F7" stroke="#D3D8E0" stroke-width="1.6"/>
+  <rect x="640" y="618" width="250" height="4" rx="2" fill="#475569" stroke="none" stroke-width="1.5"/>
+  <text x="658" y="654" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="13" font-weight="700" fill="#475569" text-anchor="start">canal-meta</text>
+  <text x="658" y="678" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="start">DDL 追踪</text>
+  <text x="658" y="696" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="start">表结构缓存</text>
+  <rect x="910" y="618" width="290" height="92" rx="14" fill="#F4F5F7" stroke="#D3D8E0" stroke-width="1.6"/>
+  <rect x="910" y="618" width="290" height="4" rx="2" fill="#475569" stroke="none" stroke-width="1.5"/>
+  <text x="928" y="654" font-family="'Noto Sans Mono CJK SC','SFMono-Regular',Consolas,monospace" font-size="13" font-weight="700" fill="#475569" text-anchor="start">canal-cli</text>
+  <text x="928" y="678" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="start">server / dump 子命令</text>
+  <text x="928" y="696" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#475569" text-anchor="start">canal.yaml 配置加载</text>
+  <line x1="40" y1="748" x2="1200" y2="748" stroke="#E2E8F0" stroke-width="1.2" stroke-linecap="round"/>
+  <text x="40" y="774" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="11" font-weight="400" fill="#64748B" text-anchor="start">实线箭头 = 事件数据流</text>
+  <text x="250" y="774" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="11" font-weight="400" fill="#64748B" text-anchor="start">虚线框 = 外部组件 / 下游</text>
+  <text x="470" y="774" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="11" font-weight="400" fill="#64748B" text-anchor="start">颜色 = 架构层次：</text>
+  <rect x="600" y="764" width="12" height="12" rx="3" fill="#FFF3EA" stroke="#F5C4A2" stroke-width="1.2"/>
+  <text x="618" y="774" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="11" font-weight="400" fill="#475569" text-anchor="start">接入</text>
+  <rect x="660" y="764" width="12" height="12" rx="3" fill="#F4F0FD" stroke="#D0C2F4" stroke-width="1.2"/>
+  <text x="678" y="774" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="11" font-weight="400" fill="#475569" text-anchor="start">管道</text>
+  <rect x="720" y="764" width="12" height="12" rx="3" fill="#E9F8F5" stroke="#A3DED4" stroke-width="1.2"/>
+  <text x="738" y="774" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="11" font-weight="400" fill="#475569" text-anchor="start">存储</text>
+  <rect x="780" y="764" width="12" height="12" rx="3" fill="#EAF2FE" stroke="#B0CFF7" stroke-width="1.2"/>
+  <text x="798" y="774" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="11" font-weight="400" fill="#475569" text-anchor="start">服务</text>
+  <rect x="840" y="764" width="12" height="12" rx="3" fill="#FFF8E8" stroke="#EFD69B" stroke-width="1.2"/>
+  <text x="858" y="774" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="11" font-weight="400" fill="#475569" text-anchor="start">运维</text>
+  <text x="1200" y="774" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#64748B" text-anchor="end">Canal Rust v2.1.0 · Apache-2.0</text>
+</svg>

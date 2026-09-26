@@ -75,7 +75,12 @@ impl DefaultBinlogConnector {
             password: password.to_string(),
             original_password: Some(password.to_string()),
             server_id,
-            ssl_mode: SslMode::Require,
+            // mysql_cdc 0.2.1 (the latest release) hard-panics with
+            // `unimplemented!("Ssl encryption is not supported in this version")`
+            // for ANY mode other than `Disabled`, so `Disabled` is not a
+            // preference here — it is the only value that can connect at all.
+            // See the unencrypted-connection warning in `run_replication`.
+            ssl_mode: SslMode::Disabled,
             connect_timeout_secs: 30,
             sender: None,
             current_pos: None,
@@ -86,6 +91,10 @@ impl DefaultBinlogConnector {
     }
 
     /// Set the SSL mode for the MySQL connection.
+    ///
+    /// NOTE: `mysql_cdc 0.2.1` does not implement TLS — constructing its client
+    /// with any mode other than [`SslMode::Disabled`] panics. Overriding this is
+    /// therefore only useful as a placeholder for a future dependency.
     pub fn with_ssl_mode(mut self, mode: SslMode) -> Self {
         self.ssl_mode = mode;
         self
@@ -116,7 +125,7 @@ impl DefaultBinlogConnector {
             blocking: true,
             ssl_mode: self.ssl_mode,
             // mysql_cdc uses u32 for binlog position (protocol limit)
-    binlog: BinlogOptions::from_position(pos.journal_name.clone(), pos.position as u32),
+            binlog: BinlogOptions::from_position(pos.journal_name.clone(), pos.position as u32),
             ..Default::default()
         }
     }
@@ -129,6 +138,15 @@ impl DefaultBinlogConnector {
         started: tokio::sync::oneshot::Sender<()>,
         start_journal: &str,
     ) {
+        // mysql_cdc has no TLS implementation, so this connection carries the
+        // MySQL credentials and every binlog event in plaintext. Say so loudly
+        // once per connection rather than letting it pass unremarked.
+        warn!(
+            "MySQL binlog connection to {}:{} is UNENCRYPTED — mysql_cdc 0.2.1 does not \
+             implement TLS. Run it over a private network or an SSH tunnel.",
+            options.hostname, options.port
+        );
+
         let mut client = BinlogClient::new(options);
         let mut converter = EventConverter::new();
         let mut current_binlog_file = start_journal.to_string();
@@ -137,7 +155,7 @@ impl DefaultBinlogConnector {
         let mut last_error_pos: Option<(String, u64)> = None;
         const MAX_CONSECUTIVE_ERRORS: u32 = 3;
 
-        let events = match client.replicate() {
+        let mut events = match client.replicate() {
             Ok(e) => e,
             Err(e) => {
                 let send_err = CanalError::BinlogConnection(format!(
@@ -156,8 +174,34 @@ impl DefaultBinlogConnector {
         // Signal that we've successfully connected and started replicating
         let _ = started.send(()); // oneshot — caller may have timed out, that's fine
         let mut current_gtid: Option<String> = None;
+        // Position of the last event we decoded, for panic diagnostics.
+        let mut last_pos: u64 = 0;
 
-        for result in events {
+        // Driven by hand rather than `for result in events`: a `for` loop calls
+        // `next()` inside its desugaring, where a panic from the decoder escapes
+        // and kills this thread (closing the event channel and silently stopping
+        // the CDC server). `next_or_panic` turns that into a value we can report.
+        loop {
+            let result = match next_or_panic(&mut events) {
+                NextOutcome::Item(r) => r,
+                NextOutcome::Done => break,
+                NextOutcome::Panicked(msg) => {
+                    error!(
+                        "mysql_cdc panicked while decoding the binlog at {}:{} (last good position) — \
+                         the upstream event is malformed or the decoder is buggy; stopping replication: {}",
+                        current_binlog_file, last_pos, msg
+                    );
+                    let panic_err = CanalError::Protocol(format!(
+                        "binlog decoder panicked near {}:{}: {}",
+                        current_binlog_file, last_pos, msg
+                    ));
+                    if tx.blocking_send(Err(panic_err)).is_err() {
+                        error!("Channel closed during panic error delivery");
+                    }
+                    break;
+                }
+            };
+
             if cancel.is_cancelled() {
                 info!("Binlog replication cancelled");
                 break;
@@ -174,6 +218,7 @@ impl DefaultBinlogConnector {
                     continue;
                 }
             };
+            last_pos = header.next_event_position as u64;
 
             // Track GTID from GTID events for inclusion in subsequent CanalEvents
             match &event {
@@ -222,9 +267,7 @@ impl DefaultBinlogConnector {
                     if consecutive_errors >= MAX_CONSECUTIVE_ERRORS {
                         error!(
                             "Skipping permanently-undecodable event at {}:{} after {} attempts",
-                            current_binlog_file,
-                            header.next_event_position,
-                            consecutive_errors,
+                            current_binlog_file, header.next_event_position, consecutive_errors,
                         );
                         consecutive_errors = 0;
                         last_error_pos = None;
@@ -429,6 +472,41 @@ impl DefaultBinlogConnector {
     }
 }
 
+/// Result of pulling one item out of the binlog event stream.
+enum NextOutcome<T> {
+    /// The iterator yielded an item.
+    Item(T),
+    /// The iterator is exhausted — the stream ended normally.
+    Done,
+    /// The iterator panicked; carries the panic message.
+    Panicked(String),
+}
+
+/// Advance `it` by one item, catching a panic instead of letting it escape.
+///
+/// `mysql_cdc 0.2.1` panics on malformed replication data — `row_parser.rs:109`
+/// indexes `columns_present` with the *table map's* column count, so a row event
+/// declaring fewer columns panics with an index-out-of-bounds. In `spawn_blocking`
+/// that panic would kill the replication thread and close the event channel,
+/// which the caller reads as a clean "stream ended" and shuts the server down.
+/// Catching it here turns the crash into a value the caller can report.
+///
+/// The iterator is not used again after a caught panic (the caller must stop
+/// driving it), so its possibly-inconsistent state is never observed.
+fn next_or_panic<T>(it: &mut impl Iterator<Item = T>) -> NextOutcome<T> {
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| it.next())) {
+        Ok(Some(item)) => NextOutcome::Item(item),
+        Ok(None) => NextOutcome::Done,
+        Err(payload) => NextOutcome::Panicked(
+            payload
+                .downcast_ref::<&str>()
+                .map(|s| s.to_string())
+                .or_else(|| payload.downcast_ref::<String>().cloned())
+                .unwrap_or_else(|| "<non-string panic payload>".to_string()),
+        ),
+    }
+}
+
 // -- Async trait implementation --
 
 #[async_trait]
@@ -466,26 +544,33 @@ impl BinlogConnector for DefaultBinlogConnector {
         let (started_tx, started_rx) = tokio::sync::oneshot::channel();
 
         let journal_name = pos.journal_name.clone();
-        tokio::task::spawn_blocking(move || {
+        let replication_handle = tokio::task::spawn_blocking(move || {
             Self::run_replication(options, tx, cancel_for_spawn, started_tx, &journal_name);
         });
-
-        let started_result = match tokio::time::timeout(
-            std::time::Duration::from_secs(timeout_secs),
-            started_rx,
-        )
-        .await
-        {
-            Ok(r) => r,
-            Err(_) => {
-                cancel_for_timeout.cancel();
-                self.running.store(false, Ordering::Release);
-                return Err(CanalError::BinlogConnection(format!(
-                    "connection timed out after {}s",
-                    timeout_secs
-                )));
+        // Nothing else joins this task, so bind the handle and watch it: a
+        // replication thread that dies (panic outside the guarded pull, or a
+        // cancelled blocking read) must be loud, not a silently closed channel.
+        tokio::spawn(async move {
+            match replication_handle.await {
+                Ok(()) => debug!("Binlog replication task finished"),
+                Err(e) => error!("Binlog replication task ended abnormally: {}", e),
             }
-        };
+        });
+
+        let started_result =
+            match tokio::time::timeout(std::time::Duration::from_secs(timeout_secs), started_rx)
+                .await
+            {
+                Ok(r) => r,
+                Err(_) => {
+                    cancel_for_timeout.cancel();
+                    self.running.store(false, Ordering::Release);
+                    return Err(CanalError::BinlogConnection(format!(
+                        "connection timed out after {}s",
+                        timeout_secs
+                    )));
+                }
+            };
 
         match started_result {
             Ok(()) => self.connected.store(true, Ordering::Release),
@@ -543,5 +628,66 @@ impl Drop for DefaultBinlogConnector {
         if let Some(token) = self.cancel_token.take() {
             token.cancel();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Stand-in for `mysql_cdc`'s event iterator: its `next()` panics with an
+    /// index-out-of-bounds, exactly like `row_parser.rs:109` does on a malformed
+    /// row event. The real panic cannot be triggered from here — it lives inside
+    /// the dependency — so this exercises the containment mechanism instead.
+    struct PanicOnNext;
+
+    impl Iterator for PanicOnNext {
+        type Item = u8;
+
+        fn next(&mut self) -> Option<u8> {
+            panic!("index out of bounds: the len is 3 but the index is 5");
+        }
+    }
+
+    // The caught panic still prints its message to stderr via the default panic
+    // hook — expected noise, the hook is global and must not be swapped here.
+    #[test]
+    fn next_or_panic_converts_panic_into_outcome() {
+        let mut it = PanicOnNext;
+        match next_or_panic(&mut it) {
+            NextOutcome::Panicked(msg) => {
+                assert!(msg.contains("index out of bounds"), "message lost: {msg}")
+            }
+            _ => panic!("panic escaped containment"),
+        }
+    }
+
+    #[test]
+    fn next_or_panic_passes_items_and_end_through_unchanged() {
+        let mut it = [1u8, 2, 3].into_iter();
+        for expected in [1u8, 2, 3] {
+            match next_or_panic(&mut it) {
+                NextOutcome::Item(got) => assert_eq!(got, expected),
+                _ => panic!("expected item {expected}"),
+            }
+        }
+        assert!(
+            matches!(next_or_panic(&mut it), NextOutcome::Done),
+            "expected Done after the last item"
+        );
+    }
+
+    #[test]
+    fn default_ssl_mode_is_disabled() {
+        // Regression: the default used to be `SslMode::Require`, but mysql_cdc
+        // panics with `unimplemented!` for any non-Disabled mode — so every
+        // connection attempt died before reaching MySQL. `Disabled` is the only
+        // value that can connect; this pins that so it cannot silently regress.
+        let connector = DefaultBinlogConnector::new("localhost", 3306, "u", "p", 1).unwrap();
+        assert_eq!(
+            connector.ssl_mode,
+            SslMode::Disabled,
+            "the only mode mysql_cdc can connect with is Disabled"
+        );
     }
 }

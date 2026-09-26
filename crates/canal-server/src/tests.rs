@@ -74,7 +74,10 @@ fn test_canal_event_to_entry_header_fields() {
     assert_eq!(h.schema_name, "mydb");
     assert_eq!(h.table_name, "users");
     assert_eq!(h.gtid, "3e11fa47-71ca-11e1-9e33-c80aa9429562:1-5");
-    assert!(h.event_length > 0, "event_length should be non-zero from store_value");
+    assert!(
+        h.event_length > 0,
+        "event_length should be non-zero from store_value"
+    );
 
     match h.event_type_present {
         Some(header::EventTypePresent::EventType(v)) => {

@@ -312,16 +312,19 @@ fn test_error_display_remaining_variants() {
         "authentication failed for client bob"
     );
     let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "no file");
+    assert_eq!(format!("{}", CanalError::Io(io_err)), "io: no file");
     assert_eq!(
-        format!("{}", CanalError::Io(io_err)),
-        "io: no file"
+        format!("{}", CanalError::Store("full".into())),
+        "store: full"
     );
-    assert_eq!(format!("{}", CanalError::Store("full".into())), "store: full");
     assert_eq!(
         format!("{}", CanalError::Config("bad".into())),
         "configuration: bad"
     );
-    assert_eq!(format!("{}", CanalError::NotFound("x".into())), "not found: x");
+    assert_eq!(
+        format!("{}", CanalError::NotFound("x".into())),
+        "not found: x"
+    );
 }
 
 #[test]

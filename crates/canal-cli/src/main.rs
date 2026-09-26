@@ -6,8 +6,8 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use canal_admin::AdminServer;
 use canal_binlog::BinlogConnector;
+use canal_cli::{load_config, resolve_admin_bind, setup_logging, Cli, Commands};
 use canal_common::FilterPattern;
-use canal_cli::{load_config, setup_logging, Cli, Commands};
 use canal_instance::instance::{CanalInstance, InstanceConfig, InstanceManager};
 use canal_prometheus::{CanalMetrics, MetricsServer};
 use clap::Parser;
@@ -39,6 +39,10 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
     }
 
     tracing::info!("Starting canal-rust server v{}", env!("CARGO_PKG_VERSION"));
+    tracing::info!(
+        "{} is on duty, guarding the data canal",
+        canal_cli::PET_NAME
+    );
     tracing::info!(
         "MySQL source: {}:{}",
         config.canal.mysql.host,
@@ -98,11 +102,7 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
     metrics.set_instances_active(instance_mgr.running_count() as u64);
 
     // Start admin API
-    let admin_port = bind_addr
-        .port()
-        .checked_add(1)
-        .context("Admin port overflow: main port 65535 has no room for admin")?;
-    let admin_bind = format!("127.0.0.1:{}", admin_port);
+    let admin_bind = resolve_admin_bind(config.canal.server.admin_bind.as_deref(), bind_addr)?;
     let admin_server = AdminServer::new(&admin_bind, instance_mgr.clone());
     let _admin_task = admin_server
         .start()
