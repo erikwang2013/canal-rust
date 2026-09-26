@@ -18,6 +18,10 @@ jobs:
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
+      # canal-proto/build.rs drives prost-build, which shells out to `protoc`.
+      # Without this every compile fails with "Could not find `protoc`".
+      - name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
       - run: cargo fmt --check --all
       - run: cargo clippy --all-targets --locked -- -D warnings
       - run: cargo build --release --locked

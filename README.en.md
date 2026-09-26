@@ -144,6 +144,10 @@ Three independent tracks — a fault in any one of them never blocks a graceful 
 ### Prerequisites
 
 - Rust 1.85+ (`clap` and other dependencies now use edition 2024, which requires rustc ≥ 1.85)
+- **`protoc`** (Protocol Buffers compiler) — `canal-proto`'s `build.rs` generates code with
+  `prost-build`; without it **every compile fails** with `Could not find 'protoc'`
+  - Debian/Ubuntu: `apt-get install protobuf-compiler`
+  - macOS: `brew install protobuf`
 - MySQL 5.7+ / 8.0 (binlog enabled, ROW format)
 - (Optional) Kafka for message queue output
 

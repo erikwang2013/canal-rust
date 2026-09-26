@@ -3,6 +3,10 @@
 # `edition = "2024"` and `rust-version = "1.85"`, so an older toolchain cannot
 # build this lockfile at all. Keep in sync with `rust-version` in Cargo.toml.
 FROM rust:1.85-slim-bookworm AS builder
+# canal-proto/build.rs drives prost-build, which shells out to `protoc`;
+# the slim image does not ship it, so the build fails without this.
+RUN apt-get update && apt-get install -y --no-install-recommends protobuf-compiler \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 COPY crates/ crates/

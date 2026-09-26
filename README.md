@@ -167,6 +167,10 @@ canal-common ──────────────────────�
 ### 环境要求
 
 - Rust 1.85+（依赖链中 `clap` 等已使用 edition 2024，需 rustc ≥ 1.85）
+- **`protoc`**（Protocol Buffers 编译器）—— `canal-proto` 的 `build.rs` 用 `prost-build`
+  生成代码，缺了它**任何编译都会失败**并报 `Could not find 'protoc'`
+  - Debian/Ubuntu：`apt-get install protobuf-compiler`
+  - macOS：`brew install protobuf`
 - MySQL 5.7+ / 8.0（开启 binlog，格式 ROW）
 - （可选）Kafka 用于消息队列输出
 
