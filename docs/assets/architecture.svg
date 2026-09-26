@@ -2,7 +2,7 @@
   <rect width="1240" height="812" fill="#FFFFFF"/>
   <rect x="0" y="0" width="1240" height="4" rx="0" fill="#E8552B" stroke="none" stroke-width="1.5"/>
   <text x="40" y="52" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="27" font-weight="700" fill="#0F172A" text-anchor="start">Canal Rust · 架构设计</text>
-  <text x="40" y="80" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="13" font-weight="400" fill="#64748B" text-anchor="start">MySQL binlog 增量订阅 &amp; 消费 · 14 个 crate 的 Rust workspace · v2.1.0</text>
+  <text x="40" y="80" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="13" font-weight="400" fill="#64748B" text-anchor="start">MySQL binlog 增量订阅 &amp; 消费 · 14 个 crate 的 Rust workspace · v2.2.0</text>
   <text x="1200" y="52" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700" fill="#B0301B" text-anchor="end">小运 / Canal Crab</text>
   <text x="1200" y="72" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="11" font-weight="400" fill="#64748B" text-anchor="end">项目宠物 · 守着数据运河的螃蟹</text>
   <rect x="40" y="112" width="140" height="172" rx="14" fill="#EEF2F7" stroke="#C6D2E0" stroke-width="1.6"/>
@@ -134,5 +134,5 @@
   <text x="798" y="774" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="11" font-weight="400" fill="#475569" text-anchor="start">服务</text>
   <rect x="840" y="764" width="12" height="12" rx="3" fill="#FFF8E8" stroke="#EFD69B" stroke-width="1.2"/>
   <text x="858" y="774" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="11" font-weight="400" fill="#475569" text-anchor="start">运维</text>
-  <text x="1200" y="774" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#64748B" text-anchor="end">Canal Rust v2.1.0 · Apache-2.0</text>
+  <text x="1200" y="774" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="400" fill="#64748B" text-anchor="end">Canal Rust v2.2.0 · Apache-2.0</text>
 </svg>

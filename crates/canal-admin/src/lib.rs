@@ -5,6 +5,7 @@ use axum::{
     Json, Router,
 };
 use canal_common::lifecycle::CanalLifecycle;
+use canal_common::pet::{PET_NAME, PET_SVG, PET_TAGLINE};
 use canal_instance::instance::InstanceManager;
 use serde::Serialize;
 use std::sync::Arc;
@@ -87,6 +88,8 @@ impl AdminServer {
         info!("Admin API starting on {}", addr);
 
         let app = Router::new()
+            .route("/", get(index_handler))
+            .route("/pet.svg", get(pet_svg_handler))
             .route("/health", get(health_handler))
             .route("/api/instances", get(list_instances))
             .route("/api/instances/:name/start", post(start_instance))
@@ -150,6 +153,70 @@ async fn health_handler(State(state): State<AdminState>) -> Json<HealthResponse>
         version: env!("CARGO_PKG_VERSION").to_string(),
         uptime_seconds: state.started_at.elapsed().as_secs(),
     })
+}
+
+// -- mascot ---------------------------------------------------------------
+
+/// The vector original, embedded at compile time from `docs/assets/canal-pet.svg`.
+/// Editing that file updates the served artwork too, with no runtime file access.
+async fn pet_svg_handler() -> impl axum::response::IntoResponse {
+    (
+        [(axum::http::header::CONTENT_TYPE, "image/svg+xml")],
+        PET_SVG,
+    )
+}
+
+/// Human-facing landing page for the Admin API. Deliberately unauthenticated
+/// and deliberately shallow: it shows version, uptime and how many instances
+/// are *running*, never instance names — those still need the token via
+/// `/api/instances`.
+async fn index_handler(State(state): State<AdminState>) -> axum::response::Html<String> {
+    let version = env!("CARGO_PKG_VERSION");
+    let uptime = state.started_at.elapsed().as_secs();
+    let running = state.instance_manager.running_count();
+    let total = state.instance_manager.list().len();
+
+    axum::response::Html(format!(
+        r#"<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Canal Rust · Admin</title>
+<style>
+  :root {{ color-scheme: light dark; }}
+  body {{ margin:0; min-height:100vh; display:flex; flex-direction:column;
+         align-items:center; justify-content:center; gap:1.25rem;
+         font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;
+         background:#fffdfa; color:#2d2438; }}
+  img {{ width:min(420px,80vw); height:auto; }}
+  h1 {{ margin:0; font-size:1.15rem; font-weight:650; }}
+  p {{ margin:0; color:#6b7280; font-size:.875rem; }}
+  dl {{ display:flex; gap:2rem; margin:0; text-align:center; }}
+  dt {{ font-size:.7rem; letter-spacing:.08em; text-transform:uppercase; color:#9ca3af; }}
+  dd {{ margin:.15rem 0 0; font-weight:650; font-variant-numeric:tabular-nums; }}
+  code {{ background:#f3f4f6; padding:.1rem .35rem; border-radius:.25rem; font-size:.8rem; }}
+  @media (prefers-color-scheme:dark) {{
+    body {{ background:#1b1b1f; color:#f3f4f6; }}
+    code {{ background:#2a2a31; }}
+  }}
+</style>
+</head>
+<body>
+  <img src="/pet.svg" alt="{name} — {tagline}">
+  <h1>{name}</h1>
+  <p>{tagline}</p>
+  <dl>
+    <div><dt>version</dt><dd>v{version}</dd></div>
+    <div><dt>uptime</dt><dd>{uptime}s</dd></div>
+    <div><dt>instances</dt><dd>{running} / {total}</dd></div>
+  </dl>
+  <p><code>GET /health</code> · <code>GET /api/instances</code> · <code>GET /metrics</code></p>
+</body>
+</html>"#,
+        name = PET_NAME,
+        tagline = PET_TAGLINE,
+    ))
 }
 
 async fn list_instances(
@@ -226,6 +293,7 @@ async fn stop_instance(
 mod tests {
     use super::*;
     use axum::http::HeaderValue;
+    use axum::response::IntoResponse;
     use canal_common::{FilterPattern, LogPosition};
     use canal_instance::instance::{CanalInstance, InstanceConfig};
 
@@ -255,6 +323,63 @@ mod tests {
             admin_token: token,
         }
     }
+    #[tokio::test]
+    async fn test_pet_svg_is_served_as_svg() {
+        let resp = pet_svg_handler().await.into_response();
+        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(
+            resp.headers().get("content-type").unwrap(),
+            "image/svg+xml",
+            "browsers must be told this is SVG, not text"
+        );
+        let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        assert!(body.starts_with(b"<svg"));
+    }
+
+    #[tokio::test]
+    async fn test_index_shows_the_mascot() {
+        let mgr = Arc::new(InstanceManager::new());
+        register_instance(&mgr, "example");
+        let resp = index_handler(State(state_with(mgr, None)))
+            .await
+            .into_response();
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let html = String::from_utf8(body.to_vec()).unwrap();
+
+        assert!(html.contains(PET_NAME), "the landing page lost the mascot");
+        assert!(
+            html.contains("/pet.svg"),
+            "the page does not point at the art"
+        );
+        assert!(html.contains(env!("CARGO_PKG_VERSION")), "version missing");
+    }
+
+    #[tokio::test]
+    async fn test_index_does_not_leak_instance_names_without_auth() {
+        // The landing page is reachable unauthenticated, so it must stay
+        // shallow — instance names are what the token protects.
+        let mgr = Arc::new(InstanceManager::new());
+        register_instance(&mgr, "secret-prod-db");
+        let resp = index_handler(State(state_with(mgr, Some("s3cret".into()))))
+            .await
+            .into_response();
+        let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let html = String::from_utf8(body.to_vec()).unwrap();
+
+        assert!(
+            !html.contains("secret-prod-db"),
+            "the unauthenticated landing page leaked an instance name"
+        );
+    }
+
     #[test]
     fn test_check_auth_no_token_required() {
         let headers = HeaderMap::new();

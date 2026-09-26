@@ -230,7 +230,7 @@ checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 
 [[package]]
 name = "canal-admin"
-version = "2.1.0"
+version = "2.2.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -243,7 +243,7 @@ dependencies = [
 
 [[package]]
 name = "canal-binlog"
-version = "2.1.0"
+version = "2.2.0"
 dependencies = [
  "async-trait",
  "canal-common",
@@ -256,7 +256,7 @@ dependencies = [
 
 [[package]]
 name = "canal-cli"
-version = "2.1.0"
+version = "2.2.0"
 dependencies = [
  "anyhow",
  "canal-admin",
@@ -276,7 +276,7 @@ dependencies = [
 
 [[package]]
 name = "canal-client"
-version = "2.1.0"
+version = "2.2.0"
 dependencies = [
  "canal-common",
  "canal-proto",
@@ -287,7 +287,7 @@ dependencies = [
 
 [[package]]
 name = "canal-common"
-version = "2.1.0"
+version = "2.2.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -301,7 +301,7 @@ dependencies = [
 
 [[package]]
 name = "canal-connector"
-version = "2.1.0"
+version = "2.2.0"
 dependencies = [
  "async-trait",
  "canal-common",
@@ -316,7 +316,7 @@ dependencies = [
 
 [[package]]
 name = "canal-filter"
-version = "2.1.0"
+version = "2.2.0"
 dependencies = [
  "canal-common",
  "regex",
@@ -325,7 +325,7 @@ dependencies = [
 
 [[package]]
 name = "canal-instance"
-version = "2.1.0"
+version = "2.2.0"
 dependencies = [
  "async-trait",
  "canal-binlog",
@@ -341,7 +341,7 @@ dependencies = [
 
 [[package]]
 name = "canal-meta"
-version = "2.1.0"
+version = "2.2.0"
 dependencies = [
  "canal-common",
  "chrono",
@@ -352,7 +352,7 @@ dependencies = [
 
 [[package]]
 name = "canal-prometheus"
-version = "2.1.0"
+version = "2.2.0"
 dependencies = [
  "axum",
  "metrics",
@@ -363,7 +363,7 @@ dependencies = [
 
 [[package]]
 name = "canal-proto"
-version = "2.1.0"
+version = "2.2.0"
 dependencies = [
  "bytes",
  "prost",
@@ -373,7 +373,7 @@ dependencies = [
 
 [[package]]
 name = "canal-server"
-version = "2.1.0"
+version = "2.2.0"
 dependencies = [
  "async-trait",
  "bytes",
@@ -394,7 +394,7 @@ dependencies = [
 
 [[package]]
 name = "canal-sink"
-version = "2.1.0"
+version = "2.2.0"
 dependencies = [
  "async-trait",
  "canal-common",
@@ -407,7 +407,7 @@ dependencies = [
 
 [[package]]
 name = "canal-store"
-version = "2.1.0"
+version = "2.2.0"
 dependencies = [
  "async-trait",
  "canal-common",

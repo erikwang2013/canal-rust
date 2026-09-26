@@ -20,6 +20,7 @@ async fn main() -> Result<()> {
     match cli.command {
         Commands::Server { config } => run_server(config).await,
         Commands::Dump { config } => run_dump(config).await,
+        Commands::Pet => run_pet(),
     }
 }
 
@@ -279,5 +280,15 @@ async fn run_dump(config_path: PathBuf) -> Result<()> {
     }
 
     eprintln!("\nDone. {} events received.", count);
+    Ok(())
+}
+
+/// `canal pet` — meet the mascot and find out where it lives.
+fn run_pet() -> Result<()> {
+    println!("{}", canal_cli::pet_banner());
+    println!("  vector original  docs/assets/canal-pet.svg");
+    println!("  in code          canal_common::pet::{{CANAL_CRAB, PET_SVG}}");
+    println!("  served by        canal server, Admin API  GET /  and  GET /pet.svg");
+    println!("  on the web       README.md / README.en.md, top of the page");
     Ok(())
 }

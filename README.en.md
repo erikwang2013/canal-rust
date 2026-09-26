@@ -45,8 +45,20 @@ The design turns the project's job into a character. MySQL keeps producing chang
 | The binlog scroll upstream | raw events `canal-binlog` pulled from MySQL |
 | The canal underfoot | the pipeline itself |
 
-- Vector original: [`docs/assets/canal-pet.svg`](docs/assets/canal-pet.svg)
-- It also lives in the code: `canal --help` prints the ASCII version (`canal_cli::CANAL_CRAB`), and `canal server` reports for duty once in the startup log.
+### Where 小运 lives in the code
+
+There is exactly one vector original: [`docs/assets/canal-pet.svg`](docs/assets/canal-pet.svg). It is pulled in with `include_str!`, so **editing the SVG edits the running binary** — no asset packaging step.
+
+| Location | Form |
+|----------|------|
+| `crates/canal-common/src/pet.rs` | Single source of truth: `PET_NAME` · `CANAL_CRAB` (ASCII) · `PET_SVG` (embedded vector) · `banner()` |
+| `canal --help` | Prints the ASCII crab in the welcome text |
+| `canal pet` | Its own subcommand: prints the crab and tells you where it lives |
+| `canal server` startup | Reports for duty in the startup log |
+| Admin API `GET /` | Open the admin port in a browser: the crab plus version / uptime / instance count |
+| Admin API `GET /pet.svg` | Serves the vector original as `image/svg+xml` |
+
+It sits in `canal-common` because that is the lowest crate both the CLI and the admin server already depend on — `canal-cli` depends on `canal-admin`, so putting it in either would create a cycle.
 
 ```
      \    \              /    /
@@ -304,9 +316,9 @@ canal-rust/
 | Crates | 14 |
 | Lines of Rust (source) | ~8,400 |
 | Lines of Rust (tests) | ~3,900 |
-| Unit / integration tests | 383 (all passing) |
+| Unit / integration tests | 389 (all passing) |
 | Proto definitions | 2 |
-| Version | v2.1.0 |
+| Version | v2.2.0 |
 | Clippy warnings | 0 |
 | License | Apache-2.0 |
 
@@ -377,6 +389,8 @@ curl http://localhost:11112/health
 curl http://localhost:11112/api/instances
 curl -X POST http://localhost:11112/api/instances/default/stop
 ```
+
+Opening `http://localhost:11112/` in a browser shows 小运 with live status (version / uptime / instance count). That landing page needs no token and deliberately shows only counts, never instance names — those still require the token via `/api/instances`.
 
 ## Development
 

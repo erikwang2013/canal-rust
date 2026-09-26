@@ -1,5 +1,6 @@
 pub mod error;
 pub mod lifecycle;
+pub mod pet;
 pub mod types;
 pub mod utils;
 

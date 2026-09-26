@@ -45,8 +45,20 @@ Canal Rust 模拟 MySQL slave 的交互协议，向 MySQL master 发送 dump 请
 | 上游的 binlog 卷轴 | `canal-binlog` 从 MySQL 拉到的原始事件 |
 | 脚下的运河 | 整条链路本身 |
 
-- 矢量原图：[`docs/assets/canal-pet.svg`](docs/assets/canal-pet.svg)
-- 它也住在代码里：`canal --help` 会打印它的 ASCII 版本（`canal_cli::CANAL_CRAB`），`canal server` 启动时会在日志里报到一次。
+### 小运住在代码里的哪些地方
+
+矢量原图只有一份：[`docs/assets/canal-pet.svg`](docs/assets/canal-pet.svg)。它被 `include_str!` 编进二进制，所以**改 SVG 就等于改运行时**，不需要额外打包资源。
+
+| 位置 | 形式 |
+|------|------|
+| `crates/canal-common/src/pet.rs` | 唯一真源：`PET_NAME` · `CANAL_CRAB`（ASCII）· `PET_SVG`（嵌入的矢量原图）· `banner()` |
+| `canal --help` | 欢迎信息中打印 ASCII 版小运 |
+| `canal pet` | 独立子命令，打印小运并告诉你它都在哪 |
+| `canal server` 启动 | 日志里报到一行 |
+| Admin API `GET /` | 浏览器打开管理端口就能看到小运 + 版本 / 运行时长 / 实例数 |
+| Admin API `GET /pet.svg` | 直接返回矢量原图（`image/svg+xml`） |
+
+放在 `canal-common` 是因为它是 CLI 与管理服务共同依赖的最底层 crate —— `canal-cli` 依赖 `canal-admin`，宠物放哪一边都会成环。
 
 ```
      \    \              /    /
@@ -326,9 +338,9 @@ canal-rust/
 | Crates | 14 |
 | Rust 源码行数 | ~8,400 |
 | 测试代码行数 | ~3,900 |
-| 单元/集成测试 | 383（全部通过） |
+| 单元/集成测试 | 389（全部通过） |
 | Protobuf 定义 | 2 |
-| 版本 | v2.1.0 |
+| 版本 | v2.2.0 |
 | Clippy 警告 | 0 |
 | 许可协议 | Apache-2.0 |
 
@@ -409,6 +421,8 @@ curl http://localhost:11112/health
 curl http://localhost:11112/api/instances
 curl -X POST http://localhost:11112/api/instances/default/stop
 ```
+
+直接用浏览器打开 `http://localhost:11112/` 会看到小运和实时状态（版本 / 运行时长 / 实例数）—— 这是无需 token 的落地页，只显示计数、不显示实例名；实例名仍要通过带 token 的 `/api/instances` 获取。
 
 ## 开发
 

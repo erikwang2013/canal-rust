@@ -163,23 +163,9 @@ pub fn default_log_format() -> String {
 
 // -- CLI --
 
-/// Project mascot: 小运 the Canal Crab — keeper of the lock on the data canal.
-/// It stands on the lock wall with one claw on the paddle wheel and the other
-/// carrying a change event downstream. `docs/assets/canal-pet.svg` is the
-/// vector original; this is the terminal-sized reduction.
-pub const CANAL_CRAB: &str = r#"     \    \              /    /
-      \    \____________/    /
-    ___\_                  _/___
-   /     o                o     \
-  |               __              |
-   \          \________/         /
-    '.__________________________.'
-   __/   /     |      |     \   \__
-  |==================================|
-  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"#;
-
-/// Name of the mascot, for greetings in logs and help text.
-pub const PET_NAME: &str = "小运 (Canal Crab)";
+// The mascot itself lives in `canal-common`, which the admin server also links;
+// re-exported here so `canal_cli::CANAL_CRAB` keeps working for existing users.
+pub use canal_common::pet::{banner as pet_banner, CANAL_CRAB, PET_NAME, PET_SVG};
 
 #[derive(Parser)]
 #[command(
@@ -203,6 +189,8 @@ pub enum Commands {
         #[arg(short, long, default_value = "canal.yaml")]
         config: PathBuf,
     },
+    /// Meet 小运, the project mascot (and print where the artwork lives)
+    Pet,
 }
 
 // -- Config loading --
