@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Usage · Canal Rust</title>
+  <meta name="description" content="Canal Rust usage: Rust client, CLI, Kafka, multi-instance deployment, Prometheus metrics and Admin API.">
+  <meta name="theme-color" content="#f3ecdf">
+  <meta name="author" content="艾瑞可erik">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="application-name" content="Canal Rust">
+  <link rel="canonical" href="https://package.erik.xyz/canal/usage.en.html">
+  <link rel="alternate" hreflang="zh-CN" href="https://package.erik.xyz/canal/usage.html">
+  <link rel="alternate" hreflang="en" href="https://package.erik.xyz/canal/usage.en.html">
+  <link rel="alternate" hreflang="x-default" href="https://package.erik.xyz/canal/usage.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Canal Rust">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="zh_CN">
+  <meta property="og:title" content="Usage · Canal Rust">
+  <meta property="og:description" content="Canal Rust usage: Rust client, CLI, Kafka, multi-instance deployment, Prometheus metrics and Admin API.">
+  <meta property="og:url" content="https://package.erik.xyz/canal/usage.en.html">
+  <meta property="og:image" content="https://package.erik.xyz/canal/assets/img/og-canal-rust-en.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Canal Rust — Xiaoyun at the lock of the data canal">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Usage · Canal Rust">
+  <meta name="twitter:description" content="Canal Rust usage: Rust client, CLI, Kafka, multi-instance deployment, Prometheus metrics and Admin API.">
+  <meta name="twitter:image" content="https://package.erik.xyz/canal/assets/img/og-canal-rust-en.png">
+  <script>
+    (function () {
+      document.documentElement.classList.add('js');
+      if (location.pathname === '/canal') location.replace('/canal/');
+    })();
+  </script>
+  <link rel="icon" href="assets/img/pet-top-en.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/core.css">
+  <link rel="stylesheet" href="assets/css/pages.css">
+  <link rel="stylesheet" href="assets/css/docs.css">
+  <link rel="stylesheet" href="assets/css/lightbox.css">
+  <link rel="stylesheet" href="assets/css/search.css">
+  <noscript><style>.js .reveal{opacity:1;transform:none}</style></noscript>
+  <script defer src="assets/js/site.js"></script>
+  <script defer src="assets/js/search.js"></script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "name": "Usage · Canal Rust",
+  "description": "Canal Rust usage: Rust client, CLI, Kafka, multi-instance deployment, Prometheus metrics and Admin API.",
+  "url": "https://package.erik.xyz/canal/usage.en.html",
+  "inLanguage": "en",
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "Canal Rust",
+    "url": "https://package.erik.xyz/canal/index.en.html"
+  },
+  "about": {
+    "@type": "SoftwareApplication",
+    "name": "Canal Rust",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Linux, macOS",
+    "url": "https://package.erik.xyz/canal/index.en.html"
+  },
+  "primaryImageOfPage": {
+    "@type": "ImageObject",
+    "url": "https://package.erik.xyz/canal/assets/img/og-canal-rust-en.png",
+    "width": 1200,
+    "height": 630
+  }
+}
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="index.en.html" aria-label="Canal Rust home">
+        <span class="brand-mark"><img src="assets/img/pet-top-en.svg" alt="" width="40" height="40"></span>
+        <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">DATA CANAL · v2.2.0</span></span>
+      </a>
+      <nav class="site-nav" id="site-nav" aria-label="Main navigation">
+        <a href="index.en.html">Home</a>
+        <a href="about.en.html">About</a>
+        <a href="features.en.html">Features</a>
+        <a href="changelog.en.html">Changelog</a>
+        <a href="install.en.html">Install</a>
+        <a href="usage.en.html" aria-current="page">Usage</a>
+        <a class="nav-author" href="https://erik.xyz" target="_blank" rel="noopener">艾瑞可erik <span aria-hidden="true">↗</span></a>
+      </nav>
+      <div class="header-tools">
+        <a class="lang-switch" href="usage.html" hreflang="zh-CN" lang="zh-CN" aria-label="Switch to Chinese">中文</a>
+        <button class="search-toggle" type="button" aria-label="Search" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open navigation menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <section class="page-hero">
+      <div class="container">
+        <p class="eyebrow">Usage / Guide</p>
+        <h1>Subscribe to a change,<br>starting from the client.</h1>
+        <p class="lede">Once the server is running, a client connects to the Canal TCP port, declares a destination, and reads events one by one. Existing Canal clients can connect too, because the protocol has not changed.</p>
+        <div class="page-hero-meta"><span>Canal wire protocol</span><span>Rust SDK</span><span>Kafka / TCP</span><span>Prometheus</span></div>
+      </div>
+    </section>
+
+    <section class="section" style="padding-top:24px">
+      <div class="container doc-layout">
+        <aside class="doc-toc" aria-label="On this page">
+          <p>ON THIS PAGE</p>
+          <a href="#client">Rust client</a>
+          <a href="#cli">CLI</a>
+          <a href="#kafka">Kafka</a>
+          <a href="#instances">Multi-instance</a>
+          <a href="#metrics">Prometheus</a>
+          <a href="#admin">Admin API</a>
+          <a href="#behavior">Runtime behavior</a>
+          <a href="#develop">Development</a>
+        </aside>
+
+        <div class="doc-body">
+          <section id="client">
+            <h2>Subscribe with the Rust client</h2>
+            <p><code>canal-client</code> is the repository's Rust SDK. After connecting, subscribe to a destination and read events as a stream; each <code>next_event()</code> returns one event.</p>
+            <div class="code-block"><div class="code-head"><span>main.rs</span><button class="code-copy" type="button">Copy</button></div>
+              <pre><code>use canal_client::CanalClient;
+
+#[tokio::main]
+async fn main() -&gt; Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {
+    let mut client = CanalClient::new("127.0.0.1", 11111)
+        .with_destination("example");
+
+    client.connect().await?;
+    let mut stream = client.subscribe(None).await?;
+
+    while let Some(Ok(event)) = stream.next_event().await {
+        println!("{}: {} @ {}.{}", event.journal_name, event.position,
+                 event.schema_name, event.table_name);
+    }
+    Ok(())
+}</code></pre>
+            </div>
+            <p>Events carry the journal name, position, schema, table and DML / DDL information. The full example and end-to-end test live in <code>crates/canal-client/tests/e2e.rs</code>.</p>
+            <div class="callout info">Java / Go / Python / C# / Node.js clients need no changes: Canal Rust reuses upstream <code>CanalProtocol.proto</code> and <code>EntryProtocol.proto</code> and keeps the wire protocol compatible.</div>
+          </section>
+
+          <section id="cli">
+            <h2>CLI</h2>
+            <div class="code-block"><div class="code-head"><span>terminal</span><button class="code-copy" type="button">Copy</button></div>
+              <pre><code><span class="c"># run the server</span>
+./target/release/canal-rust server --config canal.yaml
+
+<span class="c"># watch binlog events directly</span>
+./target/release/canal-rust dump --config canal.yaml
+
+<span class="c"># meet Xiaoyun</span>
+./target/release/canal-rust pet</code></pre>
+            </div>
+            <p><code>dump</code> connects to MySQL and prints each event: count, journal / position, schema.table, entry type and DDL SQL or DML type. It does not start the TCP service, so it is useful for validating credentials and positions before deployment.</p>
+          </section>
+
+          <section id="kafka">
+            <h2>Scenario 1: sync to Kafka</h2>
+            <p>Filter changes from one database and publish them to a Kafka topic as JSON flat messages.</p>
+            <div class="code-block"><div class="code-head"><span>canal.yaml</span><button class="code-copy" type="button">Copy</button></div>
+              <pre><code>canal:
+  mysql:
+    host: "10.0.0.1"
+    username: "replicator"
+    password: "secret"
+  filter:
+    pattern: "mydb\\..*"</code></pre>
+            </div>
+            <div class="code-block"><div class="code-head"><span>main.rs</span><button class="code-copy" type="button">Copy</button></div>
+              <pre><code>use canal_connector::kafka::{KafkaConfig, KafkaConnector};
+use canal_instance::{CanalInstance, InstanceConfig};
+use canal_common::{FilterPattern, LogPosition};
+use std::sync::Arc;
+
+let kafka_config = KafkaConfig::new("localhost:9092", "mysql-changes");
+let kafka = Arc::new(KafkaConnector::new("kafka-sync", kafka_config).unwrap());
+let config = InstanceConfig {
+    destination: "mydb-sync".into(),
+    mysql_host: "10.0.0.1".into(),
+    mysql_port: 3306,
+    mysql_username: "replicator".into(),
+    mysql_password: "secret".into(),
+    mysql_server_id: 2001,
+    start_position: LogPosition::new("mysql-bin.000001", 4),
+    filter: FilterPattern { pattern: "mydb\\..*".into(), black_list: "".into() },
+    store_buffer_size: 16384,
+    connector_names: vec!["kafka-sync".into()],
+};</code></pre>
+            </div>
+            <p>The connector joins the same instance path through <code>canal-sink</code>; one change can enter the ring buffer and Kafka in parallel without blocking.</p>
+          </section>
+
+          <section id="instances">
+            <h2>Scenario 2: multi-instance</h2>
+            <p><code>canal-instance</code> runs multiple destinations in one process. Each instance has its own binlog position, filters and store, useful for isolating prod / test in one Canal Rust process.</p>
+            <div class="code-block"><div class="code-head"><span>main.rs</span><button class="code-copy" type="button">Copy</button></div>
+              <pre><code>let manager = InstanceManager::new();
+
+manager.register(CanalInstance::new(
+    InstanceConfig { destination: "prod".into(), ..prod_config }, vec![kafka_prod],
+)).await;
+
+manager.register(CanalInstance::new(
+    InstanceConfig { destination: "test".into(), ..test_config }, vec![kafka_test],
+)).await;
+
+manager.start_all().await?;</code></pre>
+            </div>
+            <p>Instance lifecycle: Created → Starting → Running (<code>feed()</code> loop) → Stopping → Stopped.</p>
+          </section>
+
+          <section id="metrics">
+            <h2>Scenario 3: Prometheus monitoring</h2>
+            <div class="code-block"><div class="code-head"><span>terminal</span><button class="code-copy" type="button">Copy</button></div>
+              <pre><code>curl http://localhost:9090/metrics
+
+<span class="c"># canal_events_parsed_total 150000</span>
+<span class="c"># canal_events_dispatched_total 146800</span>
+<span class="c"># canal_instances_active 2</span></code></pre>
+            </div>
+            <div class="table-wrap">
+              <table><thead><tr><th>Metric</th><th>Type</th><th>Meaning</th></tr></thead><tbody>
+                <tr><td><code>canal_events_parsed_total</code></td><td>counter</td><td>Binlog events parsed from MySQL</td></tr>
+                <tr><td><code>canal_events_filtered_total</code></td><td>counter</td><td>Events dropped by filters</td></tr>
+                <tr><td><code>canal_events_dispatched_total</code></td><td>counter</td><td>Events delivered to connectors</td></tr>
+                <tr><td><code>canal_dispatch_errors_total</code></td><td>counter</td><td>Connector dispatch failures</td></tr>
+                <tr><td><code>canal_instances_active</code></td><td>gauge</td><td>Active instances</td></tr>
+              </tbody></table>
+            </div>
+            <div class="callout warn"><code>/metrics</code> has no authentication by default. Keep <code>metrics_bind</code> on loopback, on a private network, or behind an authenticating proxy; do not expose it publicly.</div>
+          </section>
+
+          <section id="admin">
+            <h2>Scenario 4: Admin API</h2>
+            <p>The Admin API listens on <strong>main port + 1, loopback only</strong> by default. For containers or remote access, set <code>server.admin_bind</code> explicitly:</p>
+            <div class="code-block"><div class="code-head"><span>canal.yaml</span><button class="code-copy" type="button">Copy</button></div>
+              <pre><code>canal:
+  server:
+    bind: "0.0.0.0:11111"
+    admin_bind: "0.0.0.0:11112"   <span class="c"># default: 127.0.0.1:11112</span></code></pre>
+            </div>
+            <div class="code-block"><div class="code-head"><span>terminal</span><button class="code-copy" type="button">Copy</button></div>
+              <pre><code>curl http://localhost:11112/health
+curl http://localhost:11112/api/instances
+curl -X POST http://localhost:11112/api/instances/default/stop</code></pre>
+            </div>
+            <div class="table-wrap">
+              <table><thead><tr><th>Endpoint</th><th>Purpose</th></tr></thead><tbody>
+                <tr><td><code>GET /</code></td><td>Unauthenticated landing page: version, uptime, instance count and Xiaoyun</td></tr>
+                <tr><td><code>GET /health</code></td><td>Health check with <code>status</code> / <code>version</code> / <code>uptime_seconds</code></td></tr>
+                <tr><td><code>GET /api/instances</code></td><td>Instance list and state</td></tr>
+                <tr><td><code>POST /api/instances/:name/start</code></td><td>Start an instance</td></tr>
+                <tr><td><code>POST /api/instances/:name/stop</code></td><td>Stop an instance</td></tr>
+                <tr><td><code>GET /pet.svg</code></td><td>Xiaoyun's vector original</td></tr>
+              </tbody></table>
+            </div>
+            <p><code>AdminServer</code> supports <code>with_auth</code> for <code>Authorization: Bearer &lt;token&gt;</code>; the CLI does not enable Admin auth by default. Protect the port with binding and firewall rules.</p>
+            <p>Open <code>http://localhost:11112/</code> in a browser to see Xiaoyun and live status.</p>
+          </section>
+
+          <section id="behavior">
+            <h2>Runtime behavior</h2>
+            <ul>
+              <li>Startup logs print <code>Xiaoyun is on duty, guarding the data canal</code>, then the Canal, metrics and Admin addresses.</li>
+              <li>Binlog events enter an instance in batches: 256 events or a 200ms flush, avoiding per-event downstream wakeups.</li>
+              <li><code>Ctrl-C</code> triggers graceful shutdown; the binlog task waits up to 5 seconds to flush remaining events.</li>
+              <li>Idle clients are disconnected after <code>idle_timeout_secs</code> (default 3600 seconds).</li>
+              <li>When the ring buffer overflows, the oldest events are evicted; client Ack advances the consumption position.</li>
+            </ul>
+            <div class="callout info">See <a href="install.en.html#config">Installation · canal.yaml</a> for the full configuration reference.</div>
+          </section>
+
+          <section id="develop">
+            <h2>Development</h2>
+            <div class="code-block"><div class="code-head"><span>terminal</span><button class="code-copy" type="button">Copy</button></div>
+              <pre><code>cargo build --release
+cargo test --all
+cargo clippy --all-targets -- -D warnings
+cargo fmt --check --all
+cargo doc --open</code></pre>
+            </div>
+            <p>Tests live next to each crate: unit tests in <code>src/tests*.rs</code> or <code>#[cfg(test)] mod tests</code>, integration tests in <code>crates/*/tests/</code>. CI runs fmt, clippy, build, test and doc.</p>
+            <div class="callout"><img class="pet-note" src="assets/img/pet-joy-top-en.svg" alt="" width="70" height="62" loading="lazy">At this point a change should have travelled from MySQL to a downstream consumer. The rest is wiring it into your application.</div>
+            <a class="btn btn-ghost" href="changelog.en.html">See what changed in each release <span class="arrow" aria-hidden="true">→</span></a>
+          </section>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-intro">
+          <a class="brand brand--footer" href="index.en.html" aria-label="Canal Rust home">
+            <span class="brand-mark"><img src="assets/img/pet-top-en.svg" alt="" width="40" height="40"></span>
+            <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">DATA CANAL · v2.2.0</span></span>
+          </a>
+          <p>MySQL binlog incremental subscription &amp; consumption. A Rust rewrite of Alibaba Canal, reusing the same Canal protobuf protocol.</p>
+          <p class="footer-license">Code Apache-2.0 · Visual assets © the author</p>
+        </div>
+        <nav class="footer-nav" aria-label="Footer navigation">
+          <p class="footer-kicker">EXPLORE</p>
+          <a href="about.en.html">About</a>
+          <a href="features.en.html">Features</a>
+          <a href="changelog.en.html">Changelog</a>
+          <a href="install.en.html">Install</a>
+          <a href="usage.en.html">Usage</a>
+          <a href="index.en.html#support">Tip the project</a>
+        </nav>
+        <div class="footer-meta">
+          <p class="footer-kicker">AUTHOR</p>
+          <a class="footer-author" href="https://erik.xyz" target="_blank" rel="noopener">艾瑞可erik <span aria-hidden="true">↗</span></a>
+          <p class="footer-kicker">VISUAL ASSETS</p>
+          <p>Xiaoyun and the 12 expression forms are non-open-source visual assets. Commercial use requires a license. Contact erik@erik.xyz.</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Canal Rust</span><span class="footer-dot" aria-hidden="true">·</span><span>Built static. Served fast.</span>
+        <div class="footer-info" id="busuanzi"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script> <span id="busuanzi_container_page_pv"><span data-i18n="post.readA">Views</span> <b id="busuanzi_value_page_pv">0</b> <span data-i18n="post.readB">views 👀</span></span></div>
+      </div>
+    </div>
+  </footer>
+
+  <button class="backtop" id="backtop" type="button" aria-label="Back to top">
+    <img src="assets/img/pet-top-en.svg" alt="" width="64" height="64" loading="lazy">
+  </button>
+</body>
+</html>

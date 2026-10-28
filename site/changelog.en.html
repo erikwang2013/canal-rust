@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Changelog · Canal Rust</title>
+  <meta name="description" content="Canal Rust changelog from v1.0.0 phase one to v2.2.0 mascot runtime, with each release and fix.">
+  <meta name="theme-color" content="#f3ecdf">
+  <meta name="author" content="艾瑞可erik">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="application-name" content="Canal Rust">
+  <link rel="canonical" href="https://package.erik.xyz/canal/changelog.en.html">
+  <link rel="alternate" hreflang="zh-CN" href="https://package.erik.xyz/canal/changelog.html">
+  <link rel="alternate" hreflang="en" href="https://package.erik.xyz/canal/changelog.en.html">
+  <link rel="alternate" hreflang="x-default" href="https://package.erik.xyz/canal/changelog.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Canal Rust">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="zh_CN">
+  <meta property="og:title" content="Changelog · Canal Rust">
+  <meta property="og:description" content="Canal Rust changelog from v1.0.0 phase one to v2.2.0 mascot runtime, with each release and fix.">
+  <meta property="og:url" content="https://package.erik.xyz/canal/changelog.en.html">
+  <meta property="og:image" content="https://package.erik.xyz/canal/assets/img/og-canal-rust-en.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Canal Rust — Xiaoyun at the lock of the data canal">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Changelog · Canal Rust">
+  <meta name="twitter:description" content="Canal Rust changelog from v1.0.0 phase one to v2.2.0 mascot runtime, with each release and fix.">
+  <meta name="twitter:image" content="https://package.erik.xyz/canal/assets/img/og-canal-rust-en.png">
+  <script>
+    (function () {
+      document.documentElement.classList.add('js');
+      if (location.pathname === '/canal') location.replace('/canal/');
+    })();
+  </script>
+  <link rel="icon" href="assets/img/pet-top-en.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/core.css">
+  <link rel="stylesheet" href="assets/css/pages.css">
+  <link rel="stylesheet" href="assets/css/lightbox.css">
+  <link rel="stylesheet" href="assets/css/search.css">
+  <noscript><style>.js .reveal{opacity:1;transform:none}</style></noscript>
+  <script defer src="assets/js/site.js"></script>
+  <script defer src="assets/js/search.js"></script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "name": "Changelog · Canal Rust",
+  "description": "Canal Rust changelog from v1.0.0 phase one to v2.2.0 mascot runtime, with each release and fix.",
+  "url": "https://package.erik.xyz/canal/changelog.en.html",
+  "inLanguage": "en",
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "Canal Rust",
+    "url": "https://package.erik.xyz/canal/index.en.html"
+  },
+  "about": {
+    "@type": "SoftwareApplication",
+    "name": "Canal Rust",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Linux, macOS",
+    "url": "https://package.erik.xyz/canal/index.en.html"
+  },
+  "primaryImageOfPage": {
+    "@type": "ImageObject",
+    "url": "https://package.erik.xyz/canal/assets/img/og-canal-rust-en.png",
+    "width": 1200,
+    "height": 630
+  }
+}
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="index.en.html" aria-label="Canal Rust home">
+        <span class="brand-mark"><img src="assets/img/pet-top-en.svg" alt="" width="40" height="40"></span>
+        <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">DATA CANAL · v2.2.0</span></span>
+      </a>
+      <nav class="site-nav" id="site-nav" aria-label="Main navigation">
+        <a href="index.en.html">Home</a>
+        <a href="about.en.html">About</a>
+        <a href="features.en.html">Features</a>
+        <a href="changelog.en.html" aria-current="page">Changelog</a>
+        <a href="install.en.html">Install</a>
+        <a href="usage.en.html">Usage</a>
+        <a class="nav-author" href="https://erik.xyz" target="_blank" rel="noopener">艾瑞可erik <span aria-hidden="true">↗</span></a>
+      </nav>
+      <div class="header-tools">
+        <a class="lang-switch" href="changelog.html" hreflang="zh-CN" lang="zh-CN" aria-label="Switch to Chinese">中文</a>
+        <button class="search-toggle" type="button" aria-label="Search" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open navigation menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <section class="page-hero">
+      <div class="container">
+        <p class="eyebrow">Releases / Changelog</p>
+        <h1>Every step,<br>kept in the canal.</h1>
+        <p class="lede">Versions come from <code>Cargo.toml</code> <code>[workspace.package]</code>; CI creates tags when the version changes. From v1.0.0 to v2.2.0, this is the record.</p>
+        <div class="page-hero-meta"><span>v2.2.0 current</span><span>26 tags + main</span><span>2026-07-30 → 2026-10-28</span><span>Apache-2.0</span></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="release-list">
+          <article class="release-entry is-current reveal">
+            <div class="release-side">
+              <span class="release-version">v2.2.0</span>
+              <time class="release-date" datetime="2026-09-26">2026-09-26</time>
+              <span class="tag tag-rust">current</span>
+              <img class="release-pet" src="assets/img/pet-top-en.svg" alt="Xiaoyun · Smile" width="46" height="46" loading="lazy">
+            </div>
+            <div class="release-body">
+              <h3>Xiaoyun enters the runtime</h3>
+              <p>The mascot is no longer only a README illustration; it is a runtime asset shared by the CLI, logs and the Admin surface.</p>
+              <ul>
+                <li><code>canal-common</code> becomes the single source: <code>PET_NAME</code>, <code>CANAL_CRAB</code> ASCII, <code>PET_SVG</code> and <code>banner()</code>.</li>
+                <li>New <code>canal-rust pet</code> subcommand; <code>canal-rust --help</code> and server startup logs print Xiaoyun.</li>
+                <li>Admin API landing page <code>GET /</code> shows Xiaoyun and live status; <code>GET /pet.svg</code> serves the vector original.</li>
+                <li>CI / Docker install protoc; 389 unit / integration tests pass, 0 Clippy warnings.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="release-entry reveal">
+            <div class="release-side">
+              <span class="release-version">main</span>
+              <time class="release-date" datetime="2026-10-28">2026-10-28</time>
+              <span class="tag">unreleased</span>
+              <img class="release-pet" src="assets/img/pet-cute-top-en.svg" alt="Xiaoyun · Cute" width="46" height="46" loading="lazy">
+            </div>
+            <div class="release-body">
+              <h3>Expression fixes and asset license</h3>
+              <ul>
+                <li>Expression forms fixed: expression circles and duplicated facial features removed; all 12 keep their motion.</li>
+                <li>Mascot, images and expressions are explicitly non-open-source visual assets; commercial use needs written permission.</li>
+                <li>Latest commit on main; no version tag yet.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="release-entry reveal">
+            <div class="release-side">
+              <span class="release-version">v2.1.0</span>
+              <time class="release-date" datetime="2026-09-26">2026-09-26</time>
+              <img class="release-pet" src="assets/img/pet-knocking-top-en.svg" alt="Xiaoyun · Knocking" width="46" height="46" loading="lazy">
+            </div>
+            <div class="release-body">
+              <h3>Mascot redraw and infrastructure</h3>
+              <ul><li>Mascot redrawn; the vector original and runtime asset unified.</li><li>Connection blocking and other correctness issues fixed with regression tests.</li><li>Docker and CI infrastructure completed.</li></ul>
+            </div>
+          </article>
+
+          <article class="release-entry reveal">
+            <div class="release-side">
+              <span class="release-version">v2.0.0</span>
+              <time class="release-date" datetime="2026-07-31">2026-07-31</time>
+              <img class="release-pet" src="assets/img/pet-joy-top-en.svg" alt="Xiaoyun · Joy" width="46" height="46" loading="lazy">
+            </div>
+            <div class="release-body">
+              <h3>Infrastructure / big refactor</h3>
+              <ul><li>Configuration loading, error handling and lifecycle abstractions unified.</li><li>A stable foundation for the patch series that followed.</li><li>v2.0.1–v2.0.6 continued tightening edge cases.</li></ul>
+            </div>
+          </article>
+
+          <details class="release-group reveal">
+            <summary><b>v2.0.1 – v2.0.6</b><span>2026-07-31 → 2026-08-02 · 5 patches</span></summary>
+            <div class="group-body"><ul class="release-body" style="margin-top:0">
+              <li><b>v2.0.6</b> · 2026-08-02 · fixes.</li>
+              <li><b>v2.0.5</b> · 2026-08-02 · fixes.</li>
+              <li><b>v2.0.3</b> · 2026-07-31 · bug fixes; 16 files changed, 92 tests pass.</li>
+              <li><b>v2.0.2</b> · 2026-07-31 · fixes.</li>
+              <li><b>v2.0.1</b> · 2026-07-31 · 22 fixes across 12 files.</li>
+            </ul></div>
+          </details>
+
+          <details class="release-group reveal">
+            <summary><b>v1.1.0 – v1.1.8</b><span>2026-07-31 · 9 review-fix releases</span></summary>
+            <div class="group-body"><ul class="release-body" style="margin-top:0">
+              <li><b>v1.1.8</b> · known issues: 5 critical, 14 high, 12 medium, 12 low.</li>
+              <li><b>v1.1.7</b> · 11 new issues, no high severity; no deadlock, data race or data-loss risk.</li>
+              <li><b>v1.1.6</b> · 7 issues fixed.</li>
+              <li><b>v1.1.5</b> · fixes.</li>
+              <li><b>v1.1.4</b> · 9 fixes: buffer position, connector assertion, DDL schema name, graceful shutdown, batch fetch, dispatch signature, DashMap, Kafka drop count, auth-failure rate limit.</li>
+              <li><b>v1.1.3 / v1.1.2 / v1.1.1</b> · fix summaries.</li>
+              <li><b>v1.1.0</b> · 3 issues from the v5 review round.</li>
+            </ul></div>
+          </details>
+
+          <details class="release-group reveal">
+            <summary><b>v1.0.0 – v1.0.9</b><span>2026-07-30 → 2026-07-31 · three phases</span></summary>
+            <div class="group-body"><ul class="release-body" style="margin-top:0">
+              <li><b>v1.0.9</b> · 14 issues fixed in review round v4.</li>
+              <li><b>v1.0.8</b> · known issues fixed.</li>
+              <li><b>v1.0.7</b> · 9 issues resolved.</li>
+              <li><b>v1.0.6</b> · 12 issues fixed: all 5 critical, 5 medium and 2 code-quality issues.</li>
+              <li><b>v1.0.5</b> · fixes.</li>
+              <li><b>v1.0.4</b> · I2, I4 and I7 fixed.</li>
+              <li><b>v1.0.3</b> · phase three complete: 77 tests, 18 commits.</li>
+              <li><b>v1.0.2</b> · phase two adds 5 crates: instance, connector, prometheus, meta, admin.</li>
+              <li><b>v1.0.1</b> · design-document completeness check.</li>
+              <li><b>v1.0.0</b> · phase one complete; core path connected.</li>
+            </ul></div>
+          </details>
+        </div>
+        <div class="callout info reveal" style="margin-top:28px">Older commits and full release notes are on <a href="https://github.com/erikwang2013/canal-rust/releases" target="_blank" rel="noopener">GitHub Releases</a>. Tags are created by <code>.github/workflows/release.yml</code> when the <code>Cargo.toml</code> version changes.</div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-intro">
+          <a class="brand brand--footer" href="index.en.html" aria-label="Canal Rust home">
+            <span class="brand-mark"><img src="assets/img/pet-top-en.svg" alt="" width="40" height="40"></span>
+            <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">DATA CANAL · v2.2.0</span></span>
+          </a>
+          <p>MySQL binlog incremental subscription &amp; consumption. A Rust rewrite of Alibaba Canal, reusing the same Canal protobuf protocol.</p>
+          <p class="footer-license">Code Apache-2.0 · Visual assets © the author</p>
+        </div>
+        <nav class="footer-nav" aria-label="Footer navigation">
+          <p class="footer-kicker">EXPLORE</p>
+          <a href="about.en.html">About</a>
+          <a href="features.en.html">Features</a>
+          <a href="changelog.en.html">Changelog</a>
+          <a href="install.en.html">Install</a>
+          <a href="usage.en.html">Usage</a>
+          <a href="index.en.html#support">Tip the project</a>
+        </nav>
+        <div class="footer-meta">
+          <p class="footer-kicker">AUTHOR</p>
+          <a class="footer-author" href="https://erik.xyz" target="_blank" rel="noopener">艾瑞可erik <span aria-hidden="true">↗</span></a>
+          <p class="footer-kicker">VISUAL ASSETS</p>
+          <p>Xiaoyun and the 12 expression forms are non-open-source visual assets. Commercial use requires a license. Contact erik@erik.xyz.</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Canal Rust</span><span class="footer-dot" aria-hidden="true">·</span><span>Built static. Served fast.</span>
+        <div class="footer-info" id="busuanzi"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script> <span id="busuanzi_container_page_pv"><span data-i18n="post.readA">Views</span> <b id="busuanzi_value_page_pv">0</b> <span data-i18n="post.readB">views 👀</span></span></div>
+      </div>
+    </div>
+  </footer>
+
+  <button class="backtop" id="backtop" type="button" aria-label="Back to top">
+    <img src="assets/img/pet-top-en.svg" alt="" width="64" height="64" loading="lazy">
+  </button>
+</body>
+</html>

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>版本日志 · Canal Rust</title>
+  <meta name="description" content="Canal Rust 版本日志：从 v1.0.0 第一期到 v2.2.0 宠物接入运行时，记录每个版本的变更与修复。">
+  <meta name="theme-color" content="#f3ecdf">
+  <meta name="author" content="艾瑞可erik">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="application-name" content="Canal Rust">
+  <link rel="canonical" href="https://package.erik.xyz/canal/changelog.html">
+  <link rel="alternate" hreflang="zh-CN" href="https://package.erik.xyz/canal/changelog.html">
+  <link rel="alternate" hreflang="en" href="https://package.erik.xyz/canal/changelog.en.html">
+  <link rel="alternate" hreflang="x-default" href="https://package.erik.xyz/canal/changelog.html">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Canal Rust">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:title" content="版本日志 · Canal Rust">
+  <meta property="og:description" content="Canal Rust 版本日志：从 v1.0.0 第一期到 v2.2.0 宠物接入运行时，记录每个版本的变更与修复。">
+  <meta property="og:url" content="https://package.erik.xyz/canal/changelog.html">
+  <meta property="og:image" content="https://package.erik.xyz/canal/assets/img/og-canal-rust.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Canal Rust — 小运守在数据运河的闸口">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="版本日志 · Canal Rust">
+  <meta name="twitter:description" content="Canal Rust 版本日志：从 v1.0.0 第一期到 v2.2.0 宠物接入运行时，记录每个版本的变更与修复。">
+  <meta name="twitter:image" content="https://package.erik.xyz/canal/assets/img/og-canal-rust.png">
+  <script>
+    (function () {
+      document.documentElement.classList.add('js');
+      if (location.pathname === '/canal') location.replace('/canal/');
+    })();
+  </script>
+  <link rel="icon" href="assets/img/pet-top.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/core.css">
+  <link rel="stylesheet" href="assets/css/pages.css">
+  <link rel="stylesheet" href="assets/css/lightbox.css">
+  <link rel="stylesheet" href="assets/css/search.css">
+  <noscript><style>.js .reveal{opacity:1;transform:none}</style></noscript>
+  <script defer src="assets/js/site.js"></script>
+  <script defer src="assets/js/search.js"></script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "name": "版本日志 · Canal Rust",
+  "description": "Canal Rust 版本日志：从 v1.0.0 第一期到 v2.2.0 宠物接入运行时，记录每个版本的变更与修复。",
+  "url": "https://package.erik.xyz/canal/changelog.html",
+  "inLanguage": "zh-CN",
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "Canal Rust",
+    "url": "https://package.erik.xyz/canal/"
+  },
+  "about": {
+    "@type": "SoftwareApplication",
+    "name": "Canal Rust",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Linux, macOS",
+    "url": "https://package.erik.xyz/canal/"
+  },
+  "primaryImageOfPage": {
+    "@type": "ImageObject",
+    "url": "https://package.erik.xyz/canal/assets/img/og-canal-rust.png",
+    "width": 1200,
+    "height": 630
+  }
+}
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到主要内容</a>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="index.html" aria-label="Canal Rust 首页">
+        <span class="brand-mark"><img src="assets/img/pet-top.svg" alt="" width="40" height="40"></span>
+        <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">数据运河 · v2.2.0</span></span>
+      </a>
+      <nav class="site-nav" id="site-nav" aria-label="主导航">
+        <a href="index.html">首页</a>
+        <a href="about.html">项目介绍</a>
+        <a href="features.html">功能迭代</a>
+        <a href="changelog.html" aria-current="page">版本日志</a>
+        <a href="install.html">安装文档</a>
+        <a href="usage.html">使用说明</a>
+        <a class="nav-author" href="https://erik.xyz" target="_blank" rel="noopener">艾瑞可erik <span aria-hidden="true">↗</span></a>
+      </nav>
+      <div class="header-tools">
+        <a class="lang-switch" href="changelog.en.html" hreflang="en" lang="en" aria-label="切换到英文">EN</a>
+        <button class="search-toggle" type="button" aria-label="搜索" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="打开导航菜单">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="page-hero">
+      <div class="container">
+        <p class="eyebrow">Releases / 版本日志</p>
+        <h1>每一次推进，<br>都留在运河里。</h1>
+        <p class="lede">
+          版本号来自 <code>Cargo.toml</code> 的 <code>[workspace.package]</code>；标签由 CI 在版本变化时创建。
+          从 v1.0.0 到 v2.2.0，这里记录每次推进与修复。
+        </p>
+        <div class="page-hero-meta">
+          <span>v2.2.0 current</span><span>26 tags + main</span><span>2026-07-30 → 2026-10-28</span><span>Apache-2.0</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="release-list">
+          <article class="release-entry is-current reveal">
+            <div class="release-side">
+              <span class="release-version">v2.2.0</span>
+              <time class="release-date" datetime="2026-09-26">2026-09-26</time>
+              <span class="tag tag-rust">current</span>
+              <img class="release-pet" src="assets/img/pet-top.svg" alt="小运 · 笑" width="46" height="46" loading="lazy">
+            </div>
+            <div class="release-body">
+              <h3>小运进入运行时</h3>
+              <p>项目宠物不再只是 README 里的插图，而是 CLI、日志与管理端共同使用的运行时资产。</p>
+              <ul>
+                <li><code>canal-common</code> 成为唯一真源：<code>PET_NAME</code>、<code>CANAL_CRAB</code> ASCII、<code>PET_SVG</code> 与 <code>banner()</code>。</li>
+                <li>新增 <code>canal-rust pet</code> 子命令；<code>canal-rust --help</code> 欢迎信息与 server 启动日志都会打印小运。</li>
+                <li>Admin API 落地页 <code>GET /</code> 展示小运与实时状态，<code>GET /pet.svg</code> 直接返回矢量原图。</li>
+                <li>CI 与 Docker 构建显式安装 protoc；389 项单元 / 集成测试全部通过，Clippy 0 警告。</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="release-entry reveal">
+            <div class="release-side">
+              <span class="release-version">main</span>
+              <time class="release-date" datetime="2026-10-28">2026-10-28</time>
+              <span class="tag">未发布</span>
+              <img class="release-pet" src="assets/img/pet-cute-top.svg" alt="小运 · 卖萌" width="46" height="46" loading="lazy">
+            </div>
+            <div class="release-body">
+              <h3>表情形态修正与资产授权</h3>
+              <ul>
+                <li>修正项目宠物表情：移除表情圆圈与重复五官，12 种形态保持各自的动效。</li>
+                <li>明确项目宠物、图片、表情为非开源视觉资产；商业使用需取得书面授权。</li>
+                <li>main 分支最新提交，尚未打版本标签。</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="release-entry reveal">
+            <div class="release-side">
+              <span class="release-version">v2.1.0</span>
+              <time class="release-date" datetime="2026-09-26">2026-09-26</time>
+              <img class="release-pet" src="assets/img/pet-knocking-top.svg" alt="小运 · 敲打" width="46" height="46" loading="lazy">
+            </div>
+            <div class="release-body">
+              <h3>宠物重绘与基建补齐</h3>
+              <ul>
+                <li>重绘项目宠物，统一矢量原图与运行时资产。</li>
+                <li>修复连接阻塞等正确性问题，补上回归测试。</li>
+                <li>补齐 Docker 与 CI 基建。</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="release-entry reveal">
+            <div class="release-side">
+              <span class="release-version">v2.0.0</span>
+              <time class="release-date" datetime="2026-07-31">2026-07-31</time>
+              <img class="release-pet" src="assets/img/pet-joy-top.svg" alt="小运 · 欢乐" width="46" height="46" loading="lazy">
+            </div>
+            <div class="release-body">
+              <h3>基础设施 / 大重构</h3>
+              <ul>
+                <li>统一配置加载、错误处理与生命周期抽象。</li>
+                <li>为后续的补丁系列建立稳定地基。</li>
+                <li>v2.0.1–v2.0.6 补丁系列继续收敛边界问题。</li>
+              </ul>
+            </div>
+          </article>
+
+          <details class="release-group reveal">
+            <summary><b>v2.0.1 – v2.0.6</b><span>2026-07-31 → 2026-08-02 · 5 个补丁</span></summary>
+            <div class="group-body">
+              <ul class="release-body" style="margin-top:0">
+                <li><b>v2.0.6</b> · 2026-08-02 · 修复问题。</li>
+                <li><b>v2.0.5</b> · 2026-08-02 · 修复问题。</li>
+                <li><b>v2.0.3</b> · 2026-07-31 · 修复 bug；16 个文件变更，92 项测试通过。</li>
+                <li><b>v2.0.2</b> · 2026-07-31 · 修复问题。</li>
+                <li><b>v2.0.1</b> · 2026-07-31 · 修复内容 22 项，涉及 12 个文件。</li>
+              </ul>
+            </div>
+          </details>
+
+          <details class="release-group reveal">
+            <summary><b>v1.1.0 – v1.1.8</b><span>2026-07-31 · 9 个审查修复版本</span></summary>
+            <div class="group-body">
+              <ul class="release-body" style="margin-top:0">
+                <li><b>v1.1.8</b> · 更新已知问题：5 严重、14 高、12 中、12 低。</li>
+                <li><b>v1.1.7</b> · 新发现 11 个问题，无高严重度，无死锁、无数据竞争、无数据丢失风险。</li>
+                <li><b>v1.1.6</b> · 修复 7 个问题。</li>
+                <li><b>v1.1.5</b> · 本轮修复问题。</li>
+                <li><b>v1.1.4</b> · 修复 9 个问题：缓冲区位点、connector 断言、DDL 库名、优雅关闭、批量取数、dispatch 签名、DashMap、Kafka 丢弃计数、认证失败限速。</li>
+                <li><b>v1.1.3 / v1.1.2 / v1.1.1</b> · 连续修复摘要与已修复问题。</li>
+                <li><b>v1.1.0</b> · 本轮 v5 修复的 3 个问题。</li>
+              </ul>
+            </div>
+          </details>
+
+          <details class="release-group reveal">
+            <summary><b>v1.0.0 – v1.0.9</b><span>2026-07-30 → 2026-07-31 · 三期实现</span></summary>
+            <div class="group-body">
+              <ul class="release-body" style="margin-top:0">
+                <li><b>v1.0.9</b> · 本轮（v4）修复 14 个问题。</li>
+                <li><b>v1.0.8</b> · 修复已知问题。</li>
+                <li><b>v1.0.7</b> · 9 个问题已解决。</li>
+                <li><b>v1.0.6</b> · 12 个问题已修复：全部 5 个严重问题、5 个中等问题、2 个代码质量问题。</li>
+                <li><b>v1.0.5</b> · 修复问题。</li>
+                <li><b>v1.0.4</b> · 本轮修复 I2、I4、I7。</li>
+                <li><b>v1.0.3</b> · 三期完成：77 项测试，18 个 commit。</li>
+                <li><b>v1.0.2</b> · 第二期新增 5 个 crate：instance、connector、prometheus、meta、admin。</li>
+                <li><b>v1.0.1</b> · 对照设计文档检查完成度。</li>
+                <li><b>v1.0.0</b> · 第一期实现完成，核心链路贯通。</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+
+        <div class="callout info reveal" style="margin-top:28px">
+          更早的提交与完整 release notes 可在
+          <a href="https://github.com/erikwang2013/canal-rust/releases" target="_blank" rel="noopener">GitHub Releases</a>
+          查看。版本标签由 <code>.github/workflows/release.yml</code> 在 <code>Cargo.toml</code> 版本变化时创建。
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-intro">
+          <a class="brand brand--footer" href="index.html" aria-label="Canal Rust 首页">
+            <span class="brand-mark"><img src="assets/img/pet-top.svg" alt="" width="40" height="40"></span>
+            <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">数据运河 · v2.2.0</span></span>
+          </a>
+          <p>MySQL binlog 增量订阅 &amp; 消费组件。用 Rust 重写阿里巴巴 Canal，复用同一套 Canal protobuf 协议。</p>
+          <p class="footer-license">代码 Apache-2.0 · 视觉资产版权归作者所有</p>
+        </div>
+        <nav class="footer-nav" aria-label="页脚导航">
+          <p class="footer-kicker">EXPLORE</p>
+          <a href="about.html">项目介绍</a>
+          <a href="features.html">功能迭代</a>
+          <a href="changelog.html">版本日志</a>
+          <a href="install.html">安装文档</a>
+          <a href="usage.html">使用说明</a>
+          <a href="index.html#support">打赏支持</a>
+        </nav>
+        <div class="footer-meta">
+          <p class="footer-kicker">AUTHOR</p>
+          <a class="footer-author" href="https://erik.xyz" target="_blank" rel="noopener">艾瑞可erik <span aria-hidden="true">↗</span></a>
+          <p class="footer-kicker">VISUAL ASSETS</p>
+          <p>小运与 12 种表情为非开源视觉资产，商业使用需取得授权。联系 erik@erik.xyz。</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Canal Rust</span><span class="footer-dot" aria-hidden="true">·</span><span>Built static. Served fast.</span>
+        <div class="footer-info" id="busuanzi"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script> <span id="busuanzi_container_page_pv"><span data-i18n="post.readA">阅读</span> <b id="busuanzi_value_page_pv">0</b> <span data-i18n="post.readB">次 👀</span></span></div>
+      </div>
+    </div>
+  </footer>
+
+  <button class="backtop" id="backtop" type="button" aria-label="返回顶部">
+    <img src="assets/img/pet-top.svg" alt="" width="64" height="64" loading="lazy">
+  </button>
+</body>
+</html>

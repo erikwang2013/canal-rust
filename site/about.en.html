@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>About · Canal Rust</title>
+  <meta name="description" content="About Canal Rust: a Rust rewrite of Alibaba Canal with 14 crates covering ingest, parsing, filtering, storage, egress and acknowledgement while staying wire-compatible.">
+  <meta name="theme-color" content="#f3ecdf">
+  <meta name="author" content="艾瑞可erik">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="application-name" content="Canal Rust">
+  <link rel="canonical" href="https://package.erik.xyz/canal/about.en.html">
+  <link rel="alternate" hreflang="zh-CN" href="https://package.erik.xyz/canal/about.html">
+  <link rel="alternate" hreflang="en" href="https://package.erik.xyz/canal/about.en.html">
+  <link rel="alternate" hreflang="x-default" href="https://package.erik.xyz/canal/about.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Canal Rust">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="zh_CN">
+  <meta property="og:title" content="About · Canal Rust">
+  <meta property="og:description" content="About Canal Rust: a Rust rewrite of Alibaba Canal with 14 crates covering ingest, parsing, filtering, storage, egress and acknowledgement while staying wire-compatible.">
+  <meta property="og:url" content="https://package.erik.xyz/canal/about.en.html">
+  <meta property="og:image" content="https://package.erik.xyz/canal/assets/img/og-canal-rust-en.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Canal Rust — Xiaoyun at the lock of the data canal">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="About · Canal Rust">
+  <meta name="twitter:description" content="About Canal Rust: a Rust rewrite of Alibaba Canal with 14 crates covering ingest, parsing, filtering, storage, egress and acknowledgement while staying wire-compatible.">
+  <meta name="twitter:image" content="https://package.erik.xyz/canal/assets/img/og-canal-rust-en.png">
+  <script>
+    (function () {
+      document.documentElement.classList.add('js');
+      if (location.pathname === '/canal') location.replace('/canal/');
+    })();
+  </script>
+  <link rel="icon" href="assets/img/pet-top-en.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/core.css">
+  <link rel="stylesheet" href="assets/css/pages.css">
+  <link rel="stylesheet" href="assets/css/lightbox.css">
+  <link rel="stylesheet" href="assets/css/search.css">
+  <noscript><style>.js .reveal{opacity:1;transform:none}</style></noscript>
+  <script defer src="assets/js/site.js"></script>
+  <script defer src="assets/js/search.js"></script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "About · Canal Rust",
+  "description": "About Canal Rust: a Rust rewrite of Alibaba Canal with 14 crates covering ingest, parsing, filtering, storage, egress and acknowledgement while staying wire-compatible.",
+  "url": "https://package.erik.xyz/canal/about.en.html",
+  "inLanguage": "en",
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "Canal Rust",
+    "url": "https://package.erik.xyz/canal/index.en.html"
+  },
+  "about": {
+    "@type": "SoftwareApplication",
+    "name": "Canal Rust",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Linux, macOS",
+    "url": "https://package.erik.xyz/canal/index.en.html"
+  },
+  "primaryImageOfPage": {
+    "@type": "ImageObject",
+    "url": "https://package.erik.xyz/canal/assets/img/og-canal-rust-en.png",
+    "width": 1200,
+    "height": 630
+  }
+}
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="index.en.html" aria-label="Canal Rust home">
+        <span class="brand-mark"><img src="assets/img/pet-top-en.svg" alt="" width="40" height="40"></span>
+        <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">DATA CANAL · v2.2.0</span></span>
+      </a>
+      <nav class="site-nav" id="site-nav" aria-label="Main navigation">
+        <a href="index.en.html">Home</a>
+        <a href="about.en.html" aria-current="page">About</a>
+        <a href="features.en.html">Features</a>
+        <a href="changelog.en.html">Changelog</a>
+        <a href="install.en.html">Install</a>
+        <a href="usage.en.html">Usage</a>
+        <a class="nav-author" href="https://erik.xyz" target="_blank" rel="noopener">艾瑞可erik <span aria-hidden="true">↗</span></a>
+      </nav>
+      <div class="header-tools">
+        <a class="lang-switch" href="about.html" hreflang="zh-CN" lang="zh-CN" aria-label="Switch to Chinese">中文</a>
+        <button class="search-toggle" type="button" aria-label="Search" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open navigation menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <section class="page-hero">
+      <div class="container">
+        <p class="eyebrow">Project / About</p>
+        <h1>A data canal,<br>kept by a crab.</h1>
+        <p class="lede">
+          Canal Rust emulates the MySQL slave protocol, sends dump requests to the master,
+          parses binary log events and serves them to downstream consumers over protobuf.
+          It keeps Java Canal's wire protocol and swaps the runtime for Rust.
+        </p>
+        <div class="page-hero-meta">
+          <span>Apache-2.0</span><span>Cargo workspace</span><span>v2.2.0</span><span>since 2026-07-30</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="section-index">01 / OVERVIEW</p>
+          <div>
+            <h2 class="section-title">One change,<br>delivered end to end.</h2>
+            <p class="section-lede">
+              MySQL keeps producing changes upstream; downstream consumers can fall behind.
+              Something in the middle has to control the flow, keep events and confirm delivery.
+              Canal Rust splits the job into 14 crates, each independently testable.
+            </p>
+          </div>
+        </div>
+
+        <div class="spec-grid reveal">
+          <div class="spec-cell"><dt>Crates</dt><dd>14</dd><small>independently built Rust crates</small></div>
+          <div class="spec-cell"><dt>Rust source</dt><dd>~8.4k</dd><small>lines of source</small></div>
+          <div class="spec-cell"><dt>Test code</dt><dd>~3.9k</dd><small>lines of tests</small></div>
+          <div class="spec-cell"><dt>Tests</dt><dd>389</dd><small>unit / integration tests</small></div>
+          <div class="spec-cell"><dt>Protobuf</dt><dd>2</dd><small>upstream Canal definitions</small></div>
+          <div class="spec-cell"><dt>Version</dt><dd>2.2.0</dd><small>workspace version</small></div>
+          <div class="spec-cell"><dt>Clippy</dt><dd>0</dd><small>warnings</small></div>
+          <div class="spec-cell"><dt>License</dt><dd>Apache</dd><small>code, version 2.0</small></div>
+        </div>
+
+        <div class="split reveal">
+          <div>
+            <p class="lead">Canal Rust is not another CDC product. It is a deliberately restrained rewrite: same protocol, same semantics, new implementation.</p>
+            <p>
+              Fourteen crates cover the full path: <strong>ingest → parse → filter → store → egress → ack</strong>.
+              The wire protocol is identical to Java Canal, so existing Java / Go / Python / C# / Node.js clients connect without changes.
+            </p>
+          </div>
+          <div>
+            <p>
+              <code>mysql_cdc</code> connects to MySQL 5.1–8.0 and MariaDB with position and GTID modes.
+              Parsed events pass through regex filters, a ring buffer, and TCP or Kafka exits before reaching consumers.
+            </p>
+            <p>
+              Rust brings clearer ownership, a lighter runtime and crate boundaries that can be tested and replaced independently.
+              The 14 crates form a one-way dependency graph — a stable home for the mascot too.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section band">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="section-index">02 / ARCHITECTURE</p>
+          <div>
+            <h2 class="section-title">Six layers,<br>one direction.</h2>
+            <p class="section-lede">From MySQL to a TCP client or Kafka, each crate does one job. Layers meet at an explicit event model, and an exception in one does not block graceful shutdown of the others.</p>
+          </div>
+        </div>
+
+        <figure class="figure-card reveal">
+          <img src="assets/img/architecture-en.svg" alt="Canal Rust architecture: MySQL Master, canal-binlog, canal-filter, canal-sink, canal-store, canal-server and Kafka"
+               width="1240" height="812" loading="lazy" decoding="async">
+          <figcaption>Architecture / 14-crate Rust workspace · v2.2.0</figcaption>
+        </figure>
+
+        <div class="table-wrap reveal" style="margin-top:24px">
+          <table>
+            <thead><tr><th>Layer</th><th>Crate</th><th>Responsibility</th></tr></thead>
+            <tbody>
+              <tr><td>Ingest</td><td><code>canal-binlog</code></td><td>Connect to MySQL, pull binlog and convert it to a unified event model</td></tr>
+              <tr><td>Process</td><td><code>canal-filter</code> · <code>canal-sink</code></td><td>Regex table/schema filtering and fan-out to multiple exits</td></tr>
+              <tr><td>Egress</td><td><code>canal-store</code> · <code>canal-server</code> · <code>canal-connector</code></td><td>Ring buffer, TCP protocol service and Kafka delivery</td></tr>
+              <tr><td>Orchestrate</td><td><code>canal-instance</code></td><td>Manage multiple destinations; each owns a complete path</td></tr>
+              <tr><td>Operate</td><td><code>canal-admin</code> · <code>canal-prometheus</code> · <code>canal-cli</code></td><td>Control API, metrics endpoint and CLI entry point</td></tr>
+              <tr><td>Foundation</td><td><code>canal-common</code> · <code>canal-proto</code> · <code>canal-meta</code></td><td>Types and lifecycle, protobuf generation and schema cache</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="code-block reveal" style="margin-top:24px">
+          <div class="code-head"><span>data flow</span><button class="code-copy" type="button">Copy</button></div>
+          <pre><code>MySQL Master
+    │  binlog dump (mysql_cdc)
+    ▼
+canal-binlog ──▶ canal-filter ──▶ canal-sink ──┬──▶ canal-store ──▶ canal-server ──▶ client
+                                                └──▶ canal-connector ──▶ Kafka
+
+canal-instance manages destinations; canal-admin / canal-prometheus expose control and metrics.</code></pre>
+        </div>
+
+        <p class="section-lede" style="margin-top:26px">Instance, session and process are independent tracks: an error in one does not block graceful shutdown of the others.</p>
+        <figure class="figure-card reveal" style="margin-top:18px">
+          <img src="assets/img/lifecycle-en.svg" alt="Canal Rust lifecycle: instance, session and process state flows"
+               width="1240" height="890" loading="lazy" decoding="async">
+          <figcaption>Lifecycle / instance · session · process</figcaption>
+        </figure>
+
+        <a class="btn btn-ghost btn-small arch-cta" href="features.en.html">Explore the 14 capabilities <span class="arrow" aria-hidden="true">→</span></a>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="section-index">03 / DECISIONS</p>
+          <div>
+            <h2 class="section-title">Every choice,<br>fewer surprises.</h2>
+            <p class="section-lede">Wire compatibility is a hard constraint. Everything else serves it: a mature CDC library, pure-Rust protobuf, a dependency-free ring buffer and runtime state visible through tracing and Prometheus.</p>
+          </div>
+        </div>
+
+        <div class="table-wrap reveal">
+          <table>
+            <thead><tr><th>Decision</th><th>Choice</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Wire protocol</td><td>Reuse Canal <code>.proto</code></td><td>Existing clients need no changes</td></tr>
+              <tr><td>binlog parsing</td><td><code>mysql_cdc</code> crate</td><td>Mature CDC library for MySQL / MariaDB</td></tr>
+              <tr><td>Async runtime</td><td><code>tokio</code></td><td>The Rust ecosystem standard</td></tr>
+              <tr><td>Serialization</td><td><code>prost</code> + <code>prost-build</code></td><td>Pure-Rust protobuf</td></tr>
+              <tr><td>Event storage</td><td>Custom ring buffer</td><td>No external dependency, built on <code>VecDeque</code></td></tr>
+              <tr><td>Configuration</td><td><code>serde_yaml</code></td><td>YAML, matching Java Canal's properties role</td></tr>
+              <tr><td>Logging</td><td><code>tracing</code></td><td>Structured, span-based logs</td></tr>
+              <tr><td>Web framework</td><td><code>axum</code></td><td>Admin API and Prometheus endpoint</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="section-title" style="font-size:1.45rem;margin-top:42px">Technology comparison</h3>
+        <div class="table-wrap reveal" style="margin-top:16px">
+          <table>
+            <thead><tr><th>Component</th><th>Java Canal</th><th>Canal Rust</th></tr></thead>
+            <tbody>
+              <tr><td>Language</td><td>Java 8</td><td>Rust (stable)</td></tr>
+              <tr><td>Runtime</td><td>JVM</td><td>Native binary (AOT)</td></tr>
+              <tr><td>Networking</td><td>Netty 4.x</td><td><code>tokio</code> + <code>tokio-util</code> codec</td></tr>
+              <tr><td>Serialization</td><td>Protobuf 3 (java)</td><td><code>prost</code></td></tr>
+              <tr><td>Binlog</td><td><code>dbsync</code></td><td><code>mysql_cdc</code></td></tr>
+              <tr><td>Event storage</td><td>LMAX Disruptor</td><td>Custom ring buffer</td></tr>
+              <tr><td>DI container</td><td>Spring 5</td><td>Constructor injection</td></tr>
+              <tr><td>Configuration</td><td>Spring properties</td><td><code>serde_yaml</code></td></tr>
+              <tr><td>Logging</td><td>Logback + SLF4J</td><td><code>tracing</code></td></tr>
+              <tr><td>SQL parser</td><td>Druid</td><td><code>sqlparser</code></td></tr>
+              <tr><td>Build</td><td>Maven</td><td>Cargo</td></tr>
+              <tr><td>Expression engine</td><td>Aviator</td><td><code>regex</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout warn reveal" style="margin-top:24px">
+          <strong>Known edges:</strong> upstream <code>mysql_cdc 0.2.1</code> has no TLS, so MySQL connections are plaintext;
+          authentication supports only <code>mysql_native_password</code> and <code>caching_sha2_password</code>;
+          the Admin API binds to loopback by default and needs an explicit <code>server.admin_bind</code> for containers or remote access.
+          See <a href="features.en.html#limits">Features · Known limits</a>.
+        </div>
+      </div>
+    </section>
+
+    <section class="section band" id="mascot">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="section-index">04 / MASCOT</p>
+          <div>
+            <h2 class="section-title">Xiaoyun,<br>keeper of the data canal.</h2>
+            <p class="section-lede">The design turns the pipeline's job into a character: control the flow, keep events, deliver downstream. Twelve expression forms give the mascot a mood for every page.</p>
+          </div>
+        </div>
+
+        <div class="mascot-grid">
+          <figure class="mascot-figure reveal">
+            <img src="assets/img/canal-pet-en.svg" alt="Xiaoyun on the lock wall, one claw on the paddle wheel, the other carrying a glowing event, with data packets below"
+                 width="720" height="520" loading="lazy" decoding="async">
+            <figcaption>Xiaoyun · Canal Crab / vector original</figcaption>
+          </figure>
+          <div class="mascot-copy reveal">
+            <p><strong>Xiaoyun</strong>'s rust-red shell maps to Rust; the left claw turns the paddle wheel, deciding how much data passes; the right claw carries a glowing event downstream. A binlog scroll floats upstream, released packets drift below, and the canal underfoot is the pipeline itself.</p>
+            <div class="map-list">
+              <div class="map-row"><span>Rust-red shell</span><span>Rust</span></div>
+              <div class="map-row"><span>Paddle wheel</span><span>canal-store · ring buffer</span></div>
+              <div class="map-row"><span>Event in the right claw</span><span>canal-sink · fan-out</span></div>
+              <div class="map-row"><span>Packets below the lock</span><span>canal-server / canal-connector</span></div>
+              <div class="map-row"><span>Binlog scroll upstream</span><span>canal-binlog</span></div>
+            </div>
+            <p class="gallery-note">The vector original lives in <code>docs/assets/canal-pet.svg</code>. It is embedded with <code>include_str!</code>, so editing the SVG updates the runtime without extra assets.</p>
+          </div>
+        </div>
+
+        <div class="pet-gallery reveal" style="margin-top:clamp(36px,5vw,56px)">
+          <div class="pet-card"><img src="assets/img/pet-smile-en.svg" alt="Xiaoyun · Smile" width="720" height="520" loading="lazy"><b>Smile</b><code>:emoji-smile:</code></div>
+          <div class="pet-card"><img src="assets/img/pet-joy-en.svg" alt="Xiaoyun · Joy" width="720" height="520" loading="lazy"><b>Joy</b><code>:emoji-joy:</code></div>
+          <div class="pet-card"><img src="assets/img/pet-cry-en.svg" alt="Xiaoyun · Cry" width="720" height="520" loading="lazy"><b>Cry</b><code>:emoji-cry:</code></div>
+          <div class="pet-card"><img src="assets/img/pet-depressed-en.svg" alt="Xiaoyun · Depressed" width="720" height="520" loading="lazy"><b>Depressed</b><code>:emoji-depressed:</code></div>
+          <div class="pet-card"><img src="assets/img/pet-terrified-en.svg" alt="Xiaoyun · Terrified" width="720" height="520" loading="lazy"><b>Terrified</b><code>:emoji-terrified:</code></div>
+          <div class="pet-card"><img src="assets/img/pet-angry-en.svg" alt="Xiaoyun · Angry" width="720" height="520" loading="lazy"><b>Angry</b><code>:emoji-angry:</code></div>
+          <div class="pet-card"><img src="assets/img/pet-coquettish-en.svg" alt="Xiaoyun · Coquettish" width="720" height="520" loading="lazy"><b>Coquettish</b><code>:emoji-coquettish:</code></div>
+          <div class="pet-card"><img src="assets/img/pet-cute-en.svg" alt="Xiaoyun · Cute" width="720" height="520" loading="lazy"><b>Cute</b><code>:emoji-cute:</code></div>
+          <div class="pet-card"><img src="assets/img/pet-pleasing-en.svg" alt="Xiaoyun · Pleasing" width="720" height="520" loading="lazy"><b>Pleasing</b><code>:emoji-pleasing:</code></div>
+          <div class="pet-card"><img src="assets/img/pet-knocking-en.svg" alt="Xiaoyun · Knocking" width="720" height="520" loading="lazy"><b>Knocking</b><code>:emoji-knocking:</code></div>
+          <div class="pet-card"><img src="assets/img/pet-facepalm-en.svg" alt="Xiaoyun · Facepalm" width="720" height="520" loading="lazy"><b>Facepalm</b><code>:emoji-facepalm:</code></div>
+          <div class="pet-card"><img src="assets/img/pet-tongue-en.svg" alt="Xiaoyun · Tongue Out" width="720" height="520" loading="lazy"><b>Tongue Out</b><code>:emoji-tongue:</code></div>
+        </div>
+        <p class="gallery-note">12 animated forms: Smile / Joy / Cry / Depressed / Terrified / Angry / Coquettish / Cute / Pleasing / Knocking / Facepalm / Tongue Out. Each SVG carries its own expression, effects and motion, and respects <code>prefers-reduced-motion</code>. The pet, images and expressions are non-open-source visual assets.</p>
+      </div>
+    </section>
+
+    <section class="section" id="support">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="section-index">05 / SUPPORT</p>
+          <div>
+            <h2 class="section-title">If it saved you some time.</h2>
+            <p class="section-lede">The code is Apache-2.0; the mascot and visual assets are separate. If this canal helps your project, a coffee is appreciated. Click a QR code to open and zoom it.</p>
+          </div>
+        </div>
+        <div class="support-row reveal">
+          <div class="support-card">
+            <img src="assets/img/weixinpay-en.png" alt="WeChat Pay QR code" width="104" height="104" loading="lazy" decoding="async">
+            <div><b>WeChat Pay</b><span>Tip the project · click to zoom</span></div>
+          </div>
+          <div class="support-card">
+            <img src="assets/img/alipay-en.png" alt="Alipay QR code" width="104" height="104" loading="lazy" decoding="async">
+            <div><b>Alipay</b><span>Tip the project · click to zoom</span></div>
+          </div>
+        </div>
+        <div class="callout info reveal" style="margin-top:26px">
+          Visual asset license: the mascot, images, icons, emojis and their source files are non-open-source assets.
+          No copying, modification, redistribution or commercial use without written permission. Licensing: <strong>erik@erik.xyz</strong>.
+        </div>
+        <a class="btn btn-primary arch-cta" href="install.en.html">Start installing <span class="arrow" aria-hidden="true">→</span></a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-intro">
+          <a class="brand brand--footer" href="index.en.html" aria-label="Canal Rust home">
+            <span class="brand-mark"><img src="assets/img/pet-top-en.svg" alt="" width="40" height="40"></span>
+            <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">DATA CANAL · v2.2.0</span></span>
+          </a>
+          <p>MySQL binlog incremental subscription &amp; consumption. A Rust rewrite of Alibaba Canal, reusing the same Canal protobuf protocol.</p>
+          <p class="footer-license">Code Apache-2.0 · Visual assets © the author</p>
+        </div>
+        <nav class="footer-nav" aria-label="Footer navigation">
+          <p class="footer-kicker">EXPLORE</p>
+          <a href="about.en.html">About</a>
+          <a href="features.en.html">Features</a>
+          <a href="changelog.en.html">Changelog</a>
+          <a href="install.en.html">Install</a>
+          <a href="usage.en.html">Usage</a>
+          <a href="index.en.html#support">Tip the project</a>
+        </nav>
+        <div class="footer-meta">
+          <p class="footer-kicker">AUTHOR</p>
+          <a class="footer-author" href="https://erik.xyz" target="_blank" rel="noopener">艾瑞可erik <span aria-hidden="true">↗</span></a>
+          <p class="footer-kicker">VISUAL ASSETS</p>
+          <p>Xiaoyun and the 12 expression forms are non-open-source visual assets. Commercial use requires a license. Contact erik@erik.xyz.</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Canal Rust</span><span class="footer-dot" aria-hidden="true">·</span><span>Built static. Served fast.</span>
+        <div class="footer-info" id="busuanzi"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script> <span id="busuanzi_container_page_pv"><span data-i18n="post.readA">Views</span> <b id="busuanzi_value_page_pv">0</b> <span data-i18n="post.readB">views 👀</span></span></div>
+      </div>
+    </div>
+  </footer>
+
+  <button class="backtop" id="backtop" type="button" aria-label="Back to top">
+    <img src="assets/img/pet-top-en.svg" alt="" width="64" height="64" loading="lazy">
+  </button>
+</body>
+</html>

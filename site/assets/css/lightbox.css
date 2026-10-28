@@ -1,0 +1,111 @@
+/* Canal Rust — image lightbox */
+
+body.lightbox-open { overflow: hidden; }
+.zoomable { cursor: zoom-in; }
+.zoomable:focus-visible { outline: 3px solid var(--water-light); outline-offset: 4px; }
+
+.lightbox {
+  width: min(94vw, 1280px);
+  max-width: none;
+  max-height: 94vh;
+  margin: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 20px;
+  background: transparent;
+  color: #e9e1d5;
+  overflow: visible;
+}
+.lightbox::backdrop {
+  background: rgba(8, 11, 16, .84);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.lightbox-shell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.lightbox-viewport {
+  position: relative;
+  height: min(78vh, 900px);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 18px;
+  background: #0b1118;
+  box-shadow: 0 30px 80px -30px rgba(0, 0, 0, .9);
+  touch-action: none;
+}
+.lightbox-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+  transform-origin: center center;
+  will-change: transform;
+  cursor: zoom-in;
+}
+.lightbox-viewport.is-zoomed .lightbox-image { cursor: grab; }
+.lightbox-viewport.is-dragging .lightbox-image { cursor: grabbing; }
+
+.lightbox-toolbar {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 999px;
+  background: rgba(18, 24, 32, .78);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+.lightbox-toolbar button {
+  min-width: 38px;
+  height: 38px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #e9e1d5;
+  font-family: var(--mono);
+  font-size: .9rem;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.lightbox-toolbar button:hover { background: rgba(255, 255, 255, .12); color: #fff; }
+.lightbox-toolbar .lightbox-scale { min-width: 58px; font-size: .68rem; color: var(--water-light); }
+.lightbox-toolbar .lightbox-close { font-size: 1.2rem; }
+
+.lightbox-caption {
+  margin: 0;
+  padding: 0 8px;
+  max-height: 3.4em;
+  overflow: auto;
+  color: #c7d0d9;
+  font-size: .78rem;
+  line-height: 1.55;
+  text-align: center;
+}
+.lightbox-hint {
+  margin: 0;
+  color: #7f8c9a;
+  font-family: var(--mono);
+  font-size: .6rem;
+  letter-spacing: .05em;
+  text-align: center;
+}
+
+@media (max-width: 680px) {
+  .lightbox { width: 96vw; border-radius: 16px; }
+  .lightbox-viewport { height: min(70vh, 620px); border-radius: 14px; }
+  .lightbox-toolbar { top: 8px; right: 8px; }
+  .lightbox-toolbar button { min-width: 34px; height: 34px; }
+  .lightbox-toolbar .lightbox-scale { min-width: 50px; }
+  .lightbox-caption { font-size: .7rem; }
+}

@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Canal Rust · MySQL binlog subscription & consumption</title>
+  <meta name="description" content="Canal Rust is a Rust rewrite of Alibaba Canal. It emulates a MySQL slave, parses binlog and delivers change events over the Canal protobuf protocol. 14 crates, 389 tests.">
+  <meta name="theme-color" content="#f3ecdf">
+  <meta name="author" content="艾瑞可erik">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="application-name" content="Canal Rust">
+  <link rel="canonical" href="https://package.erik.xyz/canal/index.en.html">
+  <link rel="alternate" hreflang="zh-CN" href="https://package.erik.xyz/canal/">
+  <link rel="alternate" hreflang="en" href="https://package.erik.xyz/canal/index.en.html">
+  <link rel="alternate" hreflang="x-default" href="https://package.erik.xyz/canal/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Canal Rust">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="zh_CN">
+  <meta property="og:title" content="Canal Rust · MySQL binlog subscription & consumption">
+  <meta property="og:description" content="Canal Rust is a Rust rewrite of Alibaba Canal. It emulates a MySQL slave, parses binlog and delivers change events over the Canal protobuf protocol. 14 crates, 389 tests.">
+  <meta property="og:url" content="https://package.erik.xyz/canal/index.en.html">
+  <meta property="og:image" content="https://package.erik.xyz/canal/assets/img/og-canal-rust-en.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Canal Rust — Xiaoyun at the lock of the data canal">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Canal Rust · MySQL binlog subscription & consumption">
+  <meta name="twitter:description" content="Canal Rust is a Rust rewrite of Alibaba Canal. It emulates a MySQL slave, parses binlog and delivers change events over the Canal protobuf protocol. 14 crates, 389 tests.">
+  <meta name="twitter:image" content="https://package.erik.xyz/canal/assets/img/og-canal-rust-en.png">
+  <script>
+    (function () {
+      document.documentElement.classList.add('js');
+      if (location.pathname === '/canal') location.replace('/canal/');
+    })();
+  </script>
+  <link rel="icon" href="assets/img/pet-top-en.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/core.css">
+  <link rel="stylesheet" href="assets/css/pages.css">
+  <link rel="stylesheet" href="assets/css/home.css">
+  <link rel="stylesheet" href="assets/css/lightbox.css">
+  <link rel="stylesheet" href="assets/css/search.css">
+  <noscript><style>.js .reveal{opacity:1;transform:none}</style></noscript>
+  <script defer src="assets/js/site.js"></script>
+  <script defer src="assets/js/search.js"></script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://package.erik.xyz/canal/index.en.html#website",
+      "url": "https://package.erik.xyz/canal/index.en.html",
+      "name": "Canal Rust",
+      "description": "Canal Rust is a Rust rewrite of Alibaba Canal. It emulates a MySQL slave, parses binlog and delivers change events over the Canal protobuf protocol. 14 crates, 389 tests.",
+      "inLanguage": "en",
+      "publisher": {
+        "@type": "Person",
+        "name": "艾瑞可erik",
+        "url": "https://erik.xyz"
+      }
+    },
+    {
+      "@type": "SoftwareSourceCode",
+      "@id": "https://package.erik.xyz/canal/index.en.html#software",
+      "name": "Canal Rust",
+      "description": "Canal Rust is a Rust rewrite of Alibaba Canal. It emulates a MySQL slave, parses binlog and delivers change events over the Canal protobuf protocol. 14 crates, 389 tests.",
+      "url": "https://package.erik.xyz/canal/index.en.html",
+      "codeRepository": "https://github.com/erikwang2013/canal-rust",
+      "programmingLanguage": "Rust",
+      "license": "https://www.apache.org/licenses/LICENSE-2.0",
+      "version": "2.2.0",
+      "author": {
+        "@type": "Person",
+        "name": "艾瑞可erik",
+        "url": "https://erik.xyz"
+      },
+      "isPartOf": {
+        "@id": "https://package.erik.xyz/canal/index.en.html#website"
+      }
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://package.erik.xyz/canal/index.en.html#webpage",
+      "url": "https://package.erik.xyz/canal/index.en.html",
+      "name": "Canal Rust · MySQL binlog subscription & consumption",
+      "description": "Canal Rust is a Rust rewrite of Alibaba Canal. It emulates a MySQL slave, parses binlog and delivers change events over the Canal protobuf protocol. 14 crates, 389 tests.",
+      "inLanguage": "en",
+      "isPartOf": {
+        "@id": "https://package.erik.xyz/canal/index.en.html#website"
+      },
+      "about": {
+        "@id": "https://package.erik.xyz/canal/index.en.html#software"
+      },
+      "primaryImageOfPage": {
+        "@type": "ImageObject",
+        "url": "https://package.erik.xyz/canal/assets/img/og-canal-rust-en.png",
+        "width": 1200,
+        "height": 630
+      }
+    }
+  ]
+}
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="index.en.html" aria-label="Canal Rust home">
+        <span class="brand-mark"><img src="assets/img/pet-top-en.svg" alt="" width="40" height="40"></span>
+        <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">DATA CANAL · v2.2.0</span></span>
+      </a>
+      <nav class="site-nav" id="site-nav" aria-label="Main navigation">
+        <a href="index.en.html" aria-current="page">Home</a>
+        <a href="about.en.html">About</a>
+        <a href="features.en.html">Features</a>
+        <a href="changelog.en.html">Changelog</a>
+        <a href="install.en.html">Install</a>
+        <a href="usage.en.html">Usage</a>
+        <a class="nav-author" href="https://erik.xyz" target="_blank" rel="noopener">艾瑞可erik <span aria-hidden="true">↗</span></a>
+      </nav>
+      <div class="header-tools">
+        <a class="lang-switch" href="index.html" hreflang="zh-CN" lang="zh-CN" aria-label="Switch to Chinese">中文</a>
+        <button class="search-toggle" type="button" aria-label="Search" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open navigation menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <div class="hero-screen">
+      <section class="hero">
+        <div class="container hero-inner">
+          <div class="hero-copy">
+            <p class="eyebrow">MySQL binlog · Rust rewrite</p>
+            <h1>Every change<br><span class="mark">leaves a trace</span><br>down the canal.</h1>
+            <p class="hero-lede">
+              Canal Rust emulates a MySQL slave, sends dump requests to the master, parses binlog,
+              and delivers change events to downstream consumers over the Canal protobuf protocol.
+              14 crates cover the full path: <strong>ingest → parse → filter → store → egress → ack</strong>.
+            </p>
+            <div class="hero-actions">
+              <a class="btn btn-primary" href="install.en.html">Quick start <span class="arrow" aria-hidden="true">→</span></a>
+              <a class="btn btn-ghost" href="about.en.html">Explore architecture</a>
+            </div>
+            <div class="hero-facts">
+              <div><b>14</b><span>crates</span></div>
+              <div><b>389</b><span>tests passing</span></div>
+              <div><b>v2.2.0</b><span>current release</span></div>
+              <div><b>0</b><span>clippy warnings</span></div>
+            </div>
+          </div>
+          <div class="hero-visual">
+            <div id="canal-canvas" aria-hidden="true"></div>
+            <div class="pet-stage">
+              <img class="pet-main" src="assets/img/canal-pet-en.svg"
+                   alt="Xiaoyun, the Canal Rust mascot: a rust-red crab standing on the lock wall of the data canal, one claw on the paddle wheel, the other carrying a glowing change event"
+                   width="720" height="520" fetchpriority="high">
+            </div>
+            <span class="hero-badge hero-badge--top"><span class="live-dot"></span> binlog stream · live</span>
+            <span class="hero-badge hero-badge--bottom">LOCK 01 / Xiaoyun · Canal Crab</span>
+            <span class="hero-pet-chip hero-pet-chip--a"><img src="assets/img/pet-joy-top-en.svg" alt="" width="52" height="52"></span>
+            <span class="hero-pet-chip hero-pet-chip--b"><img src="assets/img/pet-cute-top-en.svg" alt="" width="44" height="44"></span>
+          </div>
+        </div>
+      </section>
+      <div class="flow-strip" role="region" aria-label="Data canal">
+        <div class="flow-inner">
+          <span class="flow-label">DATA CANAL</span>
+          <div class="flow-step"><b>01</b><span>MySQL binlog</span></div>
+          <div class="flow-step"><b>02</b><span>canal-binlog</span></div>
+          <div class="flow-step"><b>03</b><span>canal-filter</span></div>
+          <div class="flow-step"><b>04</b><span>canal-store</span></div>
+          <div class="flow-step"><b>05</b><span>canal-server / Kafka</span></div>
+          <div class="flow-step"><b>06</b><span>client ack</span></div>
+        </div>
+      </div>
+    </div>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="section-index">01 / WHY</p>
+          <div>
+            <h2 class="section-title">The same wire protocol,<br>a lighter runtime.</h2>
+            <p class="section-lede">
+              No client changes, no protocol changes — just the JVM replaced by a native binary.
+              Canal Rust keeps Java Canal's protocol semantics and splits the path into 14 independently evolving crates.
+            </p>
+          </div>
+        </div>
+
+        <div class="bento">
+          <article class="bento-card bento-card--wide bento-card--dark reveal">
+            <p class="card-kicker">Protocol</p>
+            <p class="big-num">0 lines</p>
+            <h3>of client code to change</h3>
+            <p>Reuses upstream Canal <code>.proto</code>; Java / Go / Python / C# / Node.js clients connect unchanged.</p>
+            <div class="mini-flow"><span>CanalProtocol.proto</span><span>EntryProtocol.proto</span><span>prost</span></div>
+          </article>
+          <article class="bento-card bento-card--wide reveal">
+            <p class="card-kicker">Workspace</p>
+            <p class="big-num">14</p>
+            <h3>crates, each guarding a stretch</h3>
+            <p>Six layers decoupled: ingest, processing, egress, orchestration, operations, foundation. Each can be built, tested and replaced independently.</p>
+            <div class="mini-flow"><span>binlog</span><span>filter</span><span>store</span><span>sink</span><span>server</span><span>connector</span></div>
+          </article>
+          <article class="bento-card reveal has-stamp">
+            <p class="card-kicker">Ingest</p>
+            <h3>Real-time binlog parsing</h3>
+            <p>Uses <code>mysql_cdc</code> to connect MySQL 5.1–8.0 / MariaDB, with position and GTID modes, mapping TableMap into one event model.</p>
+            <img class="stamp" src="assets/img/pet-joy-top-en.svg" alt="" width="78" height="70" loading="lazy">
+          </article>
+          <article class="bento-card reveal has-stamp">
+            <p class="card-kicker">Backpressure</p>
+            <h3>Ring buffer + client Ack</h3>
+            <p>An in-memory ring buffer keeps events and evicts on overflow; client acknowledgements advance the position so consumers are not flooded.</p>
+            <img class="stamp" src="assets/img/pet-knocking-top-en.svg" alt="" width="78" height="70" loading="lazy">
+          </article>
+          <article class="bento-card reveal has-stamp">
+            <p class="card-kicker">Operate</p>
+            <h3>One process, many exits</h3>
+            <p>Run multiple destinations in one process; fan out to TCP clients or Kafka, with Prometheus metrics and an Admin API.</p>
+            <img class="stamp" src="assets/img/pet-cute-top-en.svg" alt="" width="78" height="70" loading="lazy">
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section band">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="section-index">02 / FLOW</p>
+          <div>
+            <h2 class="section-title">One event, six stages.</h2>
+            <p class="section-lede">From MySQL binlog to downstream consumers, every change is caught, checked, queued and delivered until the client acknowledges it. If a stage slows down, the metrics show it.</p>
+          </div>
+        </div>
+
+        <div class="arch-grid">
+          <figure class="figure-card reveal">
+            <img src="assets/img/architecture-en.svg" alt="Canal Rust architecture: MySQL Master, canal-binlog, canal-filter, canal-sink, canal-store, canal-server and Kafka data flow"
+                 width="1240" height="812" loading="lazy" decoding="async">
+            <figcaption>docs/assets/architecture-en.svg · v2.2.0</figcaption>
+          </figure>
+          <div class="reveal">
+            <dl class="layer-list">
+              <div class="layer-item"><dt>Ingest</dt><dd><code>canal-binlog</code> connects to MySQL, pulls binlog and converts it to a unified event model.</dd></div>
+              <div class="layer-item"><dt>Process</dt><dd><code>canal-filter</code> applies regex table/schema filters; <code>canal-sink</code> fans events out to multiple exits.</dd></div>
+              <div class="layer-item"><dt>Egress</dt><dd><code>canal-store</code> ring buffer, <code>canal-server</code> TCP protocol and <code>canal-connector</code> Kafka delivery.</dd></div>
+              <div class="layer-item"><dt>Orchestrate</dt><dd><code>canal-instance</code> manages multiple destinations; each instance owns a complete path.</dd></div>
+              <div class="layer-item"><dt>Operate</dt><dd><code>canal-admin</code> control API, <code>canal-prometheus</code> metrics and <code>canal-cli</code> entry point.</dd></div>
+              <div class="layer-item"><dt>Foundation</dt><dd><code>canal-common</code> types and lifecycle, <code>canal-proto</code> protobuf generation and <code>canal-meta</code> schema cache.</dd></div>
+            </dl>
+            <a class="btn btn-ghost btn-small arch-cta" href="about.en.html">See the full architecture <span class="arrow" aria-hidden="true">→</span></a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="section-index">03 / MASCOT</p>
+          <div>
+            <h2 class="section-title">The lock keeper,<br>with twelve faces.</h2>
+            <p class="section-lede">The mascot is not a sticker; it is the pipeline turned into a character: someone has to control the flow and deliver the events. Xiaoyun stands on the lock wall and acts out Rust, the ring buffer and fan-out.</p>
+          </div>
+        </div>
+
+        <div class="mascot-grid">
+          <figure class="mascot-figure reveal">
+            <img src="assets/img/canal-pet-en.svg" alt="Xiaoyun on the lock wall, one claw on the paddle wheel and the other carrying a glowing event"
+                 width="720" height="520" loading="lazy" decoding="async">
+            <figcaption>Xiaoyun · Canal Crab / project mascot</figcaption>
+          </figure>
+          <div class="mascot-copy reveal">
+            <p><strong>Xiaoyun</strong> is the lock keeper of this data canal. The rust-red shell maps to Rust; the left claw turns the paddle wheel, deciding how much data passes; the right claw carries a glowing event downstream. A binlog scroll floats upstream, and released packets drift below the lock.</p>
+            <div class="map-list">
+              <div class="map-row"><span>Rust-red shell</span><span>Rust</span></div>
+              <div class="map-row"><span>Paddle wheel</span><span>canal-store · ring buffer</span></div>
+              <div class="map-row"><span>Event in the right claw</span><span>canal-sink · fan-out</span></div>
+              <div class="map-row"><span>Packets below the lock</span><span>canal-server / canal-connector</span></div>
+              <div class="map-row"><span>Binlog scroll upstream</span><span>canal-binlog</span></div>
+            </div>
+            <a class="btn btn-ghost btn-small mascot-link" href="about.en.html#mascot">Meet Xiaoyun and the 12 faces <span class="arrow" aria-hidden="true">→</span></a>
+          </div>
+        </div>
+
+        <div class="pet-marquee reveal" aria-hidden="true">
+          <div class="pet-track">
+            <span class="pet-item"><img src="assets/img/pet-smile-en.svg" alt="" width="40" height="40" loading="lazy"><span>Smile</span></span>
+            <span class="pet-item"><img src="assets/img/pet-joy-en.svg" alt="" width="40" height="40" loading="lazy"><span>Joy</span></span>
+            <span class="pet-item"><img src="assets/img/pet-cry-en.svg" alt="" width="40" height="40" loading="lazy"><span>Cry</span></span>
+            <span class="pet-item"><img src="assets/img/pet-depressed-en.svg" alt="" width="40" height="40" loading="lazy"><span>Depressed</span></span>
+            <span class="pet-item"><img src="assets/img/pet-terrified-en.svg" alt="" width="40" height="40" loading="lazy"><span>Terrified</span></span>
+            <span class="pet-item"><img src="assets/img/pet-angry-en.svg" alt="" width="40" height="40" loading="lazy"><span>Angry</span></span>
+            <span class="pet-item"><img src="assets/img/pet-coquettish-en.svg" alt="" width="40" height="40" loading="lazy"><span>Coquettish</span></span>
+            <span class="pet-item"><img src="assets/img/pet-cute-en.svg" alt="" width="40" height="40" loading="lazy"><span>Cute</span></span>
+            <span class="pet-item"><img src="assets/img/pet-pleasing-en.svg" alt="" width="40" height="40" loading="lazy"><span>Pleasing</span></span>
+            <span class="pet-item"><img src="assets/img/pet-knocking-en.svg" alt="" width="40" height="40" loading="lazy"><span>Knocking</span></span>
+            <span class="pet-item"><img src="assets/img/pet-facepalm-en.svg" alt="" width="40" height="40" loading="lazy"><span>Facepalm</span></span>
+            <span class="pet-item"><img src="assets/img/pet-tongue-en.svg" alt="" width="40" height="40" loading="lazy"><span>Tongue Out</span></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section band">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="section-index">04 / RELEASES</p>
+          <div>
+            <h2 class="section-title">From phase one to v2.2.0.</h2>
+            <p class="section-lede">First make the path work, then refactor the foundation, then bring Xiaoyun into the runtime. Every release leaves a record.</p>
+          </div>
+        </div>
+        <div class="milestones">
+          <article class="milestone reveal">
+            <time datetime="2026-07-30">2026-07-30</time>
+            <h3>v1.0.0</h3>
+            <p>Phase one complete: the core path from binlog to client is connected.</p>
+            <span class="tag">phase 1</span>
+          </article>
+          <article class="milestone reveal">
+            <time datetime="2026-07-31">2026-07-31</time>
+            <h3>v2.0.0</h3>
+            <p>Infrastructure and big refactor: config, errors and lifecycle unified for the fixes that follow.</p>
+            <span class="tag">refactor</span>
+          </article>
+          <article class="milestone reveal">
+            <time datetime="2026-09-26">2026-09-26</time>
+            <h3>v2.1.0</h3>
+            <p>Mascot redraw, connection-blocking fixes and Docker / CI infrastructure.</p>
+            <span class="tag">mascot</span>
+          </article>
+          <article class="milestone reveal">
+            <time datetime="2026-09-26">2026-09-26</time>
+            <h3>v2.2.0</h3>
+            <p>Xiaoyun enters the runtime: <code>canal-rust pet</code>, <code>--help</code> and Admin <code>/pet.svg</code>; 389 tests pass.</p>
+            <span class="tag tag-rust">current</span>
+          </article>
+        </div>
+        <a class="btn btn-ghost btn-small arch-cta" href="changelog.en.html">View the full changelog <span class="arrow" aria-hidden="true">→</span></a>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="start-band reveal">
+          <div>
+            <p class="eyebrow">GET STARTED</p>
+            <h2>Five minutes, <span class="nowrap">connect the canal.</span></h2>
+            <p>Install protoc, clone, build, edit a canal.yaml and let Xiaoyun take the lock.</p>
+            <div class="start-actions">
+              <a class="btn btn-primary" href="install.en.html">Installation <span class="arrow" aria-hidden="true">→</span></a>
+              <a class="btn btn-ghost" href="usage.en.html">Usage</a>
+            </div>
+          </div>
+          <div class="code-block">
+            <div class="code-head"><span>terminal</span><button class="code-copy" type="button">Copy</button></div>
+            <pre><code><span class="c"># Rust 1.85+ and protoc required</span>
+git clone https://github.com/erikwang2013/canal-rust.git
+cd canal-rust
+cargo build --release
+./target/release/canal-rust server --config canal.yaml</code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section band" id="support">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="section-index">05 / SUPPORT</p>
+          <div>
+            <h2 class="section-title">If it saved you some time.</h2>
+            <p class="section-lede">The code is Apache-2.0; the mascot and visual assets are separate. If this canal helps your project, a coffee is appreciated. Click a QR code to open and zoom it.</p>
+          </div>
+        </div>
+        <div class="support-row reveal">
+          <div class="support-card">
+            <img src="assets/img/weixinpay-en.png" alt="WeChat Pay QR code" width="104" height="104" loading="lazy" decoding="async">
+            <div><b>WeChat Pay</b><span>Tip the project · click to zoom</span></div>
+          </div>
+          <div class="support-card">
+            <img src="assets/img/alipay-en.png" alt="Alipay QR code" width="104" height="104" loading="lazy" decoding="async">
+            <div><b>Alipay</b><span>Tip the project · click to zoom</span></div>
+          </div>
+        </div>
+        <p class="gallery-note">Xiaoyun, the images and the expression forms are non-open-source visual assets. Commercial use requires written permission. The code is Apache-2.0.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-intro">
+          <a class="brand brand--footer" href="index.en.html" aria-label="Canal Rust home">
+            <span class="brand-mark"><img src="assets/img/pet-top-en.svg" alt="" width="40" height="40"></span>
+            <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">DATA CANAL · v2.2.0</span></span>
+          </a>
+          <p>MySQL binlog incremental subscription &amp; consumption. A Rust rewrite of Alibaba Canal, reusing the same Canal protobuf protocol.</p>
+          <p class="footer-license">Code Apache-2.0 · Visual assets © the author</p>
+        </div>
+        <nav class="footer-nav" aria-label="Footer navigation">
+          <p class="footer-kicker">EXPLORE</p>
+          <a href="about.en.html">About</a>
+          <a href="features.en.html">Features</a>
+          <a href="changelog.en.html">Changelog</a>
+          <a href="install.en.html">Install</a>
+          <a href="usage.en.html">Usage</a>
+          <a href="index.en.html#support">Tip the project</a>
+        </nav>
+        <div class="footer-meta">
+          <p class="footer-kicker">AUTHOR</p>
+          <a class="footer-author" href="https://erik.xyz" target="_blank" rel="noopener">艾瑞可erik <span aria-hidden="true">↗</span></a>
+          <p class="footer-kicker">VISUAL ASSETS</p>
+          <p>Xiaoyun and the 12 expression forms are non-open-source visual assets. Commercial use requires a license. Contact erik@erik.xyz.</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Canal Rust</span><span class="footer-dot" aria-hidden="true">·</span><span>Built static. Served fast.</span>
+        <div class="footer-info" id="busuanzi"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script> <span id="busuanzi_container_page_pv"><span data-i18n="post.readA">Views</span> <b id="busuanzi_value_page_pv">0</b> <span data-i18n="post.readB">views 👀</span></span></div>
+      </div>
+    </div>
+  </footer>
+
+  <button class="backtop" id="backtop" type="button" aria-label="Back to top">
+    <img src="assets/img/pet-top-en.svg" alt="" width="64" height="64" loading="lazy">
+  </button>
+  <script type="module" src="assets/js/three-canal.js"></script>
+</body>
+</html>

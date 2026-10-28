@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>安装文档 · Canal Rust</title>
+  <meta name="description" content="Canal Rust 安装文档：环境要求、protoc 安装、构建、MySQL 配置、canal.yaml、启动、Docker 部署与故障排查。">
+  <meta name="theme-color" content="#f3ecdf">
+  <meta name="author" content="艾瑞可erik">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="application-name" content="Canal Rust">
+  <link rel="canonical" href="https://package.erik.xyz/canal/install.html">
+  <link rel="alternate" hreflang="zh-CN" href="https://package.erik.xyz/canal/install.html">
+  <link rel="alternate" hreflang="en" href="https://package.erik.xyz/canal/install.en.html">
+  <link rel="alternate" hreflang="x-default" href="https://package.erik.xyz/canal/install.html">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Canal Rust">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:title" content="安装文档 · Canal Rust">
+  <meta property="og:description" content="Canal Rust 安装文档：环境要求、protoc 安装、构建、MySQL 配置、canal.yaml、启动、Docker 部署与故障排查。">
+  <meta property="og:url" content="https://package.erik.xyz/canal/install.html">
+  <meta property="og:image" content="https://package.erik.xyz/canal/assets/img/og-canal-rust.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Canal Rust — 小运守在数据运河的闸口">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="安装文档 · Canal Rust">
+  <meta name="twitter:description" content="Canal Rust 安装文档：环境要求、protoc 安装、构建、MySQL 配置、canal.yaml、启动、Docker 部署与故障排查。">
+  <meta name="twitter:image" content="https://package.erik.xyz/canal/assets/img/og-canal-rust.png">
+  <script>
+    (function () {
+      document.documentElement.classList.add('js');
+      if (location.pathname === '/canal') location.replace('/canal/');
+    })();
+  </script>
+  <link rel="icon" href="assets/img/pet-top.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/core.css">
+  <link rel="stylesheet" href="assets/css/pages.css">
+  <link rel="stylesheet" href="assets/css/docs.css">
+  <link rel="stylesheet" href="assets/css/lightbox.css">
+  <link rel="stylesheet" href="assets/css/search.css">
+  <noscript><style>.js .reveal{opacity:1;transform:none}</style></noscript>
+  <script defer src="assets/js/site.js"></script>
+  <script defer src="assets/js/search.js"></script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "name": "安装文档 · Canal Rust",
+  "description": "Canal Rust 安装文档：环境要求、protoc 安装、构建、MySQL 配置、canal.yaml、启动、Docker 部署与故障排查。",
+  "url": "https://package.erik.xyz/canal/install.html",
+  "inLanguage": "zh-CN",
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "Canal Rust",
+    "url": "https://package.erik.xyz/canal/"
+  },
+  "about": {
+    "@type": "SoftwareApplication",
+    "name": "Canal Rust",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Linux, macOS",
+    "url": "https://package.erik.xyz/canal/"
+  },
+  "primaryImageOfPage": {
+    "@type": "ImageObject",
+    "url": "https://package.erik.xyz/canal/assets/img/og-canal-rust.png",
+    "width": 1200,
+    "height": 630
+  }
+}
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到主要内容</a>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="index.html" aria-label="Canal Rust 首页">
+        <span class="brand-mark"><img src="assets/img/pet-top.svg" alt="" width="40" height="40"></span>
+        <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">数据运河 · v2.2.0</span></span>
+      </a>
+      <nav class="site-nav" id="site-nav" aria-label="主导航">
+        <a href="index.html">首页</a>
+        <a href="about.html">项目介绍</a>
+        <a href="features.html">功能迭代</a>
+        <a href="changelog.html">版本日志</a>
+        <a href="install.html" aria-current="page">安装文档</a>
+        <a href="usage.html">使用说明</a>
+        <a class="nav-author" href="https://erik.xyz" target="_blank" rel="noopener">艾瑞可erik <span aria-hidden="true">↗</span></a>
+      </nav>
+      <div class="header-tools">
+        <a class="lang-switch" href="install.en.html" hreflang="en" lang="en" aria-label="切换到英文">EN</a>
+        <button class="search-toggle" type="button" aria-label="搜索" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="打开导航菜单">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="page-hero">
+      <div class="container">
+        <p class="eyebrow">Get started / 安装文档</p>
+        <h1>把运河，<br>接到你的 MySQL 上。</h1>
+        <p class="lede">
+          从 clone 到第一条事件，大约五分钟。需要 Rust 1.85+、protoc，以及一个开启了 ROW 格式 binlog
+          的 MySQL 5.7+ / 8.0。Kafka 是可选的。
+        </p>
+        <div class="page-hero-meta">
+          <span>Rust 1.85+</span><span>protoc required</span><span>MySQL 5.7+</span><span>~5 min</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" style="padding-top:24px">
+      <div class="container doc-layout">
+        <aside class="doc-toc" aria-label="本页目录">
+          <p>ON THIS PAGE</p>
+          <a href="#requirements">环境要求</a>
+          <a href="#source">获取源码</a>
+          <a href="#build">构建</a>
+          <a href="#mysql">配置 MySQL</a>
+          <a href="#config">配置 canal.yaml</a>
+          <a href="#run">启动服务</a>
+          <a href="#docker">Docker 部署</a>
+          <a href="#verify">验证</a>
+          <a href="#troubleshoot">故障排查</a>
+        </aside>
+
+        <div class="doc-body">
+          <section id="requirements">
+            <h2>环境要求</h2>
+            <ul>
+              <li><strong>Rust 1.85+</strong>。依赖链中的 clap、getrandom 等已使用 edition 2024，低于 1.85 无法构建当前 Cargo.lock。</li>
+              <li><strong>protoc</strong>（Protocol Buffers 编译器）。<code>canal-proto/build.rs</code> 通过 prost-build 生成代码，缺了它任何编译都会失败。</li>
+              <li><strong>MySQL 5.7+ / 8.0</strong>，开启 binlog 且格式为 ROW；MariaDB 也受支持。</li>
+              <li><strong>Kafka</strong>（可选），仅在需要消息队列出口时安装。</li>
+              <li>端口：<code>11111</code> Canal TCP、<code>11112</code> Admin API、<code>9090</code> Prometheus（均可配置）。</li>
+            </ul>
+
+            <div class="code-block">
+              <div class="code-head"><span>安装依赖</span><button class="code-copy" type="button">复制</button></div>
+              <pre><code><span class="c"># Rust（如果还没装）</span>
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+<span class="c"># Debian / Ubuntu</span>
+sudo apt-get update &amp;&amp; sudo apt-get install -y protobuf-compiler
+
+<span class="c"># macOS</span>
+brew install protobuf</code></pre>
+            </div>
+
+            <div class="callout warn">
+              缺少 protoc 时，编译会报 <code>Could not find 'protoc'</code>。这不是 Rust 版本问题，
+              先把 protoc 装好再重试。
+            </div>
+          </section>
+
+          <section id="source">
+            <h2>获取源码</h2>
+            <p>仓库包含 14 个 workspace crate、proto 定义、Docker 配置与文档。</p>
+            <div class="code-block">
+              <div class="code-head"><span>terminal</span><button class="code-copy" type="button">复制</button></div>
+              <pre><code>git clone https://github.com/erikwang2013/canal-rust.git
+cd canal-rust</code></pre>
+            </div>
+          </section>
+
+          <section id="build">
+            <h2>构建</h2>
+            <div class="code-block">
+              <div class="code-head"><span>terminal</span><button class="code-copy" type="button">复制</button></div>
+              <pre><code>cargo build --release
+
+<span class="c"># 二进制位于 target/release/canal-rust</span>
+./target/release/canal-rust --version
+./target/release/canal-rust pet</code></pre>
+            </div>
+            <p><code>canal-rust pet</code> 会打印 ASCII 版小运，并告诉你它都住在代码里的哪些位置。</p>
+          </section>
+
+          <section id="mysql">
+            <h2>配置 MySQL</h2>
+            <p>创建一个供 Canal Rust 使用的复制账号，并确认 binlog 已开启。</p>
+            <div class="code-block">
+              <div class="code-head"><span>MySQL</span><button class="code-copy" type="button">复制</button></div>
+              <pre><code>CREATE USER 'canal'@'%' IDENTIFIED WITH mysql_native_password BY 'canal';
+GRANT SELECT, REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO 'canal'@'%';
+FLUSH PRIVILEGES;
+
+SHOW VARIABLES LIKE 'log_bin';
+SHOW VARIABLES LIKE 'binlog_format';
+SHOW MASTER STATUS;</code></pre>
+            </div>
+            <p>如果 <code>binlog_format</code> 不是 <code>ROW</code>，在 MySQL 配置中设置后重启：</p>
+            <div class="code-block">
+              <div class="code-head"><span>my.cnf</span><button class="code-copy" type="button">复制</button></div>
+              <pre><code>[mysqld]
+server-id = 1
+log-bin = mysql-bin
+binlog_format = ROW</code></pre>
+            </div>
+            <div class="callout warn">
+              <strong>连接是明文的。</strong>上游 <code>mysql_cdc 0.2.1</code> 未实现 TLS，账号密码与 binlog
+              数据都不加密。只在可信内网使用；跨网段请套 SSH 隧道。认证插件仅支持
+              <code>mysql_native_password</code> 与 <code>caching_sha2_password</code>。
+            </div>
+          </section>
+
+          <section id="config">
+            <h2>配置 canal.yaml</h2>
+            <p>从模板复制一份，按实际环境修改：</p>
+            <div class="code-block">
+              <div class="code-head"><span>terminal</span><button class="code-copy" type="button">复制</button></div>
+              <pre><code>cp canal.yaml.example canal.yaml</code></pre>
+            </div>
+            <div class="code-block">
+              <div class="code-head"><span>canal.yaml</span><button class="code-copy" type="button">复制</button></div>
+              <pre><code>canal:
+  mysql:
+    host: "127.0.0.1"
+    port: 3306
+    username: "canal"
+    password: "canal"
+  store:
+    buffer_size: 16384
+  server:
+    bind: "0.0.0.0:11111"
+    metrics_bind: "127.0.0.1:9090"
+    <span class="c"># admin_bind: "0.0.0.0:11112"</span>
+  logging:
+    level: "info"
+    format: "json"</code></pre>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>字段</th><th>默认</th><th>说明</th></tr></thead>
+                <tbody>
+                  <tr><td><code>server_id</code></td><td>1001</td><td>MySQL 复制 server_id，集群内需唯一</td></tr>
+                  <tr><td><code>start_journal_name</code></td><td>mysql-bin.000001</td><td>起始 binlog 文件</td></tr>
+                  <tr><td><code>start_position</code></td><td>4</td><td>起始位点</td></tr>
+                  <tr><td><code>store.buffer_size</code></td><td>16384</td><td>ring buffer 容量</td></tr>
+                  <tr><td><code>server.bind</code></td><td>127.0.0.1:11111</td><td>Canal TCP 监听地址</td></tr>
+                  <tr><td><code>server.metrics_bind</code></td><td>127.0.0.1:9090</td><td>Prometheus /metrics 地址</td></tr>
+                  <tr><td><code>server.admin_bind</code></td><td>127.0.0.1:{主端口+1}</td><td>Admin API；不设则仅本机可达</td></tr>
+                  <tr><td><code>server.idle_timeout_secs</code></td><td>3600</td><td>客户端空闲断开时间</td></tr>
+                  <tr><td><code>filter.pattern</code></td><td>.*\..*</td><td>库表 include 正则</td></tr>
+                  <tr><td><code>auth_token</code></td><td>空</td><td>空 = 不启用认证</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section id="run">
+            <h2>启动服务</h2>
+            <div class="code-block">
+              <div class="code-head"><span>terminal</span><button class="code-copy" type="button">复制</button></div>
+              <pre><code>./target/release/canal-rust server --config canal.yaml
+
+<span class="c"># 或者</span>
+cargo run --release -- server --config canal.yaml</code></pre>
+            </div>
+            <p>
+              启动日志会出现 <code>小运 is on duty, guarding the data canal</code>，并分别打印 Canal TCP、
+              Metrics 与 Admin API 的监听地址。按 <code>Ctrl-C</code> 触发优雅关闭，binlog 任务最多等待 5 秒。
+            </p>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>子命令</th><th>用途</th></tr></thead>
+                <tbody>
+                  <tr><td><code>server</code></td><td>启动完整服务：Canal TCP、Metrics、Admin API</td></tr>
+                  <tr><td><code>dump</code></td><td>直接连接 MySQL，把 binlog 事件打印到终端</td></tr>
+                  <tr><td><code>pet</code></td><td>见一见小运，并查看矢量原图的位置</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section id="docker">
+            <h2>Docker 部署</h2>
+            <p>
+              compose 会构建镜像、发布 11111 / 11112 / 9090 三个端口，并把 <code>docker/canal.yaml</code>
+              挂载进容器。默认通过 <code>host.docker.internal</code> 连接宿主机上的 MySQL。
+            </p>
+            <div class="code-block">
+              <div class="code-head"><span>terminal</span><button class="code-copy" type="button">复制</button></div>
+              <pre><code>docker compose -f docker/docker-compose.yml up -d
+
+<span class="c"># 查看日志</span>
+docker compose -f docker/docker-compose.yml logs -f canal-rust</code></pre>
+            </div>
+            <p>修改 <code>docker/canal.yaml</code> 后重启容器即可生效，无需重新构建镜像。</p>
+            <div class="callout info">
+              容器内必须监听 <code>0.0.0.0</code>，否则宿主机的端口映射连不上。Docker 配置已经这样设置；
+              如果你自己写 compose，请保留 <code>bind</code>、<code>metrics_bind</code> 与 <code>admin_bind</code>。
+            </div>
+          </section>
+
+          <section id="verify">
+            <h2>验证</h2>
+            <div class="code-block">
+              <div class="code-head"><span>terminal</span><button class="code-copy" type="button">复制</button></div>
+              <pre><code><span class="c"># 健康检查</span>
+curl http://127.0.0.1:11112/health
+
+<span class="c"># 实例状态</span>
+curl http://127.0.0.1:11112/api/instances
+
+<span class="c"># 指标</span>
+curl http://127.0.0.1:9090/metrics
+
+<span class="c"># 浏览器打开 Admin 落地页，可以看到小运和实时状态</span>
+<span class="c"># http://127.0.0.1:11112/</span></code></pre>
+            </div>
+            <p>
+              <code>/health</code> 返回 <code>status: "UP"</code> 与版本 / 运行时长；
+              <code>/metrics</code> 中可以看到 <code>canal_events_parsed_total</code>、
+              <code>canal_events_dispatched_total</code> 与 <code>canal_instances_active</code>。
+            </p>
+            <div class="callout">
+              <img class="pet-note" src="assets/img/pet-top.svg" alt="" width="70" height="62" loading="lazy">
+              看到小运和 <code>UP</code>，就说明 Admin API 已经起来了。下一步可以写一个客户端，
+              或者用 <code>canal-rust dump</code> 先看看 binlog 里有什么。
+            </div>
+          </section>
+
+          <section id="troubleshoot">
+            <h2>故障排查</h2>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>症状</th><th>处理</th></tr></thead>
+                <tbody>
+                  <tr><td><code>Could not find 'protoc'</code></td><td>安装 protobuf-compiler / protobuf，确认 <code>protoc --version</code> 可用。</td></tr>
+                  <tr><td><code>sha256_password auth plugin is not supported</code></td><td>改用 <code>mysql_native_password</code> 或 <code>caching_sha2_password</code> 建账号。</td></tr>
+                  <tr><td>连接不上 MySQL</td><td>确认 binlog 已开启、格式为 ROW、账号具备 REPLICATION 权限、server_id 未被占用。</td></tr>
+                  <tr><td>容器 / 远程打不开 Admin</td><td>显式设置 <code>server.admin_bind: "0.0.0.0:11112"</code>，并检查防火墙。</td></tr>
+                  <tr><td><code>Address already in use</code></td><td>修改 <code>server.bind</code> / <code>metrics_bind</code> / <code>admin_bind</code> 的端口。</td></tr>
+                  <tr><td>没有事件输出</td><td>确认有写入发生；用 <code>canal-rust dump</code> 直接观察 binlog；检查 <code>filter.pattern</code> 是否过滤掉了目标库表。</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="callout warn" style="margin-top:20px">
+              还有问题？先看 <a href="usage.html">使用说明</a> 的配置章节，或到
+              <a href="https://github.com/erikwang2013/canal-rust/issues" target="_blank" rel="noopener">GitHub Issues</a> 搜索。
+            </div>
+            <a class="btn btn-primary" href="usage.html">继续看使用说明 <span class="arrow" aria-hidden="true">→</span></a>
+          </section>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-intro">
+          <a class="brand brand--footer" href="index.html" aria-label="Canal Rust 首页">
+            <span class="brand-mark"><img src="assets/img/pet-top.svg" alt="" width="40" height="40"></span>
+            <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">数据运河 · v2.2.0</span></span>
+          </a>
+          <p>MySQL binlog 增量订阅 &amp; 消费组件。用 Rust 重写阿里巴巴 Canal，复用同一套 Canal protobuf 协议。</p>
+          <p class="footer-license">代码 Apache-2.0 · 视觉资产版权归作者所有</p>
+        </div>
+        <nav class="footer-nav" aria-label="页脚导航">
+          <p class="footer-kicker">EXPLORE</p>
+          <a href="about.html">项目介绍</a>
+          <a href="features.html">功能迭代</a>
+          <a href="changelog.html">版本日志</a>
+          <a href="install.html">安装文档</a>
+          <a href="usage.html">使用说明</a>
+          <a href="index.html#support">打赏支持</a>
+        </nav>
+        <div class="footer-meta">
+          <p class="footer-kicker">AUTHOR</p>
+          <a class="footer-author" href="https://erik.xyz" target="_blank" rel="noopener">艾瑞可erik <span aria-hidden="true">↗</span></a>
+          <p class="footer-kicker">VISUAL ASSETS</p>
+          <p>小运与 12 种表情为非开源视觉资产，商业使用需取得授权。联系 erik@erik.xyz。</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Canal Rust</span><span class="footer-dot" aria-hidden="true">·</span><span>Built static. Served fast.</span>
+        <div class="footer-info" id="busuanzi"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script> <span id="busuanzi_container_page_pv"><span data-i18n="post.readA">阅读</span> <b id="busuanzi_value_page_pv">0</b> <span data-i18n="post.readB">次 👀</span></span></div>
+      </div>
+    </div>
+  </footer>
+
+  <button class="backtop" id="backtop" type="button" aria-label="返回顶部">
+    <img src="assets/img/pet-top.svg" alt="" width="64" height="64" loading="lazy">
+  </button>
+</body>
+</html>

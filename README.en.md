@@ -1,6 +1,6 @@
 # Canal Rust
 
-[中文](README.md)
+[中文](README.md) · [Live site](https://package.erik.xyz/canal/index.en.html)
 
 <p align="center">
   <img src="docs/assets/canal-pet.svg" width="620"

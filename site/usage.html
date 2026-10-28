@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>使用说明 · Canal Rust</title>
+  <meta name="description" content="Canal Rust 使用说明：Rust 客户端连接、CLI 子命令、Kafka 同步、多实例部署、Prometheus 指标与 Admin API。">
+  <meta name="theme-color" content="#f3ecdf">
+  <meta name="author" content="艾瑞可erik">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="application-name" content="Canal Rust">
+  <link rel="canonical" href="https://package.erik.xyz/canal/usage.html">
+  <link rel="alternate" hreflang="zh-CN" href="https://package.erik.xyz/canal/usage.html">
+  <link rel="alternate" hreflang="en" href="https://package.erik.xyz/canal/usage.en.html">
+  <link rel="alternate" hreflang="x-default" href="https://package.erik.xyz/canal/usage.html">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Canal Rust">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:title" content="使用说明 · Canal Rust">
+  <meta property="og:description" content="Canal Rust 使用说明：Rust 客户端连接、CLI 子命令、Kafka 同步、多实例部署、Prometheus 指标与 Admin API。">
+  <meta property="og:url" content="https://package.erik.xyz/canal/usage.html">
+  <meta property="og:image" content="https://package.erik.xyz/canal/assets/img/og-canal-rust.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Canal Rust — 小运守在数据运河的闸口">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="使用说明 · Canal Rust">
+  <meta name="twitter:description" content="Canal Rust 使用说明：Rust 客户端连接、CLI 子命令、Kafka 同步、多实例部署、Prometheus 指标与 Admin API。">
+  <meta name="twitter:image" content="https://package.erik.xyz/canal/assets/img/og-canal-rust.png">
+  <script>
+    (function () {
+      document.documentElement.classList.add('js');
+      if (location.pathname === '/canal') location.replace('/canal/');
+    })();
+  </script>
+  <link rel="icon" href="assets/img/pet-top.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/core.css">
+  <link rel="stylesheet" href="assets/css/pages.css">
+  <link rel="stylesheet" href="assets/css/docs.css">
+  <link rel="stylesheet" href="assets/css/lightbox.css">
+  <link rel="stylesheet" href="assets/css/search.css">
+  <noscript><style>.js .reveal{opacity:1;transform:none}</style></noscript>
+  <script defer src="assets/js/site.js"></script>
+  <script defer src="assets/js/search.js"></script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "name": "使用说明 · Canal Rust",
+  "description": "Canal Rust 使用说明：Rust 客户端连接、CLI 子命令、Kafka 同步、多实例部署、Prometheus 指标与 Admin API。",
+  "url": "https://package.erik.xyz/canal/usage.html",
+  "inLanguage": "zh-CN",
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "Canal Rust",
+    "url": "https://package.erik.xyz/canal/"
+  },
+  "about": {
+    "@type": "SoftwareApplication",
+    "name": "Canal Rust",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Linux, macOS",
+    "url": "https://package.erik.xyz/canal/"
+  },
+  "primaryImageOfPage": {
+    "@type": "ImageObject",
+    "url": "https://package.erik.xyz/canal/assets/img/og-canal-rust.png",
+    "width": 1200,
+    "height": 630
+  }
+}
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到主要内容</a>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="index.html" aria-label="Canal Rust 首页">
+        <span class="brand-mark"><img src="assets/img/pet-top.svg" alt="" width="40" height="40"></span>
+        <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">数据运河 · v2.2.0</span></span>
+      </a>
+      <nav class="site-nav" id="site-nav" aria-label="主导航">
+        <a href="index.html">首页</a>
+        <a href="about.html">项目介绍</a>
+        <a href="features.html">功能迭代</a>
+        <a href="changelog.html">版本日志</a>
+        <a href="install.html">安装文档</a>
+        <a href="usage.html" aria-current="page">使用说明</a>
+        <a class="nav-author" href="https://erik.xyz" target="_blank" rel="noopener">艾瑞可erik <span aria-hidden="true">↗</span></a>
+      </nav>
+      <div class="header-tools">
+        <a class="lang-switch" href="usage.en.html" hreflang="en" lang="en" aria-label="切换到英文">EN</a>
+        <button class="search-toggle" type="button" aria-label="搜索" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="打开导航菜单">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="page-hero">
+      <div class="container">
+        <p class="eyebrow">Usage / 使用说明</p>
+        <h1>订阅一次变更，<br>从客户端开始。</h1>
+        <p class="lede">
+          服务端跑起来之后，客户端只需连接 Canal TCP 端口、声明 destination，然后一条条取事件。
+          现有 Canal 客户端也可以直接接入，因为协议没有变。
+        </p>
+        <div class="page-hero-meta">
+          <span>Canal wire protocol</span><span>Rust SDK</span><span>Kafka / TCP</span><span>Prometheus</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" style="padding-top:24px">
+      <div class="container doc-layout">
+        <aside class="doc-toc" aria-label="本页目录">
+          <p>ON THIS PAGE</p>
+          <a href="#client">Rust 客户端</a>
+          <a href="#cli">命令行</a>
+          <a href="#kafka">同步到 Kafka</a>
+          <a href="#instances">多实例</a>
+          <a href="#metrics">Prometheus 指标</a>
+          <a href="#admin">Admin API</a>
+          <a href="#behavior">运行行为</a>
+          <a href="#develop">开发与测试</a>
+        </aside>
+
+        <div class="doc-body">
+          <section id="client">
+            <h2>用 Rust 客户端订阅</h2>
+            <p>
+              <code>canal-client</code> 是仓库自带的 Rust SDK。连接后订阅 destination，
+              事件会以流的方式返回；每次 <code>next_event()</code> 取到一条。
+            </p>
+            <div class="code-block">
+              <div class="code-head"><span>main.rs</span><button class="code-copy" type="button">复制</button></div>
+              <pre><code>use canal_client::CanalClient;
+
+#[tokio::main]
+async fn main() -&gt; Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {
+    let mut client = CanalClient::new("127.0.0.1", 11111)
+        .with_destination("example");
+
+    client.connect().await?;
+    let mut stream = client.subscribe(None).await?;
+
+    while let Some(Ok(event)) = stream.next_event().await {
+        println!("{}: {} @ {}.{}", event.journal_name, event.position,
+                 event.schema_name, event.table_name);
+    }
+    Ok(())
+}</code></pre>
+            </div>
+            <p>
+              事件里包含 journal 名、位点、库名、表名与 DML / DDL 信息。完整示例与端到端测试在
+              <code>crates/canal-client/tests/e2e.rs</code>。
+            </p>
+            <div class="callout info">
+              Java / Go / Python / C# / Node.js 客户端无需改动：Canal Rust 复用上游
+              <code>CanalProtocol.proto</code> 与 <code>EntryProtocol.proto</code>，保持 wire protocol 兼容。
+            </div>
+          </section>
+
+          <section id="cli">
+            <h2>命令行</h2>
+            <div class="code-block">
+              <div class="code-head"><span>terminal</span><button class="code-copy" type="button">复制</button></div>
+              <pre><code><span class="c"># 启动服务</span>
+./target/release/canal-rust server --config canal.yaml
+
+<span class="c"># 直接观察 binlog 事件</span>
+./target/release/canal-rust dump --config canal.yaml
+
+<span class="c"># 见见小运</span>
+./target/release/canal-rust pet</code></pre>
+            </div>
+            <p>
+              <code>dump</code> 会连接 MySQL 并逐条打印事件：计数、journal / position、schema.table、
+              entry type，以及 DDL SQL 或 DML 类型。它不启动 TCP 服务，适合在部署前确认账号权限和位点。
+            </p>
+          </section>
+
+          <section id="kafka">
+            <h2>场景 1：同步到 Kafka</h2>
+            <p>把某个库的变更过滤出来，投递到 Kafka topic。消息格式是 JSON flat message。</p>
+            <div class="code-block">
+              <div class="code-head"><span>canal.yaml</span><button class="code-copy" type="button">复制</button></div>
+              <pre><code>canal:
+  mysql:
+    host: "10.0.0.1"
+    username: "replicator"
+    password: "secret"
+  filter:
+    pattern: "mydb\\..*"</code></pre>
+            </div>
+            <div class="code-block">
+              <div class="code-head"><span>main.rs</span><button class="code-copy" type="button">复制</button></div>
+              <pre><code>use canal_connector::kafka::{KafkaConfig, KafkaConnector};
+use canal_instance::{CanalInstance, InstanceConfig};
+use canal_common::{FilterPattern, LogPosition};
+use std::sync::Arc;
+
+let kafka_config = KafkaConfig::new("localhost:9092", "mysql-changes");
+let kafka = Arc::new(KafkaConnector::new("kafka-sync", kafka_config).unwrap());
+let config = InstanceConfig {
+    destination: "mydb-sync".into(),
+    mysql_host: "10.0.0.1".into(),
+    mysql_port: 3306,
+    mysql_username: "replicator".into(),
+    mysql_password: "secret".into(),
+    mysql_server_id: 2001,
+    start_position: LogPosition::new("mysql-bin.000001", 4),
+    filter: FilterPattern { pattern: "mydb\\..*".into(), black_list: "".into() },
+    store_buffer_size: 16384,
+    connector_names: vec!["kafka-sync".into()],
+};</code></pre>
+            </div>
+            <p>
+              连接器通过 <code>canal-sink</code> 扇出接入同一条实例链路；同一个变更可以同时进入
+              ring buffer 与 Kafka，互不阻塞。
+            </p>
+          </section>
+
+          <section id="instances">
+            <h2>场景 2：多实例</h2>
+            <p>
+              <code>canal-instance</code> 允许一个进程运行多个 destination。每个实例有自己的
+              binlog 位点、过滤规则与 store，适合在一个 Canal Rust 进程里隔离 prod / test。
+            </p>
+            <div class="code-block">
+              <div class="code-head"><span>main.rs</span><button class="code-copy" type="button">复制</button></div>
+              <pre><code>let manager = InstanceManager::new();
+
+manager.register(CanalInstance::new(
+    InstanceConfig { destination: "prod".into(), ..prod_config }, vec![kafka_prod],
+)).await;
+
+manager.register(CanalInstance::new(
+    InstanceConfig { destination: "test".into(), ..test_config }, vec![kafka_test],
+)).await;
+
+manager.start_all().await?;</code></pre>
+            </div>
+            <p>实例生命周期：已创建 → 启动中 → 运行中（<code>feed()</code> 循环）→ 停止中 → 已停止。</p>
+          </section>
+
+          <section id="metrics">
+            <h2>场景 3：Prometheus 监控</h2>
+            <div class="code-block">
+              <div class="code-head"><span>terminal</span><button class="code-copy" type="button">复制</button></div>
+              <pre><code>curl http://localhost:9090/metrics
+
+<span class="c"># canal_events_parsed_total 150000</span>
+<span class="c"># canal_events_dispatched_total 146800</span>
+<span class="c"># canal_instances_active 2</span></code></pre>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>指标</th><th>类型</th><th>含义</th></tr></thead>
+                <tbody>
+                  <tr><td><code>canal_events_parsed_total</code></td><td>counter</td><td>从 MySQL 解析出的 binlog 事件数</td></tr>
+                  <tr><td><code>canal_events_filtered_total</code></td><td>counter</td><td>被过滤规则丢弃的事件数</td></tr>
+                  <tr><td><code>canal_events_dispatched_total</code></td><td>counter</td><td>成功分发到 connector 的事件数</td></tr>
+                  <tr><td><code>canal_dispatch_errors_total</code></td><td>counter</td><td>connector 分发失败数</td></tr>
+                  <tr><td><code>canal_instances_active</code></td><td>gauge</td><td>活跃实例数</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="callout warn">
+              <code>/metrics</code> 默认无认证。保持 <code>metrics_bind</code> 在回环地址，或放在内网 /
+              反向代理鉴权之后，不要直接暴露到公网。
+            </div>
+          </section>
+
+          <section id="admin">
+            <h2>场景 4：Admin API</h2>
+            <p>
+              Admin API 默认监听 <strong>主端口 + 1 且仅绑定回环地址</strong>。要远程或容器访问，必须显式配置
+              <code>server.admin_bind</code>：
+            </p>
+            <div class="code-block">
+              <div class="code-head"><span>canal.yaml</span><button class="code-copy" type="button">复制</button></div>
+              <pre><code>canal:
+  server:
+    bind: "0.0.0.0:11111"
+    admin_bind: "0.0.0.0:11112"   <span class="c"># 不配置 = 127.0.0.1:11112</span></code></pre>
+            </div>
+            <div class="code-block">
+              <div class="code-head"><span>terminal</span><button class="code-copy" type="button">复制</button></div>
+              <pre><code>curl http://localhost:11112/health
+curl http://localhost:11112/api/instances
+curl -X POST http://localhost:11112/api/instances/default/stop</code></pre>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>端点</th><th>用途</th></tr></thead>
+                <tbody>
+                  <tr><td><code>GET /</code></td><td>无需 token 的落地页：版本、运行时长、实例计数与小运</td></tr>
+                  <tr><td><code>GET /health</code></td><td>健康检查，返回 <code>status</code> / <code>version</code> / <code>uptime_seconds</code></td></tr>
+                  <tr><td><code>GET /api/instances</code></td><td>实例列表与状态</td></tr>
+                  <tr><td><code>POST /api/instances/:name/start</code></td><td>启动指定实例</td></tr>
+                  <tr><td><code>POST /api/instances/:name/stop</code></td><td>停止指定实例</td></tr>
+                  <tr><td><code>GET /pet.svg</code></td><td>直接返回小运矢量原图</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>
+              <code>AdminServer</code> 支持通过 <code>with_auth</code> 启用 <code>Authorization: Bearer &lt;token&gt;</code>
+              校验；CLI 默认未启用 Admin 鉴权，请通过绑定地址与防火墙保护管理端口。
+            </p>
+            <p>直接用浏览器打开 <code>http://localhost:11112/</code>，会看到小运和实时状态。</p>
+          </section>
+
+          <section id="behavior">
+            <h2>运行行为</h2>
+            <ul>
+              <li>启动日志打印 <code>小运 is on duty, guarding the data canal</code>，随后分别报告 Canal、Metrics、Admin 的监听地址。</li>
+              <li>binlog 事件按批进入实例：攒到 256 条或每 200ms 刷一次，避免单条事件频繁唤醒下游。</li>
+              <li>按 <code>Ctrl-C</code> 触发优雅关闭；binlog 任务最多等待 5 秒，把剩余事件刷完后再退出。</li>
+              <li>客户端空闲超过 <code>idle_timeout_secs</code>（默认 3600 秒）会被断开。</li>
+              <li>ring buffer 容量溢出时自动淘汰最旧事件；客户端 Ack 用于推进消费位点。</li>
+            </ul>
+            <div class="callout info">
+              完整配置字段与默认值见 <a href="install.html#config">安装文档 · 配置 canal.yaml</a>。
+            </div>
+          </section>
+
+          <section id="develop">
+            <h2>开发与测试</h2>
+            <div class="code-block">
+              <div class="code-head"><span>terminal</span><button class="code-copy" type="button">复制</button></div>
+              <pre><code>cargo build --release
+cargo test --all
+cargo clippy --all-targets -- -D warnings
+cargo fmt --check --all
+cargo doc --open</code></pre>
+            </div>
+            <p>
+              测试不集中放在顶层 <code>tests/</code>，而是与源码同 crate 维护：单元测试在
+              <code>src/tests*.rs</code> 或 <code>#[cfg(test)] mod tests</code>，集成测试在
+              <code>crates/*/tests/</code>。CI 会执行 fmt、clippy、build、test 与 doc。
+            </p>
+            <div class="callout">
+              <img class="pet-note" src="assets/img/pet-joy-top.svg" alt="" width="70" height="62" loading="lazy">
+              到这里，一条变更应该已经从 MySQL 走到了下游。剩下的就是把它接进你的业务。
+            </div>
+            <a class="btn btn-ghost" href="changelog.html">看看每个版本改了什么 <span class="arrow" aria-hidden="true">→</span></a>
+          </section>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-intro">
+          <a class="brand brand--footer" href="index.html" aria-label="Canal Rust 首页">
+            <span class="brand-mark"><img src="assets/img/pet-top.svg" alt="" width="40" height="40"></span>
+            <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">数据运河 · v2.2.0</span></span>
+          </a>
+          <p>MySQL binlog 增量订阅 &amp; 消费组件。用 Rust 重写阿里巴巴 Canal，复用同一套 Canal protobuf 协议。</p>
+          <p class="footer-license">代码 Apache-2.0 · 视觉资产版权归作者所有</p>
+        </div>
+        <nav class="footer-nav" aria-label="页脚导航">
+          <p class="footer-kicker">EXPLORE</p>
+          <a href="about.html">项目介绍</a>
+          <a href="features.html">功能迭代</a>
+          <a href="changelog.html">版本日志</a>
+          <a href="install.html">安装文档</a>
+          <a href="usage.html">使用说明</a>
+          <a href="index.html#support">打赏支持</a>
+        </nav>
+        <div class="footer-meta">
+          <p class="footer-kicker">AUTHOR</p>
+          <a class="footer-author" href="https://erik.xyz" target="_blank" rel="noopener">艾瑞可erik <span aria-hidden="true">↗</span></a>
+          <p class="footer-kicker">VISUAL ASSETS</p>
+          <p>小运与 12 种表情为非开源视觉资产，商业使用需取得授权。联系 erik@erik.xyz。</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Canal Rust</span><span class="footer-dot" aria-hidden="true">·</span><span>Built static. Served fast.</span>
+        <div class="footer-info" id="busuanzi"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script> <span id="busuanzi_container_page_pv"><span data-i18n="post.readA">阅读</span> <b id="busuanzi_value_page_pv">0</b> <span data-i18n="post.readB">次 👀</span></span></div>
+      </div>
+    </div>
+  </footer>
+
+  <button class="backtop" id="backtop" type="button" aria-label="返回顶部">
+    <img src="assets/img/pet-top.svg" alt="" width="64" height="64" loading="lazy">
+  </button>
+</body>
+</html>

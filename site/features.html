@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>功能迭代 · Canal Rust</title>
+  <meta name="description" content="Canal Rust 的 14 项能力与迭代路线：binlog 解析、协议兼容、正则过滤、环形缓冲、Kafka、多实例、Prometheus 与 Admin API。">
+  <meta name="theme-color" content="#f3ecdf">
+  <meta name="author" content="艾瑞可erik">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="application-name" content="Canal Rust">
+  <link rel="canonical" href="https://package.erik.xyz/canal/features.html">
+  <link rel="alternate" hreflang="zh-CN" href="https://package.erik.xyz/canal/features.html">
+  <link rel="alternate" hreflang="en" href="https://package.erik.xyz/canal/features.en.html">
+  <link rel="alternate" hreflang="x-default" href="https://package.erik.xyz/canal/features.html">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Canal Rust">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:title" content="功能迭代 · Canal Rust">
+  <meta property="og:description" content="Canal Rust 的 14 项能力与迭代路线：binlog 解析、协议兼容、正则过滤、环形缓冲、Kafka、多实例、Prometheus 与 Admin API。">
+  <meta property="og:url" content="https://package.erik.xyz/canal/features.html">
+  <meta property="og:image" content="https://package.erik.xyz/canal/assets/img/og-canal-rust.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Canal Rust — 小运守在数据运河的闸口">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="功能迭代 · Canal Rust">
+  <meta name="twitter:description" content="Canal Rust 的 14 项能力与迭代路线：binlog 解析、协议兼容、正则过滤、环形缓冲、Kafka、多实例、Prometheus 与 Admin API。">
+  <meta name="twitter:image" content="https://package.erik.xyz/canal/assets/img/og-canal-rust.png">
+  <script>
+    (function () {
+      document.documentElement.classList.add('js');
+      if (location.pathname === '/canal') location.replace('/canal/');
+    })();
+  </script>
+  <link rel="icon" href="assets/img/pet-top.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/core.css">
+  <link rel="stylesheet" href="assets/css/pages.css">
+  <link rel="stylesheet" href="assets/css/lightbox.css">
+  <link rel="stylesheet" href="assets/css/search.css">
+  <noscript><style>.js .reveal{opacity:1;transform:none}</style></noscript>
+  <script defer src="assets/js/site.js"></script>
+  <script defer src="assets/js/search.js"></script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "功能迭代 · Canal Rust",
+  "description": "Canal Rust 的 14 项能力与迭代路线：binlog 解析、协议兼容、正则过滤、环形缓冲、Kafka、多实例、Prometheus 与 Admin API。",
+  "url": "https://package.erik.xyz/canal/features.html",
+  "inLanguage": "zh-CN",
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "Canal Rust",
+    "url": "https://package.erik.xyz/canal/"
+  },
+  "about": {
+    "@type": "SoftwareApplication",
+    "name": "Canal Rust",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Linux, macOS",
+    "url": "https://package.erik.xyz/canal/"
+  },
+  "primaryImageOfPage": {
+    "@type": "ImageObject",
+    "url": "https://package.erik.xyz/canal/assets/img/og-canal-rust.png",
+    "width": 1200,
+    "height": 630
+  }
+}
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到主要内容</a>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="index.html" aria-label="Canal Rust 首页">
+        <span class="brand-mark"><img src="assets/img/pet-top.svg" alt="" width="40" height="40"></span>
+        <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">数据运河 · v2.2.0</span></span>
+      </a>
+      <nav class="site-nav" id="site-nav" aria-label="主导航">
+        <a href="index.html">首页</a>
+        <a href="about.html">项目介绍</a>
+        <a href="features.html" aria-current="page">功能迭代</a>
+        <a href="changelog.html">版本日志</a>
+        <a href="install.html">安装文档</a>
+        <a href="usage.html">使用说明</a>
+        <a class="nav-author" href="https://erik.xyz" target="_blank" rel="noopener">艾瑞可erik <span aria-hidden="true">↗</span></a>
+      </nav>
+      <div class="header-tools">
+        <a class="lang-switch" href="features.en.html" hreflang="en" lang="en" aria-label="切换到英文">EN</a>
+        <button class="search-toggle" type="button" aria-label="搜索" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="打开导航菜单">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="page-hero">
+      <div class="container">
+        <p class="eyebrow">Capabilities / 功能迭代</p>
+        <h1>14 个 crate，<br>14 种能力，一条链路。</h1>
+        <p class="lede">
+          能力不是功能列表，而是链路上的位置：接入、处理、输出、编排、运维、基础。
+          每一层只负责一件事，合起来才是一条能把变更送到的运河。
+        </p>
+        <div class="page-hero-meta">
+          <span>14 capabilities</span><span>6 layers</span><span>389 tests</span><span>0 clippy warnings</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="section-index">01 / MAP</p>
+          <div>
+            <h2 class="section-title">能力地图，<br>先看全貌。</h2>
+            <p class="section-lede">
+              14 项能力与 14 个 crate 一一对应，分为数据接入、数据处理、数据输出、编排与运维四组。
+              接入与处理决定“能拿到什么”，输出与运维决定“能送多远、看得多清”。
+            </p>
+          </div>
+        </div>
+
+        <figure class="figure-card reveal">
+          <img src="assets/img/functions.svg" alt="Canal Rust 功能设计图：数据接入、数据处理、数据输出、运维支撑四组共 14 项能力"
+               width="1240" height="700" loading="lazy" decoding="async">
+          <figcaption>功能设计 / 14 项能力对应 14 个 crate · v2.2.0</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="section band">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="section-index">02 / CAPABILITIES</p>
+          <div>
+            <h2 class="section-title">四组能力，<br>各管一段。</h2>
+            <p class="section-lede">
+              从 MySQL 主库到客户端或 Kafka，每个 crate 都在链路上有一个明确的位置。
+              下面的分组按数据流方向排列，而不是按代码目录排列。
+            </p>
+          </div>
+        </div>
+
+        <div class="cap-groups">
+          <article class="cap-group reveal">
+            <div class="cap-head"><h3>数据接入</h3><span class="num">01 — 03</span></div>
+            <div class="cap-list">
+              <div class="cap-item">
+                <h4>canal-binlog</h4>
+                <p>连接 MySQL 5.1–8.0 / MariaDB，拉取 binlog，把 TableMap 映射成统一事件模型。</p>
+                <small>mysql_cdc · position / GTID</small>
+              </div>
+              <div class="cap-item">
+                <h4>canal-proto</h4>
+                <p>复用 Canal 上游 <code>.proto</code>，用 prost-build 生成 Rust 类型，保持 wire protocol 兼容。</p>
+                <small>CanalProtocol.proto · EntryProtocol.proto</small>
+              </div>
+              <div class="cap-item">
+                <h4>canal-meta</h4>
+                <p>追踪 DDL 变化，缓存表结构，让解析层不必每次都回查主库。</p>
+                <small>DDL tracking · schema cache</small>
+              </div>
+            </div>
+          </article>
+
+          <article class="cap-group reveal">
+            <div class="cap-head"><h3>数据处理</h3><span class="num">04 — 06</span></div>
+            <div class="cap-list">
+              <div class="cap-item">
+                <h4>canal-filter</h4>
+                <p>基于正则的库表 include / exclude 过滤，把不需要的变更挡在链路之外。</p>
+                <small>EventFilter · regex</small>
+              </div>
+              <div class="cap-item">
+                <h4>canal-sink</h4>
+                <p>事件扇出：同一份变更可以同时进入环形缓冲和多个 connector。</p>
+                <small>fan-out · Arc</small>
+              </div>
+              <div class="cap-item">
+                <h4>canal-store</h4>
+                <p>内存 ring buffer 保存事件，容量溢出自动淘汰；客户端 Ack 后推进消费位点。</p>
+                <small>VecDeque · ack</small>
+              </div>
+            </div>
+          </article>
+
+          <article class="cap-group reveal">
+            <div class="cap-head"><h3>数据输出</h3><span class="num">07 — 09</span></div>
+            <div class="cap-list">
+              <div class="cap-item">
+                <h4>canal-server</h4>
+                <p>Canal wire protocol TCP 服务：握手、鉴权、订阅、取数、确认，与 Java Canal 客户端兼容。</p>
+                <small>tokio codec · protobuf</small>
+              </div>
+              <div class="cap-item">
+                <h4>canal-connector</h4>
+                <p>Kafka connector，把变更事件序列化为 JSON flat message 投递到消息队列。</p>
+                <small>rdkafka · JSON flat message</small>
+              </div>
+              <div class="cap-item">
+                <h4>canal-client</h4>
+                <p>Rust 客户端 SDK，订阅事件并以流的方式逐条取用。</p>
+                <small>connect · subscribe · stream</small>
+              </div>
+            </div>
+          </article>
+
+          <article class="cap-group reveal">
+            <div class="cap-head"><h3>编排与运维</h3><span class="num">10 — 14</span></div>
+            <div class="cap-list">
+              <div class="cap-item">
+                <h4>canal-instance</h4>
+                <p>单进程管理多个 destination，每个实例独占自己的 binlog、store 与 filter。</p>
+                <small>lifecycle · feed loop</small>
+              </div>
+              <div class="cap-item">
+                <h4>canal-admin</h4>
+                <p>REST Admin API：实例启停、状态查询、落地页与 <code>/pet.svg</code>。</p>
+                <small>axum · /health · /api/instances</small>
+              </div>
+              <div class="cap-item">
+                <h4>canal-prometheus</h4>
+                <p>暴露 parsed / filtered / dispatched / errors 计数与活跃实例数。</p>
+                <small>Prometheus · /metrics</small>
+              </div>
+              <div class="cap-item">
+                <h4>canal-cli</h4>
+                <p>命令行入口：<code>server</code> / <code>dump</code> / <code>pet</code>，二进制名 <code>canal-rust</code>。</p>
+                <small>clap · config loading</small>
+              </div>
+              <div class="cap-item">
+                <h4>canal-common</h4>
+                <p>基础类型、错误、生命周期抽象，以及项目宠物小运的 ASCII 与 SVG 定义。</p>
+                <small>types · lifecycle · pet</small>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="section-index">03 / ITERATION</p>
+          <div>
+            <h2 class="section-title">从跑通，到守住。</h2>
+            <p class="section-lede">
+              项目在 2026 年 7 月末完成三期实现，随后经历多轮审查修复、一次基础设施重构，
+              最终把宠物接进运行时。功能不是一次写完的，是沿着链一路补稳的。
+            </p>
+          </div>
+        </div>
+
+        <div class="iteration reveal">
+          <time class="iteration-date" datetime="2026-07-30">2026-07-30</time>
+          <div>
+            <h3>第一期 · 核心链路贯通 <span class="tag">v1.0.0</span></h3>
+            <p>common、proto、binlog、filter、sink、store、server、client、cli 依次落地，端到端跑通一条变更。</p>
+          </div>
+        </div>
+        <div class="iteration reveal">
+          <time class="iteration-date" datetime="2026-07-30">2026-07-30</time>
+          <div>
+            <h3>第二期 · 补齐编排与出口 <span class="tag">v1.0.2</span></h3>
+            <p>新增 canal-instance、canal-connector、canal-prometheus、canal-meta、canal-admin：多实例、Kafka、指标与管理面就位。</p>
+          </div>
+        </div>
+        <div class="iteration reveal">
+          <time class="iteration-date" datetime="2026-07-31">2026-07-31</time>
+          <div>
+            <h3>第三期 · 测试与审查 <span class="tag">v1.0.3</span></h3>
+            <p>链路成型，77 项测试与 18 个 commit；随后 v1.0.4–v1.1.8 连续进行代码审查与正确性修复。</p>
+          </div>
+        </div>
+        <div class="iteration reveal">
+          <time class="iteration-date" datetime="2026-07-31">2026-07-31</time>
+          <div>
+            <h3>基础设施重构 <span class="tag">v2.0.0</span></h3>
+            <p>统一配置、错误处理与生命周期；v2.0.1–v2.0.6 补丁系列继续收敛边界问题。</p>
+          </div>
+        </div>
+        <div class="iteration reveal">
+          <time class="iteration-date" datetime="2026-09-26">2026-09-26</time>
+          <div>
+            <h3>宠物与基建 <span class="tag">v2.1.0</span></h3>
+            <p>重绘项目宠物，修复连接阻塞等正确性问题，补齐 Docker / CI 基建。</p>
+          </div>
+        </div>
+        <div class="iteration reveal">
+          <time class="iteration-date" datetime="2026-09-26">2026-09-26</time>
+          <div>
+            <h3>宠物进入运行时 <span class="tag tag-rust">v2.2.0</span></h3>
+            <p><code>canal-rust pet</code>、<code>--help</code> 欢迎信息与 Admin <code>GET /pet.svg</code> 上线；CI / Docker 构建补齐 protoc；389 项测试全部通过，0 Clippy 警告。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section band" id="limits">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="section-index">04 / LIMITS</p>
+          <div>
+            <h2 class="section-title">知道边界，<br>再决定怎么用。</h2>
+            <p class="section-lede">
+              这些限制来自上游依赖或默认配置，不是隐藏的坑。部署前请逐条确认，
+              尤其是明文连接与 Admin 监听地址。
+            </p>
+          </div>
+        </div>
+
+        <div class="bento">
+          <article class="bento-card bento-card--wide has-stamp reveal">
+            <p class="card-kicker">Security</p>
+            <h3>MySQL 连接是明文的</h3>
+            <p>上游 <code>mysql_cdc 0.2.1</code> 未实现 TLS，对任何非 <code>Disabled</code> 的 <code>SslMode</code> 直接 panic。账号密码与 binlog 数据都不加密，只在可信内网使用；跨网段请套 SSH 隧道。</p>
+            <img class="stamp" src="assets/img/pet-terrified-top.svg" alt="" width="78" height="70" loading="lazy">
+          </article>
+          <article class="bento-card bento-card--wide has-stamp reveal">
+            <p class="card-kicker">Auth</p>
+            <h3>认证插件有限</h3>
+            <p>只支持 <code>mysql_native_password</code> 与 <code>caching_sha2_password</code>。使用 <code>sha256_password</code> 的账号会连接失败，建账号时显式指定认证插件。</p>
+            <img class="stamp" src="assets/img/pet-facepalm-top.svg" alt="" width="78" height="70" loading="lazy">
+          </article>
+          <article class="bento-card bento-card--wide has-stamp reveal">
+            <p class="card-kicker">Bind</p>
+            <h3>Admin 默认只在本机</h3>
+            <p>未设置 <code>server.admin_bind</code> 时，Admin API 固定在 <code>127.0.0.1:{主端口+1}</code>。容器或远程访问必须显式绑定，并确保防火墙保护。</p>
+            <img class="stamp" src="assets/img/pet-depressed-top.svg" alt="" width="78" height="70" loading="lazy">
+          </article>
+          <article class="bento-card bento-card--wide has-stamp reveal">
+            <p class="card-kicker">Metrics</p>
+            <h3><code>/metrics</code> 默认无认证</h3>
+            <p>Metrics 端点未配置认证时会打印警告。默认只监听回环地址；如果对外暴露，请放在内网或反向代理的鉴权后面。</p>
+            <img class="stamp" src="assets/img/pet-angry-top.svg" alt="" width="78" height="70" loading="lazy">
+          </article>
+        </div>
+
+        <div class="callout info reveal" style="margin-top:24px">
+          完整的安全说明与部署建议见 <a href="install.html">安装文档</a> 与 <a href="usage.html">使用说明</a>。
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="start-band reveal">
+          <div>
+            <p class="eyebrow">NEXT</p>
+            <h2>从能力清单，到一条真正跑起来的事件。</h2>
+            <p>看完成本的边界，就可以开始装 protoc、clone 仓库，让小运在本地守闸。</p>
+            <div class="start-actions">
+              <a class="btn btn-primary" href="install.html">安装文档 <span class="arrow" aria-hidden="true">→</span></a>
+              <a class="btn btn-ghost" href="changelog.html">版本日志</a>
+            </div>
+          </div>
+          <img class="start-pet" src="assets/img/pet-knocking.svg" alt="小运 · 敲打" width="720" height="520" loading="lazy" decoding="async">
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-intro">
+          <a class="brand brand--footer" href="index.html" aria-label="Canal Rust 首页">
+            <span class="brand-mark"><img src="assets/img/pet-top.svg" alt="" width="40" height="40"></span>
+            <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">数据运河 · v2.2.0</span></span>
+          </a>
+          <p>MySQL binlog 增量订阅 &amp; 消费组件。用 Rust 重写阿里巴巴 Canal，复用同一套 Canal protobuf 协议。</p>
+          <p class="footer-license">代码 Apache-2.0 · 视觉资产版权归作者所有</p>
+        </div>
+        <nav class="footer-nav" aria-label="页脚导航">
+          <p class="footer-kicker">EXPLORE</p>
+          <a href="about.html">项目介绍</a>
+          <a href="features.html">功能迭代</a>
+          <a href="changelog.html">版本日志</a>
+          <a href="install.html">安装文档</a>
+          <a href="usage.html">使用说明</a>
+          <a href="index.html#support">打赏支持</a>
+        </nav>
+        <div class="footer-meta">
+          <p class="footer-kicker">AUTHOR</p>
+          <a class="footer-author" href="https://erik.xyz" target="_blank" rel="noopener">艾瑞可erik <span aria-hidden="true">↗</span></a>
+          <p class="footer-kicker">VISUAL ASSETS</p>
+          <p>小运与 12 种表情为非开源视觉资产，商业使用需取得授权。联系 erik@erik.xyz。</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Canal Rust</span><span class="footer-dot" aria-hidden="true">·</span><span>Built static. Served fast.</span>
+        <div class="footer-info" id="busuanzi"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script> <span id="busuanzi_container_page_pv"><span data-i18n="post.readA">阅读</span> <b id="busuanzi_value_page_pv">0</b> <span data-i18n="post.readB">次 👀</span></span></div>
+      </div>
+    </div>
+  </footer>
+
+  <button class="backtop" id="backtop" type="button" aria-label="返回顶部">
+    <img src="assets/img/pet-top.svg" alt="" width="64" height="64" loading="lazy">
+  </button>
+</body>
+</html>

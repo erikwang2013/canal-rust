@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://package.erik.xyz/canal/</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://package.erik.xyz/canal/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://package.erik.xyz/canal/index.en.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://package.erik.xyz/canal/"/>
+  </url>
+  <url>
+    <loc>https://package.erik.xyz/canal/index.en.html</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://package.erik.xyz/canal/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://package.erik.xyz/canal/index.en.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://package.erik.xyz/canal/"/>
+  </url>
+  <url>
+    <loc>https://package.erik.xyz/canal/about.html</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://package.erik.xyz/canal/about.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://package.erik.xyz/canal/about.en.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://package.erik.xyz/canal/about.html"/>
+  </url>
+  <url>
+    <loc>https://package.erik.xyz/canal/about.en.html</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://package.erik.xyz/canal/about.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://package.erik.xyz/canal/about.en.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://package.erik.xyz/canal/about.html"/>
+  </url>
+  <url>
+    <loc>https://package.erik.xyz/canal/features.html</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://package.erik.xyz/canal/features.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://package.erik.xyz/canal/features.en.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://package.erik.xyz/canal/features.html"/>
+  </url>
+  <url>
+    <loc>https://package.erik.xyz/canal/features.en.html</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://package.erik.xyz/canal/features.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://package.erik.xyz/canal/features.en.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://package.erik.xyz/canal/features.html"/>
+  </url>
+  <url>
+    <loc>https://package.erik.xyz/canal/changelog.html</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://package.erik.xyz/canal/changelog.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://package.erik.xyz/canal/changelog.en.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://package.erik.xyz/canal/changelog.html"/>
+  </url>
+  <url>
+    <loc>https://package.erik.xyz/canal/changelog.en.html</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://package.erik.xyz/canal/changelog.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://package.erik.xyz/canal/changelog.en.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://package.erik.xyz/canal/changelog.html"/>
+  </url>
+  <url>
+    <loc>https://package.erik.xyz/canal/install.html</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://package.erik.xyz/canal/install.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://package.erik.xyz/canal/install.en.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://package.erik.xyz/canal/install.html"/>
+  </url>
+  <url>
+    <loc>https://package.erik.xyz/canal/install.en.html</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://package.erik.xyz/canal/install.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://package.erik.xyz/canal/install.en.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://package.erik.xyz/canal/install.html"/>
+  </url>
+  <url>
+    <loc>https://package.erik.xyz/canal/usage.html</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://package.erik.xyz/canal/usage.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://package.erik.xyz/canal/usage.en.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://package.erik.xyz/canal/usage.html"/>
+  </url>
+  <url>
+    <loc>https://package.erik.xyz/canal/usage.en.html</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://package.erik.xyz/canal/usage.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://package.erik.xyz/canal/usage.en.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://package.erik.xyz/canal/usage.html"/>
+  </url>
+</urlset>

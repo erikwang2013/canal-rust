@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Canal Rust · MySQL binlog 增量订阅与消费</title>
+  <meta name="description" content="Canal Rust：用 Rust 重写阿里巴巴 Canal。模拟 MySQL slave 解析 binlog，通过 Canal protobuf 协议把变更事件送往下游。14 个 crate，389 项测试。">
+  <meta name="theme-color" content="#f3ecdf">
+  <meta name="author" content="艾瑞可erik">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="application-name" content="Canal Rust">
+  <link rel="canonical" href="https://package.erik.xyz/canal/">
+  <link rel="alternate" hreflang="zh-CN" href="https://package.erik.xyz/canal/">
+  <link rel="alternate" hreflang="en" href="https://package.erik.xyz/canal/index.en.html">
+  <link rel="alternate" hreflang="x-default" href="https://package.erik.xyz/canal/">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Canal Rust">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:title" content="Canal Rust · MySQL binlog 增量订阅与消费">
+  <meta property="og:description" content="Canal Rust：用 Rust 重写阿里巴巴 Canal。模拟 MySQL slave 解析 binlog，通过 Canal protobuf 协议把变更事件送往下游。14 个 crate，389 项测试。">
+  <meta property="og:url" content="https://package.erik.xyz/canal/">
+  <meta property="og:image" content="https://package.erik.xyz/canal/assets/img/og-canal-rust.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Canal Rust — 小运守在数据运河的闸口">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Canal Rust · MySQL binlog 增量订阅与消费">
+  <meta name="twitter:description" content="Canal Rust：用 Rust 重写阿里巴巴 Canal。模拟 MySQL slave 解析 binlog，通过 Canal protobuf 协议把变更事件送往下游。14 个 crate，389 项测试。">
+  <meta name="twitter:image" content="https://package.erik.xyz/canal/assets/img/og-canal-rust.png">
+  <script>
+    (function () {
+      document.documentElement.classList.add('js');
+      if (location.pathname === '/canal') location.replace('/canal/');
+    })();
+  </script>
+  <link rel="icon" href="assets/img/pet-top.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/core.css">
+  <link rel="stylesheet" href="assets/css/pages.css">
+  <link rel="stylesheet" href="assets/css/home.css">
+  <link rel="stylesheet" href="assets/css/lightbox.css">
+  <link rel="stylesheet" href="assets/css/search.css">
+  <noscript><style>.js .reveal{opacity:1;transform:none}</style></noscript>
+  <script defer src="assets/js/site.js"></script>
+  <script defer src="assets/js/search.js"></script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://package.erik.xyz/canal/#website",
+      "url": "https://package.erik.xyz/canal/",
+      "name": "Canal Rust",
+      "description": "Canal Rust：用 Rust 重写阿里巴巴 Canal。模拟 MySQL slave 解析 binlog，通过 Canal protobuf 协议把变更事件送往下游。14 个 crate，389 项测试。",
+      "inLanguage": "zh-CN",
+      "publisher": {
+        "@type": "Person",
+        "name": "艾瑞可erik",
+        "url": "https://erik.xyz"
+      }
+    },
+    {
+      "@type": "SoftwareSourceCode",
+      "@id": "https://package.erik.xyz/canal/#software",
+      "name": "Canal Rust",
+      "description": "Canal Rust：用 Rust 重写阿里巴巴 Canal。模拟 MySQL slave 解析 binlog，通过 Canal protobuf 协议把变更事件送往下游。14 个 crate，389 项测试。",
+      "url": "https://package.erik.xyz/canal/",
+      "codeRepository": "https://github.com/erikwang2013/canal-rust",
+      "programmingLanguage": "Rust",
+      "license": "https://www.apache.org/licenses/LICENSE-2.0",
+      "version": "2.2.0",
+      "author": {
+        "@type": "Person",
+        "name": "艾瑞可erik",
+        "url": "https://erik.xyz"
+      },
+      "isPartOf": {
+        "@id": "https://package.erik.xyz/canal/#website"
+      }
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://package.erik.xyz/canal/#webpage",
+      "url": "https://package.erik.xyz/canal/",
+      "name": "Canal Rust · MySQL binlog 增量订阅与消费",
+      "description": "Canal Rust：用 Rust 重写阿里巴巴 Canal。模拟 MySQL slave 解析 binlog，通过 Canal protobuf 协议把变更事件送往下游。14 个 crate，389 项测试。",
+      "inLanguage": "zh-CN",
+      "isPartOf": {
+        "@id": "https://package.erik.xyz/canal/#website"
+      },
+      "about": {
+        "@id": "https://package.erik.xyz/canal/#software"
+      },
+      "primaryImageOfPage": {
+        "@type": "ImageObject",
+        "url": "https://package.erik.xyz/canal/assets/img/og-canal-rust.png",
+        "width": 1200,
+        "height": 630
+      }
+    }
+  ]
+}
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到主要内容</a>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="index.html" aria-label="Canal Rust 首页">
+        <span class="brand-mark"><img src="assets/img/pet-top.svg" alt="" width="40" height="40"></span>
+        <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">数据运河 · v2.2.0</span></span>
+      </a>
+      <nav class="site-nav" id="site-nav" aria-label="主导航">
+        <a href="index.html" aria-current="page">首页</a>
+        <a href="about.html">项目介绍</a>
+        <a href="features.html">功能迭代</a>
+        <a href="changelog.html">版本日志</a>
+        <a href="install.html">安装文档</a>
+        <a href="usage.html">使用说明</a>
+        <a class="nav-author" href="https://erik.xyz" target="_blank" rel="noopener">艾瑞可erik <span aria-hidden="true">↗</span></a>
+      </nav>
+      <div class="header-tools">
+        <a class="lang-switch" href="index.en.html" hreflang="en" lang="en" aria-label="切换到英文">EN</a>
+        <button class="search-toggle" type="button" aria-label="搜索" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="打开导航菜单">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="hero-screen">
+    <section class="hero">
+      <div class="container hero-inner">
+        <div class="hero-copy">
+          <p class="eyebrow">MySQL binlog · Rust rewrite</p>
+          <h1>让每一次<br><span class="mark">数据变更</span><br>都有迹可循。</h1>
+          <p class="hero-lede">
+            Canal Rust 模拟 MySQL slave，向主库发送 dump 请求，解析 binlog，
+            再通过 Canal protobuf 协议把变更事件送往下游。14 个 crate，一条完整的
+            <strong>接入 → 解析 → 过滤 → 存储 → 输出 → 确认</strong> 链路。
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="install.html">快速开始 <span class="arrow" aria-hidden="true">→</span></a>
+            <a class="btn btn-ghost" href="about.html">了解架构</a>
+          </div>
+          <div class="hero-facts">
+            <div><b>14</b><span>crates</span></div>
+            <div><b>389</b><span>tests passing</span></div>
+            <div><b>v2.2.0</b><span>current release</span></div>
+            <div><b>0</b><span>clippy warnings</span></div>
+          </div>
+        </div>
+
+        <div class="hero-visual">
+          <div id="canal-canvas" aria-hidden="true"></div>
+          <div class="pet-stage">
+            <img class="pet-main" src="assets/img/canal-pet.svg"
+                 alt="小运，Canal Rust 项目宠物：一只锈红色的螃蟹守在数据运河的闸墙上，左钳拧着闸门水轮，右钳托着一枚发光的数据事件"
+                 width="720" height="520" fetchpriority="high">
+          </div>
+          <span class="hero-badge hero-badge--top"><span class="live-dot"></span> binlog stream · live</span>
+          <span class="hero-badge hero-badge--bottom">LOCK 01 / 小运 · Canal Crab</span>
+          <span class="hero-pet-chip hero-pet-chip--a"><img src="assets/img/pet-joy-top.svg" alt="" width="52" height="52"></span>
+          <span class="hero-pet-chip hero-pet-chip--b"><img src="assets/img/pet-cute-top.svg" alt="" width="44" height="44"></span>
+        </div>
+      </div>
+    </section>
+
+    <div class="flow-strip" role="region" aria-label="数据链路">
+      <div class="flow-inner">
+        <span class="flow-label">DATA CANAL</span>
+        <div class="flow-step"><b>01</b><span>MySQL binlog</span></div>
+        <div class="flow-step"><b>02</b><span>canal-binlog</span></div>
+        <div class="flow-step"><b>03</b><span>canal-filter</span></div>
+        <div class="flow-step"><b>04</b><span>canal-store</span></div>
+        <div class="flow-step"><b>05</b><span>canal-server / Kafka</span></div>
+        <div class="flow-step"><b>06</b><span>client ack</span></div>
+      </div>
+    </div>
+    </div>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="section-index">01 / WHY</p>
+          <div>
+            <h2 class="section-title">同一条 wire protocol，<br>更轻的运行时。</h2>
+            <p class="section-lede">
+              不改客户端，不改协议，只把 JVM 换成原生二进制。Canal Rust 保留了 Java Canal
+              的协议语义，同时把整条链路拆成 14 个可以独立演进的 crate。
+            </p>
+          </div>
+        </div>
+
+        <div class="bento">
+          <article class="bento-card bento-card--wide bento-card--dark reveal">
+            <p class="card-kicker">Protocol</p>
+            <p class="big-num">0 行</p>
+            <h3>客户端代码需要修改</h3>
+            <p>复用 Canal 上游 <code>.proto</code>，Java / Go / Python / C# / Node.js 客户端按原方式连接。</p>
+            <div class="mini-flow">
+              <span>CanalProtocol.proto</span><span>EntryProtocol.proto</span><span>prost</span>
+            </div>
+          </article>
+
+          <article class="bento-card bento-card--wide reveal">
+            <p class="card-kicker">Workspace</p>
+            <p class="big-num">14</p>
+            <h3>个 crate，各守一段运河</h3>
+            <p>接入、处理、输出、编排、运维、基础六层解耦。每一层都可以单独编译、测试和替换。</p>
+            <div class="mini-flow">
+              <span>binlog</span><span>filter</span><span>store</span><span>sink</span><span>server</span><span>connector</span>
+            </div>
+          </article>
+
+          <article class="bento-card reveal has-stamp">
+            <p class="card-kicker">Ingest</p>
+            <h3>实时 binlog 解析</h3>
+            <p>基于 <code>mysql_cdc</code> 连接 MySQL 5.1–8.0 / MariaDB，支持 position 与 GTID 位点，把 TableMap 映射成统一事件模型。</p>
+            <img class="stamp" src="assets/img/pet-joy-top.svg" alt="" width="78" height="70" loading="lazy">
+          </article>
+
+          <article class="bento-card reveal has-stamp">
+            <p class="card-kicker">Backpressure</p>
+            <h3>环形缓冲与消费 Ack</h3>
+            <p>内存 ring buffer 保存事件，容量溢出自动淘汰；客户端确认消费后推进位点，不让下游被淹没。</p>
+            <img class="stamp" src="assets/img/pet-knocking-top.svg" alt="" width="78" height="70" loading="lazy">
+          </article>
+
+          <article class="bento-card reveal has-stamp">
+            <p class="card-kicker">Operate</p>
+            <h3>一个进程，多个出口</h3>
+            <p>单进程运行多个 destination；事件可扇出到 TCP 客户端或 Kafka，Prometheus 指标和 Admin API 一并带上。</p>
+            <img class="stamp" src="assets/img/pet-cute-top.svg" alt="" width="78" height="70" loading="lazy">
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section band">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="section-index">02 / FLOW</p>
+          <div>
+            <h2 class="section-title">一条事件，六段旅程。</h2>
+            <p class="section-lede">
+              从 MySQL 的 binlog 到下游消费者，每一次变更都被接住、检查、排队、送出，
+              直到客户端确认。哪一段慢了，都能在指标里看见。
+            </p>
+          </div>
+        </div>
+
+        <div class="arch-grid">
+          <figure class="figure-card reveal">
+            <img src="assets/img/architecture.svg" alt="Canal Rust 架构设计图：MySQL Master、canal-binlog、canal-filter、canal-sink、canal-store、canal-server 与 Kafka 的完整数据流"
+                 width="1240" height="812" loading="lazy" decoding="async">
+            <figcaption>docs/assets/architecture.svg · v2.2.0</figcaption>
+          </figure>
+
+          <div class="reveal">
+            <dl class="layer-list">
+              <div class="layer-item">
+                <dt>接入</dt>
+                <dd><code>canal-binlog</code> 连接 MySQL、拉取 binlog，转换为统一事件模型。</dd>
+              </div>
+              <div class="layer-item">
+                <dt>处理</dt>
+                <dd><code>canal-filter</code> 正则过滤库表，<code>canal-sink</code> 把事件扇出到多个出口。</dd>
+              </div>
+              <div class="layer-item">
+                <dt>输出</dt>
+                <dd><code>canal-store</code> 环形缓冲，<code>canal-server</code> 提供 TCP 协议，<code>canal-connector</code> 投递 Kafka。</dd>
+              </div>
+              <div class="layer-item">
+                <dt>编排</dt>
+                <dd><code>canal-instance</code> 管理多个 destination，每个实例独占一条完整链路。</dd>
+              </div>
+              <div class="layer-item">
+                <dt>运维</dt>
+                <dd><code>canal-admin</code> 启停 API、<code>canal-prometheus</code> 指标、<code>canal-cli</code> 命令行入口。</dd>
+              </div>
+              <div class="layer-item">
+                <dt>基础</dt>
+                <dd><code>canal-common</code> 类型与生命周期、<code>canal-proto</code> protobuf 生成、<code>canal-meta</code> 表结构缓存。</dd>
+              </div>
+            </dl>
+            <a class="btn btn-ghost btn-small arch-cta" href="about.html">查看完整架构 <span class="arrow" aria-hidden="true">→</span></a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="section-index">03 / MASCOT</p>
+          <div>
+            <h2 class="section-title">守闸的小运，<br>也有十二张脸。</h2>
+            <p class="section-lede">
+              项目宠物不是一个贴纸，而是这条链路的角色化解释：流量要有人控制，
+              事件要有人送达。小运站在闸墙上，顺便把 Rust、ring buffer 和 fan-out 都演了一遍。
+            </p>
+          </div>
+        </div>
+
+        <div class="mascot-grid">
+          <figure class="mascot-figure reveal">
+            <img src="assets/img/canal-pet.svg" alt="小运站在数据运河的闸墙上，左钳拧着闸门水轮，右钳托着发光的事件，闸下漂着数据包"
+                 width="720" height="520" loading="lazy" decoding="async">
+            <figcaption>小运 · Canal Crab / 项目宠物</figcaption>
+          </figure>
+
+          <div class="mascot-copy reveal">
+            <p>
+              <strong>小运</strong>是这条数据运河的闸官。锈红色外壳对应 Rust；左钳拧着闸门水轮，
+              决定放多少数据过去；右钳托着一枚发光的事件，把变更送往下游。上游还漂着一卷
+              binlog 日志，闸下的水里是已经放行的数据包。
+            </p>
+            <div class="map-list">
+              <div class="map-row"><span>锈红色外壳</span><span>Rust</span></div>
+              <div class="map-row"><span>闸门水轮</span><span>canal-store · ring buffer</span></div>
+              <div class="map-row"><span>右钳托着的事件</span><span>canal-sink · fan-out</span></div>
+              <div class="map-row"><span>闸下漂着的包</span><span>canal-server / canal-connector</span></div>
+              <div class="map-row"><span>上游的 binlog 卷轴</span><span>canal-binlog</span></div>
+            </div>
+            <a class="btn btn-ghost btn-small mascot-link" href="about.html#mascot">认识小运和它的 12 张脸 <span class="arrow" aria-hidden="true">→</span></a>
+          </div>
+        </div>
+
+        <div class="pet-marquee reveal" aria-hidden="true">
+          <div class="pet-track">
+            <span class="pet-item"><img src="assets/img/pet-smile.svg" alt="" width="40" height="40" loading="lazy"><span>笑</span></span>
+            <span class="pet-item"><img src="assets/img/pet-joy.svg" alt="" width="40" height="40" loading="lazy"><span>欢乐</span></span>
+            <span class="pet-item"><img src="assets/img/pet-cry.svg" alt="" width="40" height="40" loading="lazy"><span>哭</span></span>
+            <span class="pet-item"><img src="assets/img/pet-depressed.svg" alt="" width="40" height="40" loading="lazy"><span>沮丧</span></span>
+            <span class="pet-item"><img src="assets/img/pet-terrified.svg" alt="" width="40" height="40" loading="lazy"><span>惊恐</span></span>
+            <span class="pet-item"><img src="assets/img/pet-angry.svg" alt="" width="40" height="40" loading="lazy"><span>愤怒</span></span>
+            <span class="pet-item"><img src="assets/img/pet-coquettish.svg" alt="" width="40" height="40" loading="lazy"><span>撒娇</span></span>
+            <span class="pet-item"><img src="assets/img/pet-cute.svg" alt="" width="40" height="40" loading="lazy"><span>卖萌</span></span>
+            <span class="pet-item"><img src="assets/img/pet-pleasing.svg" alt="" width="40" height="40" loading="lazy"><span>讨好</span></span>
+            <span class="pet-item"><img src="assets/img/pet-knocking.svg" alt="" width="40" height="40" loading="lazy"><span>敲打</span></span>
+            <span class="pet-item"><img src="assets/img/pet-facepalm.svg" alt="" width="40" height="40" loading="lazy"><span>捂脸</span></span>
+            <span class="pet-item"><img src="assets/img/pet-tongue.svg" alt="" width="40" height="40" loading="lazy"><span>吐舌头</span></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section band">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="section-index">04 / RELEASES</p>
+          <div>
+            <h2 class="section-title">从第一期，到 v2.2.0。</h2>
+            <p class="section-lede">
+              先把链路跑通，再重构基础设施，然后把小运接进运行时。每个版本都留下可回看的记录。
+            </p>
+          </div>
+        </div>
+
+        <div class="milestones">
+          <article class="milestone reveal">
+            <time datetime="2026-07-30">2026-07-30</time>
+            <h3>v1.0.0</h3>
+            <p>第一期完成：从 binlog 到客户端的核心链路贯通。</p>
+            <span class="tag">phase 1</span>
+          </article>
+          <article class="milestone reveal">
+            <time datetime="2026-07-31">2026-07-31</time>
+            <h3>v2.0.0</h3>
+            <p>基础设施与大重构：配置、错误处理、生命周期统一，为后续修复建立地基。</p>
+            <span class="tag">refactor</span>
+          </article>
+          <article class="milestone reveal">
+            <time datetime="2026-09-26">2026-09-26</time>
+            <h3>v2.1.0</h3>
+            <p>重绘小运，修复连接阻塞等正确性问题，补齐 Docker 与 CI 基建。</p>
+            <span class="tag">mascot</span>
+          </article>
+          <article class="milestone reveal">
+            <time datetime="2026-09-26">2026-09-26</time>
+            <h3>v2.2.0</h3>
+            <p>小运进入运行时：<code>canal-rust pet</code>、<code>--help</code> 与 Admin <code>/pet.svg</code>，389 项测试全部通过。</p>
+            <span class="tag tag-rust">current</span>
+          </article>
+        </div>
+        <a class="btn btn-ghost btn-small arch-cta" href="changelog.html">查看全部版本日志 <span class="arrow" aria-hidden="true">→</span></a>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="start-band reveal">
+          <div>
+            <p class="eyebrow">GET STARTED</p>
+            <h2>五分钟，<span class="nowrap">把运河接通。</span></h2>
+            <p>装好 protoc，clone、build、改一份 canal.yaml，然后让小运开始守闸。</p>
+            <div class="start-actions">
+              <a class="btn btn-primary" href="install.html">安装文档 <span class="arrow" aria-hidden="true">→</span></a>
+              <a class="btn btn-ghost" href="usage.html">使用说明</a>
+            </div>
+          </div>
+          <div class="code-block">
+            <div class="code-head"><span>terminal</span><button class="code-copy" type="button">复制</button></div>
+            <pre><code><span class="c"># 需要 Rust 1.85+ 与 protoc</span>
+git clone https://github.com/erikwang2013/canal-rust.git
+cd canal-rust
+cargo build --release
+./target/release/canal-rust server --config canal.yaml</code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section band" id="support">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="section-index">05 / SUPPORT</p>
+          <div>
+            <h2 class="section-title">如果它帮你省了一点事。</h2>
+            <p class="section-lede">
+              代码部分遵循 Apache-2.0；项目宠物与视觉资产不在此列。如果这条运河对你的项目有帮助，
+              欢迎扫码支持一杯咖啡。点击二维码可以打开大图。
+            </p>
+          </div>
+        </div>
+
+        <div class="support-row reveal">
+          <div class="support-card">
+            <img src="assets/img/weixinpay.png" alt="微信支付收款码" width="104" height="104" loading="lazy" decoding="async">
+            <div><b>微信支付</b><span>打赏支持 · 点击二维码放大</span></div>
+          </div>
+          <div class="support-card">
+            <img src="assets/img/alipay.png" alt="支付宝收款码" width="104" height="104" loading="lazy" decoding="async">
+            <div><b>支付宝</b><span>打赏支持 · 点击二维码放大</span></div>
+          </div>
+        </div>
+
+        <p class="gallery-note">
+          项目宠物、图片与表情为非开源视觉资产，商业使用需取得书面授权。代码部分遵循 Apache-2.0。
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-intro">
+          <a class="brand brand--footer" href="index.html" aria-label="Canal Rust 首页">
+            <span class="brand-mark"><img src="assets/img/pet-top.svg" alt="" width="40" height="40"></span>
+            <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">数据运河 · v2.2.0</span></span>
+          </a>
+          <p>MySQL binlog 增量订阅 &amp; 消费组件。用 Rust 重写阿里巴巴 Canal，复用同一套 Canal protobuf 协议。</p>
+          <p class="footer-license">代码 Apache-2.0 · 视觉资产版权归作者所有</p>
+        </div>
+        <nav class="footer-nav" aria-label="页脚导航">
+          <p class="footer-kicker">EXPLORE</p>
+          <a href="about.html">项目介绍</a>
+          <a href="features.html">功能迭代</a>
+          <a href="changelog.html">版本日志</a>
+          <a href="install.html">安装文档</a>
+          <a href="usage.html">使用说明</a>
+          <a href="index.html#support">打赏支持</a>
+        </nav>
+        <div class="footer-meta">
+          <p class="footer-kicker">AUTHOR</p>
+          <a class="footer-author" href="https://erik.xyz" target="_blank" rel="noopener">艾瑞可erik <span aria-hidden="true">↗</span></a>
+          <p class="footer-kicker">VISUAL ASSETS</p>
+          <p>小运与 12 种表情为非开源视觉资产，商业使用需取得授权。联系 erik@erik.xyz。</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Canal Rust</span><span class="footer-dot" aria-hidden="true">·</span><span>Built static. Served fast.</span>
+        <div class="footer-info" id="busuanzi"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script> <span id="busuanzi_container_page_pv"><span data-i18n="post.readA">阅读</span> <b id="busuanzi_value_page_pv">0</b> <span data-i18n="post.readB">次 👀</span></span></div>
+      </div>
+    </div>
+  </footer>
+
+  <button class="backtop" id="backtop" type="button" aria-label="返回顶部">
+    <img src="assets/img/pet-top.svg" alt="" width="64" height="64" loading="lazy">
+  </button>
+
+  <script type="module" src="assets/js/three-canal.js"></script>
+</body>
+</html>

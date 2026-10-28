@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Installation · Canal Rust</title>
+  <meta name="description" content="Canal Rust installation: prerequisites, protoc, build, MySQL configuration, canal.yaml, start, Docker and troubleshooting.">
+  <meta name="theme-color" content="#f3ecdf">
+  <meta name="author" content="艾瑞可erik">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="application-name" content="Canal Rust">
+  <link rel="canonical" href="https://package.erik.xyz/canal/install.en.html">
+  <link rel="alternate" hreflang="zh-CN" href="https://package.erik.xyz/canal/install.html">
+  <link rel="alternate" hreflang="en" href="https://package.erik.xyz/canal/install.en.html">
+  <link rel="alternate" hreflang="x-default" href="https://package.erik.xyz/canal/install.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Canal Rust">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="zh_CN">
+  <meta property="og:title" content="Installation · Canal Rust">
+  <meta property="og:description" content="Canal Rust installation: prerequisites, protoc, build, MySQL configuration, canal.yaml, start, Docker and troubleshooting.">
+  <meta property="og:url" content="https://package.erik.xyz/canal/install.en.html">
+  <meta property="og:image" content="https://package.erik.xyz/canal/assets/img/og-canal-rust-en.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Canal Rust — Xiaoyun at the lock of the data canal">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Installation · Canal Rust">
+  <meta name="twitter:description" content="Canal Rust installation: prerequisites, protoc, build, MySQL configuration, canal.yaml, start, Docker and troubleshooting.">
+  <meta name="twitter:image" content="https://package.erik.xyz/canal/assets/img/og-canal-rust-en.png">
+  <script>
+    (function () {
+      document.documentElement.classList.add('js');
+      if (location.pathname === '/canal') location.replace('/canal/');
+    })();
+  </script>
+  <link rel="icon" href="assets/img/pet-top-en.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/core.css">
+  <link rel="stylesheet" href="assets/css/pages.css">
+  <link rel="stylesheet" href="assets/css/docs.css">
+  <link rel="stylesheet" href="assets/css/lightbox.css">
+  <link rel="stylesheet" href="assets/css/search.css">
+  <noscript><style>.js .reveal{opacity:1;transform:none}</style></noscript>
+  <script defer src="assets/js/site.js"></script>
+  <script defer src="assets/js/search.js"></script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "name": "Installation · Canal Rust",
+  "description": "Canal Rust installation: prerequisites, protoc, build, MySQL configuration, canal.yaml, start, Docker and troubleshooting.",
+  "url": "https://package.erik.xyz/canal/install.en.html",
+  "inLanguage": "en",
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "Canal Rust",
+    "url": "https://package.erik.xyz/canal/index.en.html"
+  },
+  "about": {
+    "@type": "SoftwareApplication",
+    "name": "Canal Rust",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Linux, macOS",
+    "url": "https://package.erik.xyz/canal/index.en.html"
+  },
+  "primaryImageOfPage": {
+    "@type": "ImageObject",
+    "url": "https://package.erik.xyz/canal/assets/img/og-canal-rust-en.png",
+    "width": 1200,
+    "height": 630
+  }
+}
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="index.en.html" aria-label="Canal Rust home">
+        <span class="brand-mark"><img src="assets/img/pet-top-en.svg" alt="" width="40" height="40"></span>
+        <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">DATA CANAL · v2.2.0</span></span>
+      </a>
+      <nav class="site-nav" id="site-nav" aria-label="Main navigation">
+        <a href="index.en.html">Home</a>
+        <a href="about.en.html">About</a>
+        <a href="features.en.html">Features</a>
+        <a href="changelog.en.html">Changelog</a>
+        <a href="install.en.html" aria-current="page">Install</a>
+        <a href="usage.en.html">Usage</a>
+        <a class="nav-author" href="https://erik.xyz" target="_blank" rel="noopener">艾瑞可erik <span aria-hidden="true">↗</span></a>
+      </nav>
+      <div class="header-tools">
+        <a class="lang-switch" href="install.html" hreflang="zh-CN" lang="zh-CN" aria-label="Switch to Chinese">中文</a>
+        <button class="search-toggle" type="button" aria-label="Search" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open navigation menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <section class="page-hero">
+      <div class="container">
+        <p class="eyebrow">Get started / Installation</p>
+        <h1>Connect the canal<br>to your MySQL.</h1>
+        <p class="lede">From clone to first event takes about five minutes. You need Rust 1.85+, protoc and MySQL 5.7+ / 8.0 with ROW binlog. Kafka is optional.</p>
+        <div class="page-hero-meta"><span>Rust 1.85+</span><span>protoc required</span><span>MySQL 5.7+</span><span>~5 min</span></div>
+      </div>
+    </section>
+
+    <section class="section" style="padding-top:24px">
+      <div class="container doc-layout">
+        <aside class="doc-toc" aria-label="On this page">
+          <p>ON THIS PAGE</p>
+          <a href="#requirements">Requirements</a>
+          <a href="#source">Get the source</a>
+          <a href="#build">Build</a>
+          <a href="#mysql">Configure MySQL</a>
+          <a href="#config">Configure canal.yaml</a>
+          <a href="#run">Run the server</a>
+          <a href="#docker">Docker</a>
+          <a href="#verify">Verify</a>
+          <a href="#troubleshoot">Troubleshooting</a>
+        </aside>
+
+        <div class="doc-body">
+          <section id="requirements">
+            <h2>Requirements</h2>
+            <ul>
+              <li><strong>Rust 1.85+</strong>. clap, getrandom and other dependencies use edition 2024; older toolchains cannot build the current Cargo.lock.</li>
+              <li><strong>protoc</strong> (Protocol Buffers compiler). <code>canal-proto/build.rs</code> drives prost-build; without protoc every build fails.</li>
+              <li><strong>MySQL 5.7+ / 8.0</strong> with binlog enabled and <code>binlog_format=ROW</code>; MariaDB is supported.</li>
+              <li><strong>Kafka</strong> (optional), only when you need a message-queue exit.</li>
+              <li>Ports: <code>11111</code> Canal TCP, <code>11112</code> Admin API, <code>9090</code> Prometheus (all configurable).</li>
+            </ul>
+            <div class="code-block">
+              <div class="code-head"><span>install dependencies</span><button class="code-copy" type="button">Copy</button></div>
+              <pre><code><span class="c"># Rust (if not installed)</span>
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+<span class="c"># Debian / Ubuntu</span>
+sudo apt-get update &amp;&amp; sudo apt-get install -y protobuf-compiler
+
+<span class="c"># macOS</span>
+brew install protobuf</code></pre>
+            </div>
+            <div class="callout warn">Without protoc, builds fail with <code>Could not find 'protoc'</code>. Install it before retrying.</div>
+          </section>
+
+          <section id="source">
+            <h2>Get the source</h2>
+            <p>The repository contains 14 workspace crates, proto definitions, Docker configuration and documentation.</p>
+            <div class="code-block"><div class="code-head"><span>terminal</span><button class="code-copy" type="button">Copy</button></div>
+              <pre><code>git clone https://github.com/erikwang2013/canal-rust.git
+cd canal-rust</code></pre>
+            </div>
+          </section>
+
+          <section id="build">
+            <h2>Build</h2>
+            <div class="code-block"><div class="code-head"><span>terminal</span><button class="code-copy" type="button">Copy</button></div>
+              <pre><code>cargo build --release
+
+<span class="c"># binary: target/release/canal-rust</span>
+./target/release/canal-rust --version
+./target/release/canal-rust pet</code></pre>
+            </div>
+            <p><code>canal-rust pet</code> prints the ASCII mascot and the places where Xiaoyun lives in the code.</p>
+          </section>
+
+          <section id="mysql">
+            <h2>Configure MySQL</h2>
+            <p>Create a replication account for Canal Rust and confirm that binlog is enabled.</p>
+            <div class="code-block"><div class="code-head"><span>MySQL</span><button class="code-copy" type="button">Copy</button></div>
+              <pre><code>CREATE USER 'canal'@'%' IDENTIFIED WITH mysql_native_password BY 'canal';
+GRANT SELECT, REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO 'canal'@'%';
+FLUSH PRIVILEGES;
+
+SHOW VARIABLES LIKE 'log_bin';
+SHOW VARIABLES LIKE 'binlog_format';
+SHOW MASTER STATUS;</code></pre>
+            </div>
+            <p>If <code>binlog_format</code> is not <code>ROW</code>, set it in MySQL configuration and restart:</p>
+            <div class="code-block"><div class="code-head"><span>my.cnf</span><button class="code-copy" type="button">Copy</button></div>
+              <pre><code>[mysqld]
+server-id = 1
+log-bin = mysql-bin
+binlog_format = ROW</code></pre>
+            </div>
+            <div class="callout warn"><strong>Connections are plaintext.</strong> Upstream <code>mysql_cdc 0.2.1</code> has no TLS; credentials and binlog data are unencrypted. Use a trusted network or an SSH tunnel. Auth plugins are limited to <code>mysql_native_password</code> and <code>caching_sha2_password</code>.</div>
+          </section>
+
+          <section id="config">
+            <h2>Configure canal.yaml</h2>
+            <p>Copy the template and adjust it for your environment:</p>
+            <div class="code-block"><div class="code-head"><span>terminal</span><button class="code-copy" type="button">Copy</button></div>
+              <pre><code>cp canal.yaml.example canal.yaml</code></pre>
+            </div>
+            <div class="code-block"><div class="code-head"><span>canal.yaml</span><button class="code-copy" type="button">Copy</button></div>
+              <pre><code>canal:
+  mysql:
+    host: "127.0.0.1"
+    port: 3306
+    username: "canal"
+    password: "canal"
+  store:
+    buffer_size: 16384
+  server:
+    bind: "0.0.0.0:11111"
+    metrics_bind: "127.0.0.1:9090"
+    <span class="c"># admin_bind: "0.0.0.0:11112"</span>
+  logging:
+    level: "info"
+    format: "json"</code></pre>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Field</th><th>Default</th><th>Description</th></tr></thead>
+                <tbody>
+                  <tr><td><code>server_id</code></td><td>1001</td><td>MySQL replication server ID; unique in the cluster</td></tr>
+                  <tr><td><code>start_journal_name</code></td><td>mysql-bin.000001</td><td>Starting binlog file</td></tr>
+                  <tr><td><code>start_position</code></td><td>4</td><td>Starting position</td></tr>
+                  <tr><td><code>store.buffer_size</code></td><td>16384</td><td>Ring buffer capacity</td></tr>
+                  <tr><td><code>server.bind</code></td><td>127.0.0.1:11111</td><td>Canal TCP listen address</td></tr>
+                  <tr><td><code>server.metrics_bind</code></td><td>127.0.0.1:9090</td><td>Prometheus /metrics address</td></tr>
+                  <tr><td><code>server.admin_bind</code></td><td>127.0.0.1:{port+1}</td><td>Admin API; loopback unless set</td></tr>
+                  <tr><td><code>server.idle_timeout_secs</code></td><td>3600</td><td>Idle client disconnect timeout</td></tr>
+                  <tr><td><code>filter.pattern</code></td><td>.*\..*</td><td>Schema/table include regex</td></tr>
+                  <tr><td><code>auth_token</code></td><td>empty</td><td>Empty = authentication disabled</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section id="run">
+            <h2>Run the server</h2>
+            <div class="code-block"><div class="code-head"><span>terminal</span><button class="code-copy" type="button">Copy</button></div>
+              <pre><code>./target/release/canal-rust server --config canal.yaml
+
+<span class="c"># or</span>
+cargo run --release -- server --config canal.yaml</code></pre>
+            </div>
+            <p>Startup logs include <code>Xiaoyun is on duty, guarding the data canal</code>, followed by the Canal TCP, metrics and Admin API addresses. <code>Ctrl-C</code> triggers graceful shutdown; the binlog task waits up to 5 seconds.</p>
+            <div class="table-wrap">
+              <table><thead><tr><th>Subcommand</th><th>Purpose</th></tr></thead><tbody>
+                <tr><td><code>server</code></td><td>Start Canal TCP, metrics and Admin API</td></tr>
+                <tr><td><code>dump</code></td><td>Connect to MySQL and print binlog events</td></tr>
+                <tr><td><code>pet</code></td><td>Meet Xiaoyun and locate the vector original</td></tr>
+              </tbody></table>
+            </div>
+          </section>
+
+          <section id="docker">
+            <h2>Docker</h2>
+            <p>Compose builds the image, publishes 11111 / 11112 / 9090 and mounts <code>docker/canal.yaml</code>. The default config reaches a MySQL on the host through <code>host.docker.internal</code>.</p>
+            <div class="code-block"><div class="code-head"><span>terminal</span><button class="code-copy" type="button">Copy</button></div>
+              <pre><code>docker compose -f docker/docker-compose.yml up -d
+
+<span class="c"># logs</span>
+docker compose -f docker/docker-compose.yml logs -f canal-rust</code></pre>
+            </div>
+            <p>Edit <code>docker/canal.yaml</code> and restart the container; no image rebuild is needed.</p>
+            <div class="callout info">Inside a container, bind to <code>0.0.0.0</code> or published ports cannot reach the service. The Docker config already does this.</div>
+          </section>
+
+          <section id="verify">
+            <h2>Verify</h2>
+            <div class="code-block"><div class="code-head"><span>terminal</span><button class="code-copy" type="button">Copy</button></div>
+              <pre><code><span class="c"># health</span>
+curl http://127.0.0.1:11112/health
+
+<span class="c"># instance status</span>
+curl http://127.0.0.1:11112/api/instances
+
+<span class="c"># metrics</span>
+curl http://127.0.0.1:9090/metrics
+
+<span class="c"># Admin landing page: Xiaoyun and live status</span>
+<span class="c"># http://127.0.0.1:11112/</span></code></pre>
+            </div>
+            <p><code>/health</code> returns <code>status: "UP"</code> with version and uptime; <code>/metrics</code> exposes <code>canal_events_parsed_total</code>, <code>canal_events_dispatched_total</code> and <code>canal_instances_active</code>.</p>
+            <div class="callout"><img class="pet-note" src="assets/img/pet-top-en.svg" alt="" width="70" height="62" loading="lazy">Seeing Xiaoyun and <code>UP</code> means the Admin API is running. Next, write a client or use <code>canal-rust dump</code> to watch the binlog.</div>
+          </section>
+
+          <section id="troubleshoot">
+            <h2>Troubleshooting</h2>
+            <div class="table-wrap">
+              <table><thead><tr><th>Symptom</th><th>Fix</th></tr></thead><tbody>
+                <tr><td><code>Could not find 'protoc'</code></td><td>Install protobuf-compiler / protobuf and confirm <code>protoc --version</code>.</td></tr>
+                <tr><td><code>sha256_password auth plugin is not supported</code></td><td>Use <code>mysql_native_password</code> or <code>caching_sha2_password</code>.</td></tr>
+                <tr><td>Cannot connect to MySQL</td><td>Check binlog is on, format is ROW, the account has REPLICATION privileges, and server_id is unique.</td></tr>
+                <tr><td>Admin is unreachable from a container / remote host</td><td>Set <code>server.admin_bind: "0.0.0.0:11112"</code> and check the firewall.</td></tr>
+                <tr><td><code>Address already in use</code></td><td>Change <code>server.bind</code>, <code>metrics_bind</code> or <code>admin_bind</code>.</td></tr>
+                <tr><td>No events</td><td>Confirm writes occur; use <code>canal-rust dump</code>; check <code>filter.pattern</code>.</td></tr>
+              </tbody></table>
+            </div>
+            <div class="callout warn" style="margin-top:20px">Still stuck? See <a href="usage.en.html">Usage</a> or search <a href="https://github.com/erikwang2013/canal-rust/issues" target="_blank" rel="noopener">GitHub Issues</a>.</div>
+            <a class="btn btn-primary" href="usage.en.html">Continue to usage <span class="arrow" aria-hidden="true">→</span></a>
+          </section>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-intro">
+          <a class="brand brand--footer" href="index.en.html" aria-label="Canal Rust home">
+            <span class="brand-mark"><img src="assets/img/pet-top-en.svg" alt="" width="40" height="40"></span>
+            <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">DATA CANAL · v2.2.0</span></span>
+          </a>
+          <p>MySQL binlog incremental subscription &amp; consumption. A Rust rewrite of Alibaba Canal, reusing the same Canal protobuf protocol.</p>
+          <p class="footer-license">Code Apache-2.0 · Visual assets © the author</p>
+        </div>
+        <nav class="footer-nav" aria-label="Footer navigation">
+          <p class="footer-kicker">EXPLORE</p>
+          <a href="about.en.html">About</a>
+          <a href="features.en.html">Features</a>
+          <a href="changelog.en.html">Changelog</a>
+          <a href="install.en.html">Install</a>
+          <a href="usage.en.html">Usage</a>
+          <a href="index.en.html#support">Tip the project</a>
+        </nav>
+        <div class="footer-meta">
+          <p class="footer-kicker">AUTHOR</p>
+          <a class="footer-author" href="https://erik.xyz" target="_blank" rel="noopener">艾瑞可erik <span aria-hidden="true">↗</span></a>
+          <p class="footer-kicker">VISUAL ASSETS</p>
+          <p>Xiaoyun and the 12 expression forms are non-open-source visual assets. Commercial use requires a license. Contact erik@erik.xyz.</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Canal Rust</span><span class="footer-dot" aria-hidden="true">·</span><span>Built static. Served fast.</span>
+        <div class="footer-info" id="busuanzi"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script> <span id="busuanzi_container_page_pv"><span data-i18n="post.readA">Views</span> <b id="busuanzi_value_page_pv">0</b> <span data-i18n="post.readB">views 👀</span></span></div>
+      </div>
+    </div>
+  </footer>
+
+  <button class="backtop" id="backtop" type="button" aria-label="Back to top">
+    <img src="assets/img/pet-top-en.svg" alt="" width="64" height="64" loading="lazy">
+  </button>
+</body>
+</html>
