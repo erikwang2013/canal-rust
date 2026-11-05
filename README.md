@@ -344,10 +344,8 @@ canal-rust/
 │   │   ├── architecture.svg        # 架构设计图
 │   │   ├── functions.svg           # 功能设计图
 │   │   └── lifecycle.svg           # 生命周期图
-│   ├── superpowers/
-│   │   ├── specs/2026-07-30-canal-rust-rewrite-design.md   # 完整设计文档
-│   │   └── plans/2026-07-30-canal-rust-phase1.md           # 第一期实现计划
-│   └── review-report-*.md          # 历次代码评审 / 测试报告
+│   └── superpowers/
+│       └── specs/2026-07-30-canal-rust-rewrite-design.md   # 完整设计文档
 ```
 
 > 没有顶层 `tests/` 目录：测试不集中放置，而是与源码同 crate 维护。
@@ -362,9 +360,9 @@ canal-rust/
 | Crates | 14 |
 | Rust 源码行数 | ~8,400 |
 | 测试代码行数 | ~3,900 |
-| 单元/集成测试 | 389（全部通过） |
+| 单元/集成测试 | 390（全部通过） |
 | Protobuf 定义 | 2 |
-| 版本 | v2.2.0 |
+| 版本 | v2.2.1 |
 | Clippy 警告 | 0 |
 | 许可协议 | Apache-2.0 |
 
@@ -400,7 +398,6 @@ let config = InstanceConfig {
     start_position: LogPosition::new("mysql-bin.000001", 4),
     filter: FilterPattern { pattern: "mydb\\..*".into(), black_list: "".into() },
     store_buffer_size: 16384,
-    connector_names: vec!["kafka-sync".into()],
 };
 ```
 
@@ -447,6 +444,8 @@ curl -X POST http://localhost:11112/api/instances/default/stop
 ```
 
 直接用浏览器打开 `http://localhost:11112/` 会看到小运和实时状态（版本 / 运行时长 / 实例数）—— 这是无需 token 的落地页，只显示计数、不显示实例名；实例名仍要通过带 token 的 `/api/instances` 获取。
+
+配置 `auth_token` 后，`/api/*` 与 `/metrics` 要求 `Authorization: Bearer <token>`；`/`、`/health` 与 `/pet.svg` 保持公开。
 
 ## 开发
 

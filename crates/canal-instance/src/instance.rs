@@ -22,7 +22,6 @@ pub struct InstanceConfig {
     pub start_position: LogPosition,
     pub filter: FilterPattern,
     pub store_buffer_size: usize,
-    pub connector_names: Vec<String>,
 }
 
 impl std::fmt::Debug for InstanceConfig {
@@ -77,10 +76,6 @@ impl CanalInstance {
 
     pub fn store(&self) -> Arc<MemoryEventStore> {
         self.store.clone()
-    }
-
-    pub fn sink(&self) -> Arc<DefaultEventSink> {
-        self.sink.clone()
     }
 
     pub async fn feed(&self, events: Vec<CanalEvent>) -> CanalResult<()> {
@@ -198,7 +193,6 @@ mod tests {
             start_position: LogPosition::new("mysql-bin.000001", 4),
             filter: FilterPattern::default(),
             store_buffer_size: 1024,
-            connector_names: vec![],
         }
     }
 
@@ -367,6 +361,5 @@ mod tests {
         let instance = CanalInstance::new(config, vec![]).unwrap();
         assert_eq!(instance.destination(), "blacklisted");
         assert!(instance.store().latest_position().is_none());
-        let _sink = instance.sink(); // accessor is available
     }
 }

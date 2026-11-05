@@ -90,16 +90,6 @@ impl DefaultBinlogConnector {
         })
     }
 
-    /// Set the SSL mode for the MySQL connection.
-    ///
-    /// NOTE: `mysql_cdc 0.2.1` does not implement TLS — constructing its client
-    /// with any mode other than [`SslMode::Disabled`] panics. Overriding this is
-    /// therefore only useful as a placeholder for a future dependency.
-    pub fn with_ssl_mode(mut self, mode: SslMode) -> Self {
-        self.ssl_mode = mode;
-        self
-    }
-
     /// Set the connection timeout in seconds (default: 30).
     pub fn with_connect_timeout(mut self, secs: u64) -> Self {
         self.connect_timeout_secs = secs;

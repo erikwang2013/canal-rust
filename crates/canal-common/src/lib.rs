@@ -1,3 +1,6 @@
+// clippy 1.99 false positive: async_trait-generated futures are already #[must_use].
+#![allow(clippy::double_must_use)]
+
 pub mod error;
 pub mod lifecycle;
 pub mod pet;

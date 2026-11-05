@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>版本日志 · Canal Rust</title>
-  <meta name="description" content="Canal Rust 版本日志：从 v1.0.0 第一期到 v2.2.0 宠物接入运行时，记录每个版本的变更与修复。">
+  <meta name="description" content="Canal Rust 版本日志：从 v1.0.0 第一期到 v2.2.1 官网、安全加固与清理，记录每个版本的变更与修复。">
   <meta name="theme-color" content="#f3ecdf">
   <meta name="author" content="艾瑞可erik">
   <meta name="robots" content="index,follow,max-image-preview:large">
@@ -18,7 +18,7 @@
   <meta property="og:site_name" content="Canal Rust">
   <meta property="og:locale" content="zh_CN">
   <meta property="og:title" content="版本日志 · Canal Rust">
-  <meta property="og:description" content="Canal Rust 版本日志：从 v1.0.0 第一期到 v2.2.0 宠物接入运行时，记录每个版本的变更与修复。">
+  <meta property="og:description" content="Canal Rust 版本日志：从 v1.0.0 第一期到 v2.2.1 官网、安全加固与清理，记录每个版本的变更与修复。">
   <meta property="og:url" content="https://package.erik.xyz/canal/changelog.html">
   <meta property="og:image" content="https://package.erik.xyz/canal/assets/img/og-canal-rust.png">
   <meta property="og:image:type" content="image/png">
@@ -27,7 +27,7 @@
   <meta property="og:image:alt" content="Canal Rust — 小运守在数据运河的闸口">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="版本日志 · Canal Rust">
-  <meta name="twitter:description" content="Canal Rust 版本日志：从 v1.0.0 第一期到 v2.2.0 宠物接入运行时，记录每个版本的变更与修复。">
+  <meta name="twitter:description" content="Canal Rust 版本日志：从 v1.0.0 第一期到 v2.2.1 官网、安全加固与清理，记录每个版本的变更与修复。">
   <meta name="twitter:image" content="https://package.erik.xyz/canal/assets/img/og-canal-rust.png">
   <script>
     (function () {
@@ -48,7 +48,7 @@
   "@context": "https://schema.org",
   "@type": "CollectionPage",
   "name": "版本日志 · Canal Rust",
-  "description": "Canal Rust 版本日志：从 v1.0.0 第一期到 v2.2.0 宠物接入运行时，记录每个版本的变更与修复。",
+  "description": "Canal Rust 版本日志：从 v1.0.0 第一期到 v2.2.1 官网、安全加固与清理，记录每个版本的变更与修复。",
   "url": "https://package.erik.xyz/canal/changelog.html",
   "inLanguage": "zh-CN",
   "isPartOf": {
@@ -79,7 +79,7 @@
     <div class="header-inner">
       <a class="brand" href="index.html" aria-label="Canal Rust 首页">
         <span class="brand-mark"><img src="assets/img/pet-top.svg" alt="" width="40" height="40"></span>
-        <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">数据运河 · v2.2.0</span></span>
+        <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">数据运河 · v2.2.1</span></span>
       </a>
       <nav class="site-nav" id="site-nav" aria-label="主导航">
         <a href="index.html">首页</a>
@@ -107,10 +107,10 @@
         <h1>每一次推进，<br>都留在运河里。</h1>
         <p class="lede">
           版本号来自 <code>Cargo.toml</code> 的 <code>[workspace.package]</code>；标签由 CI 在版本变化时创建。
-          从 v1.0.0 到 v2.2.0，这里记录每次推进与修复。
+          从 v1.0.0 到 v2.2.1，这里记录每次推进与修复。
         </p>
         <div class="page-hero-meta">
-          <span>v2.2.0 current</span><span>26 tags + main</span><span>2026-07-30 → 2026-10-28</span><span>Apache-2.0</span>
+          <span>v2.2.1 current</span><span>28 tags + main</span><span>2026-07-30 → 2026-11-05</span><span>Apache-2.0</span>
         </div>
       </div>
     </section>
@@ -120,9 +120,28 @@
         <div class="release-list">
           <article class="release-entry is-current reveal">
             <div class="release-side">
+              <span class="release-version">v2.2.1</span>
+              <time class="release-date" datetime="2026-11-05">2026-11-05</time>
+              <span class="tag tag-rust">current</span>
+              <img class="release-pet" src="assets/img/pet-cute-top.svg" alt="小运 · 卖萌" width="46" height="46" loading="lazy">
+            </div>
+            <div class="release-body">
+              <h3>官网、安全加固与依赖清理</h3>
+              <ul>
+                <li>中英文官网、站内搜索、图片弹框与 SEO；站点移除第三方访问统计脚本。</li>
+                <li>Admin API 与 <code>/metrics</code> 复用 <code>auth_token</code> 做 Bearer 校验；客户端 <code>client_id</code> / <code>destination</code> 限制 128 字节。</li>
+                <li>升级 h2、libz-sys、rustls、rustls-webpki、tokio，<code>cargo audit</code> 0 漏洞。</li>
+                <li>移除未使用依赖与接口；字体栈改用 Inter / Noto / JetBrains Mono 等开源字体。</li>
+                <li>修正宠物表情，明确视觉资产商业授权。</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="release-entry reveal">
+            <div class="release-side">
               <span class="release-version">v2.2.0</span>
               <time class="release-date" datetime="2026-09-26">2026-09-26</time>
-              <span class="tag tag-rust">current</span>
+              <span class="tag">mascot</span>
               <img class="release-pet" src="assets/img/pet-top.svg" alt="小运 · 笑" width="46" height="46" loading="lazy">
             </div>
             <div class="release-body">
@@ -133,23 +152,6 @@
                 <li>新增 <code>canal-rust pet</code> 子命令；<code>canal-rust --help</code> 欢迎信息与 server 启动日志都会打印小运。</li>
                 <li>Admin API 落地页 <code>GET /</code> 展示小运与实时状态，<code>GET /pet.svg</code> 直接返回矢量原图。</li>
                 <li>CI 与 Docker 构建显式安装 protoc；389 项单元 / 集成测试全部通过，Clippy 0 警告。</li>
-              </ul>
-            </div>
-          </article>
-
-          <article class="release-entry reveal">
-            <div class="release-side">
-              <span class="release-version">main</span>
-              <time class="release-date" datetime="2026-10-28">2026-10-28</time>
-              <span class="tag">未发布</span>
-              <img class="release-pet" src="assets/img/pet-cute-top.svg" alt="小运 · 卖萌" width="46" height="46" loading="lazy">
-            </div>
-            <div class="release-body">
-              <h3>表情形态修正与资产授权</h3>
-              <ul>
-                <li>修正项目宠物表情：移除表情圆圈与重复五官，12 种形态保持各自的动效。</li>
-                <li>明确项目宠物、图片、表情为非开源视觉资产；商业使用需取得书面授权。</li>
-                <li>main 分支最新提交，尚未打版本标签。</li>
               </ul>
             </div>
           </article>
@@ -248,7 +250,7 @@
         <div class="footer-intro">
           <a class="brand brand--footer" href="index.html" aria-label="Canal Rust 首页">
             <span class="brand-mark"><img src="assets/img/pet-top.svg" alt="" width="40" height="40"></span>
-            <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">数据运河 · v2.2.0</span></span>
+            <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">数据运河 · v2.2.1</span></span>
           </a>
           <p>MySQL binlog 增量订阅 &amp; 消费组件。用 Rust 重写阿里巴巴 Canal，复用同一套 Canal protobuf 协议。</p>
           <p class="footer-license">代码 Apache-2.0 · 视觉资产版权归作者所有</p>
@@ -271,7 +273,6 @@
       </div>
       <div class="footer-bottom">
         <span>© 2026 Canal Rust</span><span class="footer-dot" aria-hidden="true">·</span><span>Built static. Served fast.</span>
-        <div class="footer-info" id="busuanzi"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script> <span id="busuanzi_container_page_pv"><span data-i18n="post.readA">阅读</span> <b id="busuanzi_value_page_pv">0</b> <span data-i18n="post.readB">次 👀</span></span></div>
       </div>
     </div>
   </footer>

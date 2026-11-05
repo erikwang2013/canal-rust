@@ -79,7 +79,7 @@
     <div class="header-inner">
       <a class="brand" href="index.html" aria-label="Canal Rust 首页">
         <span class="brand-mark"><img src="assets/img/pet-top.svg" alt="" width="40" height="40"></span>
-        <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">数据运河 · v2.2.0</span></span>
+        <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">数据运河 · v2.2.1</span></span>
       </a>
       <nav class="site-nav" id="site-nav" aria-label="主导航">
         <a href="index.html">首页</a>
@@ -110,7 +110,7 @@
           每一层只负责一件事，合起来才是一条能把变更送到的运河。
         </p>
         <div class="page-hero-meta">
-          <span>14 capabilities</span><span>6 layers</span><span>389 tests</span><span>0 clippy warnings</span>
+          <span>14 capabilities</span><span>6 layers</span><span>390 tests</span><span>0 clippy warnings</span>
         </div>
       </div>
     </section>
@@ -131,7 +131,7 @@
         <figure class="figure-card reveal">
           <img src="assets/img/functions.svg" alt="Canal Rust 功能设计图：数据接入、数据处理、数据输出、运维支撑四组共 14 项能力"
                width="1240" height="700" loading="lazy" decoding="async">
-          <figcaption>功能设计 / 14 项能力对应 14 个 crate · v2.2.0</figcaption>
+          <figcaption>功能设计 / 14 项能力对应 14 个 crate · v2.2.1</figcaption>
         </figure>
       </div>
     </section>
@@ -340,7 +340,7 @@
           <article class="bento-card bento-card--wide has-stamp reveal">
             <p class="card-kicker">Metrics</p>
             <h3><code>/metrics</code> 默认无认证</h3>
-            <p>Metrics 端点未配置认证时会打印警告。默认只监听回环地址；如果对外暴露，请放在内网或反向代理的鉴权后面。</p>
+            <p>未配置 <code>auth_token</code> 时 Metrics 端点会打印警告；配置后需携带 Bearer token。默认只监听回环地址，如果对外暴露，请放在内网或反向代理的鉴权后面。</p>
             <img class="stamp" src="assets/img/pet-angry-top.svg" alt="" width="78" height="70" loading="lazy">
           </article>
         </div>
@@ -375,7 +375,7 @@
         <div class="footer-intro">
           <a class="brand brand--footer" href="index.html" aria-label="Canal Rust 首页">
             <span class="brand-mark"><img src="assets/img/pet-top.svg" alt="" width="40" height="40"></span>
-            <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">数据运河 · v2.2.0</span></span>
+            <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">数据运河 · v2.2.1</span></span>
           </a>
           <p>MySQL binlog 增量订阅 &amp; 消费组件。用 Rust 重写阿里巴巴 Canal，复用同一套 Canal protobuf 协议。</p>
           <p class="footer-license">代码 Apache-2.0 · 视觉资产版权归作者所有</p>
@@ -398,7 +398,6 @@
       </div>
       <div class="footer-bottom">
         <span>© 2026 Canal Rust</span><span class="footer-dot" aria-hidden="true">·</span><span>Built static. Served fast.</span>
-        <div class="footer-info" id="busuanzi"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script> <span id="busuanzi_container_page_pv"><span data-i18n="post.readA">阅读</span> <b id="busuanzi_value_page_pv">0</b> <span data-i18n="post.readB">次 👀</span></span></div>
       </div>
     </div>
   </footer>

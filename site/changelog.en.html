@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Changelog · Canal Rust</title>
-  <meta name="description" content="Canal Rust changelog from v1.0.0 phase one to v2.2.0 mascot runtime, with each release and fix.">
+  <meta name="description" content="Canal Rust changelog from v1.0.0 phase one to v2.2.1 site, security and cleanup, with each release and fix.">
   <meta name="theme-color" content="#f3ecdf">
   <meta name="author" content="艾瑞可erik">
   <meta name="robots" content="index,follow,max-image-preview:large">
@@ -18,7 +18,7 @@
   <meta property="og:locale" content="en_US">
   <meta property="og:locale:alternate" content="zh_CN">
   <meta property="og:title" content="Changelog · Canal Rust">
-  <meta property="og:description" content="Canal Rust changelog from v1.0.0 phase one to v2.2.0 mascot runtime, with each release and fix.">
+  <meta property="og:description" content="Canal Rust changelog from v1.0.0 phase one to v2.2.1 site, security and cleanup, with each release and fix.">
   <meta property="og:url" content="https://package.erik.xyz/canal/changelog.en.html">
   <meta property="og:image" content="https://package.erik.xyz/canal/assets/img/og-canal-rust-en.png">
   <meta property="og:image:type" content="image/png">
@@ -27,7 +27,7 @@
   <meta property="og:image:alt" content="Canal Rust — Xiaoyun at the lock of the data canal">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Changelog · Canal Rust">
-  <meta name="twitter:description" content="Canal Rust changelog from v1.0.0 phase one to v2.2.0 mascot runtime, with each release and fix.">
+  <meta name="twitter:description" content="Canal Rust changelog from v1.0.0 phase one to v2.2.1 site, security and cleanup, with each release and fix.">
   <meta name="twitter:image" content="https://package.erik.xyz/canal/assets/img/og-canal-rust-en.png">
   <script>
     (function () {
@@ -48,7 +48,7 @@
   "@context": "https://schema.org",
   "@type": "CollectionPage",
   "name": "Changelog · Canal Rust",
-  "description": "Canal Rust changelog from v1.0.0 phase one to v2.2.0 mascot runtime, with each release and fix.",
+  "description": "Canal Rust changelog from v1.0.0 phase one to v2.2.1 site, security and cleanup, with each release and fix.",
   "url": "https://package.erik.xyz/canal/changelog.en.html",
   "inLanguage": "en",
   "isPartOf": {
@@ -79,7 +79,7 @@
     <div class="header-inner">
       <a class="brand" href="index.en.html" aria-label="Canal Rust home">
         <span class="brand-mark"><img src="assets/img/pet-top-en.svg" alt="" width="40" height="40"></span>
-        <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">DATA CANAL · v2.2.0</span></span>
+        <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">DATA CANAL · v2.2.1</span></span>
       </a>
       <nav class="site-nav" id="site-nav" aria-label="Main navigation">
         <a href="index.en.html">Home</a>
@@ -106,8 +106,8 @@
       <div class="container">
         <p class="eyebrow">Releases / Changelog</p>
         <h1>Every step,<br>kept in the canal.</h1>
-        <p class="lede">Versions come from <code>Cargo.toml</code> <code>[workspace.package]</code>; CI creates tags when the version changes. From v1.0.0 to v2.2.0, this is the record.</p>
-        <div class="page-hero-meta"><span>v2.2.0 current</span><span>26 tags + main</span><span>2026-07-30 → 2026-10-28</span><span>Apache-2.0</span></div>
+        <p class="lede">Versions come from <code>Cargo.toml</code> <code>[workspace.package]</code>; CI creates tags when the version changes. From v1.0.0 to v2.2.1, this is the record.</p>
+        <div class="page-hero-meta"><span>v2.2.1 current</span><span>28 tags + main</span><span>2026-07-30 → 2026-11-05</span><span>Apache-2.0</span></div>
       </div>
     </section>
 
@@ -116,9 +116,28 @@
         <div class="release-list">
           <article class="release-entry is-current reveal">
             <div class="release-side">
+              <span class="release-version">v2.2.1</span>
+              <time class="release-date" datetime="2026-11-05">2026-11-05</time>
+              <span class="tag tag-rust">current</span>
+              <img class="release-pet" src="assets/img/pet-cute-top-en.svg" alt="Xiaoyun · Cute" width="46" height="46" loading="lazy">
+            </div>
+            <div class="release-body">
+              <h3>Site, security hardening and cleanup</h3>
+              <ul>
+                <li>Chinese/English site, in-page search, image lightbox and SEO; the third-party visit counter was removed.</li>
+                <li>Admin API and <code>/metrics</code> now reuse <code>auth_token</code> for Bearer auth; client <code>client_id</code> / <code>destination</code> capped at 128 bytes.</li>
+                <li>h2, libz-sys, rustls, rustls-webpki and tokio upgraded; <code>cargo audit</code> reports 0 vulnerabilities.</li>
+                <li>Unused dependencies and interfaces removed; font stacks switched to open-source Inter / Noto / JetBrains Mono.</li>
+                <li>Expression fixes and the visual-asset commercial license recorded.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="release-entry reveal">
+            <div class="release-side">
               <span class="release-version">v2.2.0</span>
               <time class="release-date" datetime="2026-09-26">2026-09-26</time>
-              <span class="tag tag-rust">current</span>
+              <span class="tag">mascot</span>
               <img class="release-pet" src="assets/img/pet-top-en.svg" alt="Xiaoyun · Smile" width="46" height="46" loading="lazy">
             </div>
             <div class="release-body">
@@ -129,23 +148,6 @@
                 <li>New <code>canal-rust pet</code> subcommand; <code>canal-rust --help</code> and server startup logs print Xiaoyun.</li>
                 <li>Admin API landing page <code>GET /</code> shows Xiaoyun and live status; <code>GET /pet.svg</code> serves the vector original.</li>
                 <li>CI / Docker install protoc; 389 unit / integration tests pass, 0 Clippy warnings.</li>
-              </ul>
-            </div>
-          </article>
-
-          <article class="release-entry reveal">
-            <div class="release-side">
-              <span class="release-version">main</span>
-              <time class="release-date" datetime="2026-10-28">2026-10-28</time>
-              <span class="tag">unreleased</span>
-              <img class="release-pet" src="assets/img/pet-cute-top-en.svg" alt="Xiaoyun · Cute" width="46" height="46" loading="lazy">
-            </div>
-            <div class="release-body">
-              <h3>Expression fixes and asset license</h3>
-              <ul>
-                <li>Expression forms fixed: expression circles and duplicated facial features removed; all 12 keep their motion.</li>
-                <li>Mascot, images and expressions are explicitly non-open-source visual assets; commercial use needs written permission.</li>
-                <li>Latest commit on main; no version tag yet.</li>
               </ul>
             </div>
           </article>
@@ -226,7 +228,7 @@
         <div class="footer-intro">
           <a class="brand brand--footer" href="index.en.html" aria-label="Canal Rust home">
             <span class="brand-mark"><img src="assets/img/pet-top-en.svg" alt="" width="40" height="40"></span>
-            <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">DATA CANAL · v2.2.0</span></span>
+            <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">DATA CANAL · v2.2.1</span></span>
           </a>
           <p>MySQL binlog incremental subscription &amp; consumption. A Rust rewrite of Alibaba Canal, reusing the same Canal protobuf protocol.</p>
           <p class="footer-license">Code Apache-2.0 · Visual assets © the author</p>
@@ -249,7 +251,6 @@
       </div>
       <div class="footer-bottom">
         <span>© 2026 Canal Rust</span><span class="footer-dot" aria-hidden="true">·</span><span>Built static. Served fast.</span>
-        <div class="footer-info" id="busuanzi"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script> <span id="busuanzi_container_page_pv"><span data-i18n="post.readA">Views</span> <b id="busuanzi_value_page_pv">0</b> <span data-i18n="post.readB">views 👀</span></span></div>
       </div>
     </div>
   </footer>

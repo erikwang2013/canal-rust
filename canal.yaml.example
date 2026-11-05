@@ -9,7 +9,8 @@ canal:
   start_journal_name: "mysql-bin.000001"
   start_position: 4
 
-  # 认证令牌（留空 = 不启用认证）
+  # 认证令牌（留空 = 不启用认证）。设置后同时保护 Canal TCP、Admin API 与 /metrics，
+  # 客户端/抓取端需携带 Authorization: Bearer <token>。
   auth_token: ""
 
   # MySQL 主库连接

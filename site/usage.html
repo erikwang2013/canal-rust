@@ -80,7 +80,7 @@
     <div class="header-inner">
       <a class="brand" href="index.html" aria-label="Canal Rust 首页">
         <span class="brand-mark"><img src="assets/img/pet-top.svg" alt="" width="40" height="40"></span>
-        <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">数据运河 · v2.2.0</span></span>
+        <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">数据运河 · v2.2.1</span></span>
       </a>
       <nav class="site-nav" id="site-nav" aria-label="主导航">
         <a href="index.html">首页</a>
@@ -217,7 +217,6 @@ let config = InstanceConfig {
     start_position: LogPosition::new("mysql-bin.000001", 4),
     filter: FilterPattern { pattern: "mydb\\..*".into(), black_list: "".into() },
     store_buffer_size: 16384,
-    connector_names: vec!["kafka-sync".into()],
 };</code></pre>
             </div>
             <p>
@@ -272,8 +271,9 @@ manager.start_all().await?;</code></pre>
               </table>
             </div>
             <div class="callout warn">
-              <code>/metrics</code> 默认无认证。保持 <code>metrics_bind</code> 在回环地址，或放在内网 /
-              反向代理鉴权之后，不要直接暴露到公网。
+              <code>/metrics</code> 未配置 <code>auth_token</code> 时无认证；配置后需携带
+              <code>Authorization: Bearer &lt;token&gt;</code>。保持 <code>metrics_bind</code> 在回环地址，
+              或放在内网 / 反向代理鉴权之后，不要直接暴露到公网。
             </div>
           </section>
 
@@ -310,8 +310,9 @@ curl -X POST http://localhost:11112/api/instances/default/stop</code></pre>
               </table>
             </div>
             <p>
-              <code>AdminServer</code> 支持通过 <code>with_auth</code> 启用 <code>Authorization: Bearer &lt;token&gt;</code>
-              校验；CLI 默认未启用 Admin 鉴权，请通过绑定地址与防火墙保护管理端口。
+              配置 <code>auth_token</code> 后，<code>/api/*</code> 需要
+              <code>Authorization: Bearer &lt;token&gt;</code>；<code>/</code>、<code>/health</code> 与
+              <code>/pet.svg</code> 保持公开。未配置 token 时请通过绑定地址与防火墙保护管理端口。
             </p>
             <p>直接用浏览器打开 <code>http://localhost:11112/</code>，会看到小运和实时状态。</p>
           </section>
@@ -362,7 +363,7 @@ cargo doc --open</code></pre>
         <div class="footer-intro">
           <a class="brand brand--footer" href="index.html" aria-label="Canal Rust 首页">
             <span class="brand-mark"><img src="assets/img/pet-top.svg" alt="" width="40" height="40"></span>
-            <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">数据运河 · v2.2.0</span></span>
+            <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">数据运河 · v2.2.1</span></span>
           </a>
           <p>MySQL binlog 增量订阅 &amp; 消费组件。用 Rust 重写阿里巴巴 Canal，复用同一套 Canal protobuf 协议。</p>
           <p class="footer-license">代码 Apache-2.0 · 视觉资产版权归作者所有</p>
@@ -385,7 +386,6 @@ cargo doc --open</code></pre>
       </div>
       <div class="footer-bottom">
         <span>© 2026 Canal Rust</span><span class="footer-dot" aria-hidden="true">·</span><span>Built static. Served fast.</span>
-        <div class="footer-info" id="busuanzi"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script> <span id="busuanzi_container_page_pv"><span data-i18n="post.readA">阅读</span> <b id="busuanzi_value_page_pv">0</b> <span data-i18n="post.readB">次 👀</span></span></div>
       </div>
     </div>
   </footer>

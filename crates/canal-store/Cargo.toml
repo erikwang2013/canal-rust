@@ -7,7 +7,6 @@ rust-version.workspace = true
 tokio.workspace = true
 async-trait.workspace = true
 tracing.workspace = true
-dashmap.workspace = true
 canal-common = { path = "../canal-common" }
 [dev-dependencies]
 tokio.workspace = true

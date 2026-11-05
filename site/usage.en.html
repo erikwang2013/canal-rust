@@ -80,7 +80,7 @@
     <div class="header-inner">
       <a class="brand" href="index.en.html" aria-label="Canal Rust home">
         <span class="brand-mark"><img src="assets/img/pet-top-en.svg" alt="" width="40" height="40"></span>
-        <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">DATA CANAL · v2.2.0</span></span>
+        <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">DATA CANAL · v2.2.1</span></span>
       </a>
       <nav class="site-nav" id="site-nav" aria-label="Main navigation">
         <a href="index.en.html">Home</a>
@@ -197,7 +197,6 @@ let config = InstanceConfig {
     start_position: LogPosition::new("mysql-bin.000001", 4),
     filter: FilterPattern { pattern: "mydb\\..*".into(), black_list: "".into() },
     store_buffer_size: 16384,
-    connector_names: vec!["kafka-sync".into()],
 };</code></pre>
             </div>
             <p>The connector joins the same instance path through <code>canal-sink</code>; one change can enter the ring buffer and Kafka in parallel without blocking.</p>
@@ -240,7 +239,7 @@ manager.start_all().await?;</code></pre>
                 <tr><td><code>canal_instances_active</code></td><td>gauge</td><td>Active instances</td></tr>
               </tbody></table>
             </div>
-            <div class="callout warn"><code>/metrics</code> has no authentication by default. Keep <code>metrics_bind</code> on loopback, on a private network, or behind an authenticating proxy; do not expose it publicly.</div>
+            <div class="callout warn"><code>/metrics</code> has no authentication unless <code>auth_token</code> is set; with a token, requests must send <code>Authorization: Bearer &lt;token&gt;</code>. Keep <code>metrics_bind</code> on loopback, on a private network, or behind an authenticating proxy; do not expose it publicly.</div>
           </section>
 
           <section id="admin">
@@ -267,7 +266,7 @@ curl -X POST http://localhost:11112/api/instances/default/stop</code></pre>
                 <tr><td><code>GET /pet.svg</code></td><td>Xiaoyun's vector original</td></tr>
               </tbody></table>
             </div>
-            <p><code>AdminServer</code> supports <code>with_auth</code> for <code>Authorization: Bearer &lt;token&gt;</code>; the CLI does not enable Admin auth by default. Protect the port with binding and firewall rules.</p>
+            <p>When <code>auth_token</code> is set, <code>/api/*</code> requires <code>Authorization: Bearer &lt;token&gt;</code>; <code>/</code>, <code>/health</code> and <code>/pet.svg</code> stay public. Without a token, protect the port with binding and firewall rules.</p>
             <p>Open <code>http://localhost:11112/</code> in a browser to see Xiaoyun and live status.</p>
           </section>
 
@@ -308,7 +307,7 @@ cargo doc --open</code></pre>
         <div class="footer-intro">
           <a class="brand brand--footer" href="index.en.html" aria-label="Canal Rust home">
             <span class="brand-mark"><img src="assets/img/pet-top-en.svg" alt="" width="40" height="40"></span>
-            <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">DATA CANAL · v2.2.0</span></span>
+            <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">DATA CANAL · v2.2.1</span></span>
           </a>
           <p>MySQL binlog incremental subscription &amp; consumption. A Rust rewrite of Alibaba Canal, reusing the same Canal protobuf protocol.</p>
           <p class="footer-license">Code Apache-2.0 · Visual assets © the author</p>
@@ -331,7 +330,6 @@ cargo doc --open</code></pre>
       </div>
       <div class="footer-bottom">
         <span>© 2026 Canal Rust</span><span class="footer-dot" aria-hidden="true">·</span><span>Built static. Served fast.</span>
-        <div class="footer-info" id="busuanzi"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script> <span id="busuanzi_container_page_pv"><span data-i18n="post.readA">Views</span> <b id="busuanzi_value_page_pv">0</b> <span data-i18n="post.readB">views 👀</span></span></div>
       </div>
     </div>
   </footer>

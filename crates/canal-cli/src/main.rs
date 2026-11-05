@@ -62,7 +62,10 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
             config.canal.server.metrics_bind
         )
     })?;
-    let metrics_server = MetricsServer::new(metrics_bind, metrics.clone());
+    let mut metrics_server = MetricsServer::new(metrics_bind, metrics.clone());
+    if let Some(ref token) = config.canal.auth_token {
+        metrics_server = metrics_server.with_auth(token.clone());
+    }
     let _metrics_task = metrics_server
         .start()
         .await
@@ -88,7 +91,6 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
             black_list: config.canal.filter.black_list.clone(),
         },
         store_buffer_size: config.canal.store.buffer_size,
-        connector_names: vec![],
     };
     let instance =
         CanalInstance::new(instance_config, vec![]).context("Failed to create instance")?;
@@ -104,7 +106,10 @@ async fn run_server(config_path: PathBuf) -> Result<()> {
 
     // Start admin API
     let admin_bind = resolve_admin_bind(config.canal.server.admin_bind.as_deref(), bind_addr)?;
-    let admin_server = AdminServer::new(&admin_bind, instance_mgr.clone());
+    let mut admin_server = AdminServer::new(&admin_bind, instance_mgr.clone());
+    if let Some(ref token) = config.canal.auth_token {
+        admin_server = admin_server.with_auth(token.clone());
+    }
     let _admin_task = admin_server
         .start()
         .await

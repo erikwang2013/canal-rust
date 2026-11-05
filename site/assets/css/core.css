@@ -16,12 +16,9 @@
   --night-2: #1a2330;
   --line: rgba(27, 24, 20, .13);
   --line-strong: rgba(27, 24, 20, .26);
-  --sans: "Inter", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI",
-    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
-  --serif: "Iowan Old Style", "Palatino Linotype", "Songti SC", "Noto Serif CJK SC",
-    "Source Han Serif SC", "SimSun", serif;
-  --mono: "SFMono-Regular", "Cascadia Code", "JetBrains Mono", "Noto Sans Mono CJK SC",
-    Consolas, ui-monospace, monospace;
+  --sans: "Inter", "Noto Sans SC", "Noto Sans CJK SC", system-ui, sans-serif;
+  --serif: "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", serif;
+  --mono: "JetBrains Mono", "Noto Sans Mono CJK SC", ui-monospace, monospace;
   --max: 1180px;
   --radius: 18px;
   --shadow: 0 24px 60px -30px rgba(27, 24, 20, .45);
@@ -367,8 +364,6 @@ td code, p code, li code {
   padding: 18px 0 28px; border-top: 1px solid rgba(255, 255, 255, .12);
   color: #8d8376; font-size: .74rem;
 }
-.footer-info { margin-left: auto; }
-.footer-info b { color: #e8e0d3; font-weight: 600; }
 .footer-dot { color: #5d554b; }
 
 /* ---------- Back to top ---------- */
@@ -460,7 +455,6 @@ td code, p code, li code {
   .footer-meta { grid-column: auto; display: block; }
   .footer-author { font-size: 1.45rem; }
   .footer-bottom { gap: 8px 14px; }
-  .footer-info { margin-left: 0; width: 100%; }
   .backtop { width: 58px; height: 58px; }
   .page-hero h1 { letter-spacing: -.03em; }
 }

@@ -23,6 +23,10 @@ use crate::codec::CanalCodec;
 use crate::session::SessionManager;
 
 const MAX_CONNECTIONS: usize = 1024;
+/// Bound identity strings before they become DashMap keys and log fields:
+/// an 8 MB frame must not turn into an 8 MB session key.
+const MAX_CLIENT_ID_LEN: usize = 128;
+const MAX_DESTINATION_LEN: usize = 128;
 
 /// Canal TCP server.
 pub struct CanalServer {
@@ -279,6 +283,28 @@ async fn handle_auth(
             return Ok(());
         }
     }
+    if auth.client_id.len() > MAX_CLIENT_ID_LEN {
+        return send_ack_err(
+            transport,
+            &format!(
+                "client_id too long: {} > {}",
+                auth.client_id.len(),
+                MAX_CLIENT_ID_LEN
+            ),
+        )
+        .await;
+    }
+    if auth.destination.len() > MAX_DESTINATION_LEN {
+        return send_ack_err(
+            transport,
+            &format!(
+                "destination too long: {} > {}",
+                auth.destination.len(),
+                MAX_DESTINATION_LEN
+            ),
+        )
+        .await;
+    }
     let cid = if auth.client_id.is_empty() {
         "anonymous".to_string()
     } else {
@@ -351,6 +377,18 @@ async fn handle_sub(
             )
             .await;
         }
+    }
+
+    if sub.destination.len() > MAX_DESTINATION_LEN {
+        return send_ack_err(
+            transport,
+            &format!(
+                "destination too long: {} > {}",
+                sub.destination.len(),
+                MAX_DESTINATION_LEN
+            ),
+        )
+        .await;
     }
 
     const MAX_FILTER_PATTERN_LEN: usize = 256;

@@ -298,10 +298,8 @@ canal-rust/
 │   │   ├── architecture.svg        # Architecture diagram
 │   │   ├── functions.svg           # Functional design diagram
 │   │   └── lifecycle.svg           # Lifecycle diagram
-│   ├── superpowers/
-│   │   ├── specs/2026-07-30-canal-rust-rewrite-design.md
-│   │   └── plans/2026-07-30-canal-rust-phase1.md
-│   └── review-report-*.md          # Historical review / test reports
+│   └── superpowers/
+│       └── specs/2026-07-30-canal-rust-rewrite-design.md
 ```
 
 > There is no top-level `tests/` directory: tests live next to the code they cover, inside the same crate.
@@ -316,9 +314,9 @@ canal-rust/
 | Crates | 14 |
 | Lines of Rust (source) | ~8,400 |
 | Lines of Rust (tests) | ~3,900 |
-| Unit / integration tests | 389 (all passing) |
+| Unit / integration tests | 390 (all passing) |
 | Proto definitions | 2 |
-| Version | v2.2.0 |
+| Version | v2.2.1 |
 | Clippy warnings | 0 |
 | License | Apache-2.0 |
 
@@ -344,7 +342,6 @@ let config = InstanceConfig {
     start_position: LogPosition::new("mysql-bin.000001", 4),
     filter: FilterPattern { pattern: "mydb\\..*".into(), black_list: "".into() },
     store_buffer_size: 16384,
-    connector_names: vec!["kafka-sync".into()],
 };
 ```
 
@@ -391,6 +388,8 @@ curl -X POST http://localhost:11112/api/instances/default/stop
 ```
 
 Opening `http://localhost:11112/` in a browser shows 小运 with live status (version / uptime / instance count). That landing page needs no token and deliberately shows only counts, never instance names — those still require the token via `/api/instances`.
+
+When `auth_token` is set, `/api/*` and `/metrics` require `Authorization: Bearer <token>`; `/`, `/health` and `/pet.svg` stay public.
 
 ## Development
 

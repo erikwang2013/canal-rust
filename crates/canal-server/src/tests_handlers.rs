@@ -248,6 +248,49 @@ async fn test_handle_auth_filter_too_long_rejected() {
 }
 
 #[tokio::test]
+async fn test_handle_auth_overlong_identity_rejected() {
+    let (mut tx, mut rx) = transport();
+    let mut state = ClientState::default();
+    let sessions = SessionManager::new();
+
+    let long_id = "c".repeat(129);
+    let auth = canal_proto::ClientAuth {
+        client_id: long_id.clone(),
+        destination: "example".into(),
+        ..Default::default()
+    };
+    let packet = Packet {
+        r#type: PacketType::Clientauthentication as i32,
+        body: auth.encode_to_vec(),
+        ..Default::default()
+    };
+    handle_auth(&mut tx, &packet, &mut state, &None, &sessions)
+        .await
+        .unwrap();
+    assert!(!state.authenticated);
+    assert!(sessions.get(&long_id).is_none());
+    let ack = read_ack(&mut rx).await;
+    assert!(ack.error_message.contains("client_id too long"));
+
+    let auth = canal_proto::ClientAuth {
+        client_id: "alice".into(),
+        destination: "d".repeat(129),
+        ..Default::default()
+    };
+    let packet = Packet {
+        r#type: PacketType::Clientauthentication as i32,
+        body: auth.encode_to_vec(),
+        ..Default::default()
+    };
+    handle_auth(&mut tx, &packet, &mut state, &None, &sessions)
+        .await
+        .unwrap();
+    assert!(!state.authenticated);
+    let ack = read_ack(&mut rx).await;
+    assert!(ack.error_message.contains("destination too long"));
+}
+
+#[tokio::test]
 async fn test_handle_auth_invalid_filter_regex_rejected() {
     let (mut tx, mut rx) = transport();
     let mut state = ClientState::default();

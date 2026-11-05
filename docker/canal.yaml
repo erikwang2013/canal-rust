@@ -7,7 +7,8 @@ canal:
   server_id: 1001
   start_journal_name: "mysql-bin.000001"
   start_position: 4
-  # 留空 = 不启用认证。生产环境请改成强随机串，并同步更新客户端。
+  # 留空 = 不启用认证。设置后同时保护 Canal TCP、Admin API 与 /metrics。
+  # 生产环境请改成强随机串，并同步更新客户端与抓取端。
   auth_token: ""
 
   mysql:

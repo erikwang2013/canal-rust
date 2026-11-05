@@ -79,7 +79,7 @@
     <div class="header-inner">
       <a class="brand" href="index.en.html" aria-label="Canal Rust home">
         <span class="brand-mark"><img src="assets/img/pet-top-en.svg" alt="" width="40" height="40"></span>
-        <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">DATA CANAL · v2.2.0</span></span>
+        <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">DATA CANAL · v2.2.1</span></span>
       </a>
       <nav class="site-nav" id="site-nav" aria-label="Main navigation">
         <a href="index.en.html">Home</a>
@@ -108,7 +108,7 @@
         <h1>14 crates,<br>14 capabilities, one path.</h1>
         <p class="lede">A capability is a position in the pipeline: ingest, processing, egress, orchestration, operations, foundation. Each layer does one job; together they move changes.</p>
         <div class="page-hero-meta">
-          <span>14 capabilities</span><span>6 layers</span><span>389 tests</span><span>0 clippy warnings</span>
+          <span>14 capabilities</span><span>6 layers</span><span>390 tests</span><span>0 clippy warnings</span>
         </div>
       </div>
     </section>
@@ -125,7 +125,7 @@
         <figure class="figure-card reveal">
           <img src="assets/img/functions-en.svg" alt="Canal Rust capabilities: ingest, processing, egress and operations, 14 capabilities in total"
                width="1240" height="700" loading="lazy" decoding="async">
-          <figcaption>Capabilities / 14 crates · v2.2.0</figcaption>
+          <figcaption>Capabilities / 14 crates · v2.2.1</figcaption>
         </figure>
       </div>
     </section>
@@ -227,7 +227,7 @@
           </article>
           <article class="bento-card bento-card--wide has-stamp reveal">
             <p class="card-kicker">Metrics</p><h3><code>/metrics</code> has no auth by default</h3>
-            <p>The metrics endpoint warns when no authentication is configured. It binds to loopback by default; if exposed, keep it on a private network or behind an authenticating proxy.</p>
+            <p>Without <code>auth_token</code> the metrics endpoint warns and stays open; with a token it requires a Bearer token. It binds to loopback by default; if exposed, keep it on a private network or behind an authenticating proxy.</p>
             <img class="stamp" src="assets/img/pet-angry-top-en.svg" alt="" width="78" height="70" loading="lazy">
           </article>
         </div>
@@ -260,7 +260,7 @@
         <div class="footer-intro">
           <a class="brand brand--footer" href="index.en.html" aria-label="Canal Rust home">
             <span class="brand-mark"><img src="assets/img/pet-top-en.svg" alt="" width="40" height="40"></span>
-            <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">DATA CANAL · v2.2.0</span></span>
+            <span><span class="brand-name">CANAL RUST</span><span class="brand-sub">DATA CANAL · v2.2.1</span></span>
           </a>
           <p>MySQL binlog incremental subscription &amp; consumption. A Rust rewrite of Alibaba Canal, reusing the same Canal protobuf protocol.</p>
           <p class="footer-license">Code Apache-2.0 · Visual assets © the author</p>
@@ -283,7 +283,6 @@
       </div>
       <div class="footer-bottom">
         <span>© 2026 Canal Rust</span><span class="footer-dot" aria-hidden="true">·</span><span>Built static. Served fast.</span>
-        <div class="footer-info" id="busuanzi"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script> <span id="busuanzi_container_page_pv"><span data-i18n="post.readA">Views</span> <b id="busuanzi_value_page_pv">0</b> <span data-i18n="post.readB">views 👀</span></span></div>
       </div>
     </div>
   </footer>

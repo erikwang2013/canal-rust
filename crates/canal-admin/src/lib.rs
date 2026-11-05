@@ -308,7 +308,6 @@ mod tests {
             start_position: LogPosition::new("mysql-bin.000001", 4),
             filter: FilterPattern::default(),
             store_buffer_size: 1024,
-            connector_names: vec![],
         }
     }
 
