@@ -10,6 +10,7 @@ edition = "2021"
 # error from a transitive dependency.
 rust-version = "1.85"
 license = "Apache-2.0"
+homepage = "https://package.erik.xyz/canal"
 
 [workspace.dependencies]
 tokio = { version = "1", features = ["full"] }
