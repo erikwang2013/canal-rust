@@ -11,6 +11,7 @@ edition = "2021"
 rust-version = "1.85"
 license = "Apache-2.0"
 homepage = "https://package.erik.xyz/canal"
+repository = "https://github.com/erikwang2013/canal-rust"
 
 [workspace.dependencies]
 tokio = { version = "1", features = ["full"] }
@@ -36,3 +37,18 @@ metrics = "0.23"
 metrics-exporter-prometheus = "0.15"
 dashmap = "5"
 rustc-hash = "1"
+
+# Internal crates: path for local builds, version is required by `cargo publish`.
+canal-admin = { path = "crates/canal-admin", version = "2.2.1" }
+canal-binlog = { path = "crates/canal-binlog", version = "2.2.1" }
+canal-client = { path = "crates/canal-client", version = "2.2.1" }
+canal-common = { path = "crates/canal-common", version = "2.2.1" }
+canal-connector = { path = "crates/canal-connector", version = "2.2.1" }
+canal-filter = { path = "crates/canal-filter", version = "2.2.1" }
+canal-instance = { path = "crates/canal-instance", version = "2.2.1" }
+canal-meta = { path = "crates/canal-meta", version = "2.2.1" }
+canal-prometheus = { path = "crates/canal-prometheus", version = "2.2.1" }
+canal-proto = { path = "crates/canal-proto", version = "2.2.1" }
+canal-server = { path = "crates/canal-server", version = "2.2.1" }
+canal-sink = { path = "crates/canal-sink", version = "2.2.1" }
+canal-store = { path = "crates/canal-store", version = "2.2.1" }

@@ -302,9 +302,6 @@ canal-rust/
 ├── Makefile                        # build / test / clippy / fmt / check 快捷入口
 ├── README.md                       # 本文件（中文）
 ├── README.en.md                    # English README
-├── proto/                          # Canal 上游 .proto 文件
-│   ├── CanalProtocol.proto         # 主协议（Packet, Handshake, Messages）
-│   └── EntryProtocol.proto         # 事件定义（Entry, RowChange, Column）
 ├── docker/                         # Docker 部署
 │   ├── Dockerfile                  # 多阶段构建
 │   └── docker-compose.yml          # 一键启动
@@ -312,6 +309,7 @@ canal-rust/
 │   ├── canal-common/               # 基础类型
 │   │   └── src/ {error, types, lifecycle, utils}.rs
 │   ├── canal-proto/                # protobuf 代码生成（prost-build）
+│   │   ├── proto/ {CanalProtocol, EntryProtocol}.proto
 │   │   ├── build.rs
 │   │   └── src/ {lib, com.alibaba.otter.canal.protocol}.rs
 │   ├── canal-binlog/               # MySQL binlog 解析层

@@ -3,6 +3,10 @@ name = "canal-proto"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+description = "Generated prost bindings for the Alibaba Canal wire protocol."
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
 [build-dependencies]
 prost-build = "0.13"
 [dependencies]

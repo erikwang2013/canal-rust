@@ -3,6 +3,10 @@ name = "canal-connector"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+description = "Kafka connector for canal-rust event sinks."
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
 [dependencies]
 tokio.workspace = true
 futures.workspace = true
@@ -11,5 +15,5 @@ tracing.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 rdkafka.workspace = true
-canal-common = { path = "../canal-common" }
-canal-sink = { path = "../canal-sink" }
+canal-common.workspace = true
+canal-sink.workspace = true

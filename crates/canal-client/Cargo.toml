@@ -3,13 +3,17 @@ name = "canal-client"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+description = "Rust client SDK for Alibaba Canal servers."
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
 [dependencies]
 tokio.workspace = true
 tracing.workspace = true
 prost.workspace = true
-canal-common = { path = "../canal-common" }
-canal-proto = { path = "../canal-proto" }
+canal-common.workspace = true
+canal-proto.workspace = true
 
 [dev-dependencies]
-canal-common = { path = "../canal-common" }
-canal-proto = { path = "../canal-proto" }
+canal-common.workspace = true
+canal-proto.workspace = true

@@ -3,6 +3,10 @@ name = "canal-server"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+description = "Canal wire-protocol TCP server for canal-rust."
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
 [dependencies]
 tokio.workspace = true
 tokio-util.workspace = true
@@ -13,9 +17,9 @@ futures.workspace = true
 prost.workspace = true
 dashmap.workspace = true
 regex.workspace = true
-canal-common = { path = "../canal-common" }
-canal-proto = { path = "../canal-proto" }
-canal-store = { path = "../canal-store" }
+canal-common.workspace = true
+canal-proto.workspace = true
+canal-store.workspace = true
 [dev-dependencies]
 tokio.workspace = true
 futures.workspace = true

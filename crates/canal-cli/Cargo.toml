@@ -3,6 +3,10 @@ name = "canal-cli"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+description = "Command-line interface for canal-rust, a Rust rewrite of Alibaba Canal."
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
 [[bin]]
 name = "canal-rust"
 path = "src/main.rs"
@@ -14,9 +18,9 @@ serde.workspace = true
 serde_yaml.workspace = true
 anyhow.workspace = true
 clap.workspace = true
-canal-common = { path = "../canal-common" }
-canal-binlog = { path = "../canal-binlog" }
-canal-server = { path = "../canal-server" }
-canal-prometheus = { path = "../canal-prometheus" }
-canal-instance = { path = "../canal-instance" }
-canal-admin = { path = "../canal-admin" }
+canal-common.workspace = true
+canal-binlog.workspace = true
+canal-server.workspace = true
+canal-prometheus.workspace = true
+canal-instance.workspace = true
+canal-admin.workspace = true

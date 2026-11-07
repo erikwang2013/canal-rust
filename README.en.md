@@ -256,9 +256,6 @@ canal-rust/
 ├── Makefile                        # build / test / clippy / fmt / check shortcuts
 ├── README.md                       # Chinese README
 ├── README.en.md                    # This file (English)
-├── proto/                          # Upstream Canal .proto files
-│   ├── CanalProtocol.proto         # Main protocol (Packet, Handshake, Messages)
-│   └── EntryProtocol.proto         # Event definitions (Entry, RowChange, Column)
 ├── docker/                         # Docker deployment
 │   ├── Dockerfile                  # Multi-stage build
 │   └── docker-compose.yml          # One-command startup
@@ -266,6 +263,7 @@ canal-rust/
 │   ├── canal-common/               # Core types
 │   │   └── src/ {error, types, lifecycle, utils}.rs
 │   ├── canal-proto/                # Protobuf code generation (prost-build)
+│   │   ├── proto/ {CanalProtocol, EntryProtocol}.proto
 │   │   ├── build.rs
 │   │   └── src/ {lib, com.alibaba.otter.canal.protocol}.rs
 │   ├── canal-binlog/               # MySQL binlog parser

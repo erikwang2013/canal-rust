@@ -3,12 +3,16 @@ name = "canal-meta"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+description = "DDL tracking and table schema metadata cache for canal-rust."
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
 
 [dependencies]
 serde.workspace = true
 chrono.workspace = true
 tracing.workspace = true
-canal-common = { path = "../canal-common" }
+canal-common.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true

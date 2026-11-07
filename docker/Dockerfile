@@ -10,7 +10,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends protobuf-compil
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 COPY crates/ crates/
-COPY proto/ proto/
 RUN cargo build --release --locked -p canal-cli
 
 FROM debian:bookworm-slim

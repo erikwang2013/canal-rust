@@ -3,11 +3,15 @@ name = "canal-binlog"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+description = "MySQL binlog capture and conversion for canal-rust."
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
 [dependencies]
 tokio.workspace = true
 tokio-util.workspace = true
 async-trait.workspace = true
 tracing.workspace = true
 rustc-hash.workspace = true
-canal-common = { path = "../canal-common" }
+canal-common.workspace = true
 mysql_cdc = "0.2.1"

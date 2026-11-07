@@ -3,11 +3,15 @@ name = "canal-admin"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+description = "Admin REST API for canal-rust: instance and subscription management."
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
 
 [dependencies]
 tokio.workspace = true
 axum.workspace = true
 serde.workspace = true
 tracing.workspace = true
-canal-common = { path = "../canal-common" }
-canal-instance = { path = "../canal-instance" }
+canal-common.workspace = true
+canal-instance.workspace = true

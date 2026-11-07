@@ -3,7 +3,11 @@ name = "canal-filter"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+description = "Schema/table regex filter for canal-rust binlog events."
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
 [dependencies]
 regex.workspace = true
 tracing.workspace = true
-canal-common = { path = "../canal-common" }
+canal-common.workspace = true
