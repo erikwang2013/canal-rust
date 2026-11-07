@@ -3,7 +3,7 @@
 [中文](README.md) · [Live site](https://package.erik.xyz/canal/index.en.html)
 
 <p align="center">
-  <img src="docs/assets/canal-pet.svg" width="620"
+  <img src="crates/canal-common/assets/canal-pet.svg" width="620"
        alt="小运 — the Canal Rust mascot: a rust-red crab standing on the lock wall of the data canal, one claw on the paddle wheel, the other carrying a glowing change event, with downstream data packets drifting in the water below" />
 </p>
 
@@ -47,7 +47,7 @@ The design turns the project's job into a character. MySQL keeps producing chang
 
 ### Where 小运 lives in the code
 
-There is exactly one vector original: [`docs/assets/canal-pet.svg`](docs/assets/canal-pet.svg). It is pulled in with `include_str!`, so **editing the SVG edits the running binary** — no asset packaging step.
+There is exactly one vector original: [`crates/canal-common/assets/canal-pet.svg`](crates/canal-common/assets/canal-pet.svg). It is pulled in with `include_str!`, so **editing the SVG edits the running binary** — no asset packaging step.
 
 | Location | Form |
 |----------|------|
@@ -261,6 +261,7 @@ canal-rust/
 │   └── docker-compose.yml          # One-command startup
 ├── crates/                         # 14 member crates
 │   ├── canal-common/               # Core types
+│   │   ├── assets/canal-pet.svg    # 小运 · project mascot (include_str!)
 │   │   └── src/ {error, types, lifecycle, utils}.rs
 │   ├── canal-proto/                # Protobuf code generation (prost-build)
 │   │   ├── proto/ {CanalProtocol, EntryProtocol}.proto
@@ -292,7 +293,6 @@ canal-rust/
 │       └── src/ {main, lib}.rs     # lib.rs holds CLI defs, config loading, mascot
 ├── docs/
 │   ├── assets/                     # Images
-│   │   ├── canal-pet.svg           # 小运 · project mascot
 │   │   ├── architecture.svg        # Architecture diagram
 │   │   ├── functions.svg           # Functional design diagram
 │   │   └── lifecycle.svg           # Lifecycle diagram

@@ -157,7 +157,7 @@ async fn health_handler(State(state): State<AdminState>) -> Json<HealthResponse>
 
 // -- mascot ---------------------------------------------------------------
 
-/// The vector original, embedded at compile time from `docs/assets/canal-pet.svg`.
+/// The vector original, embedded at compile time from `canal-common/assets/canal-pet.svg`.
 /// Editing that file updates the served artwork too, with no runtime file access.
 async fn pet_svg_handler() -> impl axum::response::IntoResponse {
     (

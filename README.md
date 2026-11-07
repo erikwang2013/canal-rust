@@ -3,7 +3,7 @@
 [English](README.en.md) · [在线站点](https://package.erik.xyz/canal)
 
 <p align="center">
-  <img src="docs/assets/canal-pet.svg" width="620"
+  <img src="crates/canal-common/assets/canal-pet.svg" width="620"
        alt="小运 — Canal Rust 项目宠物：一只锈红色的螃蟹站在数据运河的闸墙上，左钳拧着闸门水轮，右钳托着一枚发光的数据事件，闸下的河水里漂着下游的数据包" />
 </p>
 
@@ -47,7 +47,7 @@ Canal Rust 模拟 MySQL slave 的交互协议，向 MySQL master 发送 dump 请
 
 ### 小运住在代码里的哪些地方
 
-矢量原图只有一份：[`docs/assets/canal-pet.svg`](docs/assets/canal-pet.svg)。它被 `include_str!` 编进二进制，所以**改 SVG 就等于改运行时**，不需要额外打包资源。
+矢量原图只有一份：[`crates/canal-common/assets/canal-pet.svg`](crates/canal-common/assets/canal-pet.svg)。它被 `include_str!` 编进二进制，所以**改 SVG 就等于改运行时**，不需要额外打包资源。
 
 | 位置 | 形式 |
 |------|------|
@@ -307,6 +307,7 @@ canal-rust/
 │   └── docker-compose.yml          # 一键启动
 ├── crates/                         # 14 个成员 crate
 │   ├── canal-common/               # 基础类型
+│   │   ├── assets/canal-pet.svg    # 小运 · 项目宠物（include_str! 编入）
 │   │   └── src/ {error, types, lifecycle, utils}.rs
 │   ├── canal-proto/                # protobuf 代码生成（prost-build）
 │   │   ├── proto/ {CanalProtocol, EntryProtocol}.proto
@@ -338,7 +339,6 @@ canal-rust/
 │       └── src/ {main, lib}.rs     # lib.rs 含 CLI 定义、配置加载与项目宠物
 ├── docs/
 │   ├── assets/                     # 图片资源
-│   │   ├── canal-pet.svg           # 小运 · 项目宠物
 │   │   ├── architecture.svg        # 架构设计图
 │   │   ├── functions.svg           # 功能设计图
 │   │   └── lifecycle.svg           # 生命周期图

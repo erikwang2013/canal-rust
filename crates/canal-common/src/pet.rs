@@ -4,7 +4,7 @@
 //! admin server already depend on — `canal-cli` depends on `canal-admin`, so
 //! the pet cannot live in either without a cycle.
 //!
-//! The artwork has a single source of truth: `docs/assets/canal-pet.svg` is
+//! The artwork has a single source of truth: `assets/canal-pet.svg` is
 //! embedded at compile time, so editing the vector file updates the running
 //! server too (Cargo tracks the file and rebuilds this crate).
 
@@ -14,7 +14,7 @@ pub const PET_NAME: &str = "小运 (Canal Crab)";
 /// One-line description of what the mascot is doing.
 pub const PET_TAGLINE: &str = "keeper of the lock on the data canal";
 
-/// Terminal-sized ASCII reduction of `docs/assets/canal-pet.svg`:
+/// Terminal-sized ASCII reduction of `assets/canal-pet.svg`:
 /// the crab on the lock wall, one claw on the paddle wheel, the canal below.
 pub const CANAL_CRAB: &str = r#"     \    \              /    /
       \    \____________/    /
@@ -28,7 +28,7 @@ pub const CANAL_CRAB: &str = r#"     \    \              /    /
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"#;
 
 /// The vector original, embedded. Served by the admin API at `/pet.svg`.
-pub const PET_SVG: &str = include_str!("../../../docs/assets/canal-pet.svg");
+pub const PET_SVG: &str = include_str!("../assets/canal-pet.svg");
 
 /// A short banner combining the art with the project line, for CLI output.
 pub fn banner() -> String {

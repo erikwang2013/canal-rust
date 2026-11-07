@@ -291,7 +291,7 @@ async fn run_dump(config_path: PathBuf) -> Result<()> {
 /// `canal pet` — meet the mascot and find out where it lives.
 fn run_pet() -> Result<()> {
     println!("{}", canal_cli::pet_banner());
-    println!("  vector original  docs/assets/canal-pet.svg");
+    println!("  vector original  crates/canal-common/assets/canal-pet.svg");
     println!("  in code          canal_common::pet::{{CANAL_CRAB, PET_SVG}}");
     println!("  served by        canal server, Admin API  GET /  and  GET /pet.svg");
     println!("  on the web       README.md / README.en.md, top of the page");
